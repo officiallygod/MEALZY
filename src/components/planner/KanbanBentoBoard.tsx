@@ -384,23 +384,33 @@ export default function KanbanBentoBoard({
                   </div>
 
                   {/* Day Footer Actions */}
-                  <div className="mt-4 pt-3 border-t-2 border-black/10 dark:border-gray-800 flex items-center gap-2">
-                    <button
-                      onClick={() => onFocusDay && onFocusDay(day.dateString)}
-                      className="flex-1 py-1.5 px-3 bg-[#FAF8F5] dark:bg-[#20222E] hover:bg-black hover:text-white dark:hover:bg-[#D4FF00] dark:hover:text-black text-gray-900 dark:text-white font-black text-xs rounded-xl border-2 border-black dark:border-gray-700 shadow-neo-sm active:translate-x-0.5 active:translate-y-0.5 flex items-center justify-center gap-1 transition-all"
-                    >
-                      <CalendarDays className="w-3.5 h-3.5" />
-                      <span>Open Day</span>
-                    </button>
+                  {(() => {
+                    const scheduledSlots = new Set(dayMeals.map((m) => m.mealType));
+                    const nextAvailableSlot: MealType =
+                      (['breakfast', 'lunch', 'dinner', 'snack'] as MealType[]).find(
+                        (s) => !scheduledSlots.has(s)
+                      ) || 'dinner';
 
-                    <button
-                      onClick={() => onQuickAddMeal(day.dateString, 'lunch')}
-                      className="py-1.5 px-2.5 bg-[#D4FF00] hover:bg-[#c3ed00] text-black font-black text-xs rounded-xl border-2 border-black shadow-neo-sm flex items-center justify-center"
-                      title="Add meal to this day"
-                    >
-                      <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
-                    </button>
-                  </div>
+                    return (
+                      <div className="mt-4 pt-3 border-t-2 border-black/10 dark:border-gray-800 flex items-center gap-2">
+                        <button
+                          onClick={() => onFocusDay && onFocusDay(day.dateString)}
+                          className="flex-1 py-1.5 px-3 bg-[#FAF8F5] dark:bg-[#20222E] hover:bg-black hover:text-white dark:hover:bg-[#D4FF00] dark:hover:text-black text-gray-900 dark:text-white font-black text-xs rounded-xl border-2 border-black dark:border-gray-700 shadow-neo-sm active:translate-x-0.5 active:translate-y-0.5 flex items-center justify-center gap-1 transition-all"
+                        >
+                          <CalendarDays className="w-3.5 h-3.5" />
+                          <span>Open Day</span>
+                        </button>
+
+                        <button
+                          onClick={() => onQuickAddMeal(day.dateString, nextAvailableSlot)}
+                          className="py-1.5 px-2.5 bg-[#D4FF00] hover:bg-[#c3ed00] text-black font-black text-xs rounded-xl border-2 border-black shadow-neo-sm flex items-center justify-center"
+                          title={`Add meal to this day (${nextAvailableSlot})`}
+                        >
+                          <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+                        </button>
+                      </div>
+                    );
+                  })()}
                 </div>
               );
             })}

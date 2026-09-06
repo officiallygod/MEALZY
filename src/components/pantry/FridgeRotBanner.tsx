@@ -1,14 +1,14 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlertCircle, Clock, Trash2, CalendarCheck, Check } from 'lucide-react';
-import { FridgePantryItem, MealItem } from '@/types/meal';
+import { AlertCircle, Clock, Trash2, CalendarCheck, Check, X } from 'lucide-react';
+import { FridgePantryItem, MealItem, MealType } from '@/types/meal';
 
 interface FridgeRotBannerProps {
   items: FridgePantryItem[];
   meals?: MealItem[];
-  onConsumeItemToday: (item: FridgePantryItem, mealType: 'lunch' | 'dinner') => void;
+  onConsumeItemToday: (item: FridgePantryItem, mealType: MealType) => void;
   onMarkFinishedEarly: (itemId: string, mealTitle: string) => void;
   onDeleteItem: (itemId: string) => void;
   onlyRotting?: boolean;
@@ -22,6 +22,7 @@ export default function FridgeRotBanner({
   onDeleteItem,
   onlyRotting = false,
 }: FridgeRotBannerProps) {
+  const [pickerItemId, setPickerItemId] = useState<string | null>(null);
   // Check if an item has been assigned anywhere in scheduled meals
   const isItemAssigned = (item: FridgePantryItem): boolean => {
     if (!meals || meals.length === 0) return false;
@@ -97,26 +98,60 @@ export default function FridgeRotBanner({
                   </div>
 
                   <div className="flex items-center gap-2 flex-shrink-0">
-                    <button
-                      onClick={() => onConsumeItemToday(item, 'lunch')}
-                      className="px-3 py-1.5 bg-[#D4FF00] hover:bg-[#c3ed00] text-black font-black rounded-xl text-[11px] border-2 border-black shadow-neo-sm active:translate-x-0.5 active:translate-y-0.5 transition-all"
-                    >
-                      Eat Today
-                    </button>
-                    <button
-                      onClick={() => onMarkFinishedEarly(item.id, item.name)}
-                      className="px-2.5 py-1.5 bg-[#FFE600] hover:bg-yellow-400 text-black font-black rounded-xl text-[11px] border-2 border-black shadow-neo-sm active:translate-x-0.5 active:translate-y-0.5 transition-all"
-                      title="Item was finished earlier? Mark completed."
-                    >
-                      Gone?
-                    </button>
-                    <button
-                      onClick={() => onDeleteItem(item.id)}
-                      className="p-1.5 bg-gray-100 dark:bg-[#2A2B36] hover:bg-rose-100 text-gray-500 hover:text-rose-600 rounded-xl border border-black/20 transition-colors"
-                      title="Discard item"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                    {pickerItemId === item.id ? (
+                      <div className="flex items-center gap-1 bg-white dark:bg-[#16171E] p-1 rounded-xl border-2 border-black dark:border-gray-700 shadow-neo-sm">
+                        <span className="text-[9px] font-black uppercase text-gray-500 px-1">For:</span>
+                        {(['breakfast', 'lunch', 'dinner', 'snack'] as MealType[]).map((slot) => (
+                          <button
+                            key={slot}
+                            onClick={() => {
+                              onConsumeItemToday(item, slot);
+                              setPickerItemId(null);
+                            }}
+                            className={`px-1.5 py-0.5 text-[9px] font-black uppercase rounded border border-black ${
+                              slot === 'breakfast'
+                                ? 'bg-[#FFE600] text-black'
+                                : slot === 'lunch'
+                                ? 'bg-[#00E5FF] text-black'
+                                : slot === 'dinner'
+                                ? 'bg-[#FF5500] text-white'
+                                : 'bg-[#D4FF00] text-black'
+                            }`}
+                          >
+                            {slot === 'breakfast' ? 'Bfast' : slot}
+                          </button>
+                        ))}
+                        <button
+                          onClick={() => setPickerItemId(null)}
+                          className="px-1 text-gray-400 hover:text-black dark:hover:text-white text-xs font-black"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => setPickerItemId(item.id)}
+                          className="px-3 py-1.5 bg-[#D4FF00] hover:bg-[#c3ed00] text-black font-black rounded-xl text-[11px] border-2 border-black shadow-neo-sm active:translate-x-0.5 active:translate-y-0.5 transition-all"
+                        >
+                          Eat Today
+                        </button>
+                        <button
+                          onClick={() => onMarkFinishedEarly(item.id, item.name)}
+                          className="px-2.5 py-1.5 bg-[#FFE600] hover:bg-yellow-400 text-black font-black rounded-xl text-[11px] border-2 border-black shadow-neo-sm active:translate-x-0.5 active:translate-y-0.5 transition-all"
+                          title="Item was finished earlier? Mark completed."
+                        >
+                          Gone?
+                        </button>
+                        <button
+                          onClick={() => onDeleteItem(item.id)}
+                          className="p-1.5 bg-gray-100 dark:bg-[#2A2B36] hover:bg-rose-100 text-gray-500 hover:text-rose-600 rounded-xl border border-black/20 transition-colors"
+                          title="Discard item"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
               ))}
@@ -168,18 +203,52 @@ export default function FridgeRotBanner({
                   </div>
 
                   <div className="flex items-center gap-1.5 flex-shrink-0">
-                    <button
-                      onClick={() => onConsumeItemToday(item, 'lunch')}
-                      className="px-2.5 py-1 bg-[#D4FF00] hover:bg-[#c3ed00] text-black font-black text-[10px] rounded-lg border border-black shadow-neo-sm transition-all"
-                    >
-                      Eat
-                    </button>
-                    <button
-                      onClick={() => onMarkFinishedEarly(item.id, item.name)}
-                      className="px-2 py-1 bg-[#FFE600] hover:bg-yellow-400 text-black font-bold text-[10px] rounded-lg border border-black shadow-neo-sm"
-                    >
-                      Gone?
-                    </button>
+                    {pickerItemId === item.id ? (
+                      <div className="flex items-center gap-1 bg-white dark:bg-[#16171E] p-1 rounded-xl border-2 border-black dark:border-gray-700 shadow-neo-sm">
+                        <span className="text-[9px] font-black uppercase text-gray-500 px-1">For:</span>
+                        {(['breakfast', 'lunch', 'dinner', 'snack'] as MealType[]).map((slot) => (
+                          <button
+                            key={slot}
+                            onClick={() => {
+                              onConsumeItemToday(item, slot);
+                              setPickerItemId(null);
+                            }}
+                            className={`px-1.5 py-0.5 text-[9px] font-black uppercase rounded border border-black ${
+                              slot === 'breakfast'
+                                ? 'bg-[#FFE600] text-black'
+                                : slot === 'lunch'
+                                ? 'bg-[#00E5FF] text-black'
+                                : slot === 'dinner'
+                                ? 'bg-[#FF5500] text-white'
+                                : 'bg-[#D4FF00] text-black'
+                            }`}
+                          >
+                            {slot === 'breakfast' ? 'Bfast' : slot}
+                          </button>
+                        ))}
+                        <button
+                          onClick={() => setPickerItemId(null)}
+                          className="px-1 text-gray-400 hover:text-black dark:hover:text-white text-xs font-black"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => setPickerItemId(item.id)}
+                          className="px-2.5 py-1 bg-[#D4FF00] hover:bg-[#c3ed00] text-black font-black text-[10px] rounded-lg border border-black shadow-neo-sm transition-all"
+                        >
+                          Eat
+                        </button>
+                        <button
+                          onClick={() => onMarkFinishedEarly(item.id, item.name)}
+                          className="px-2 py-1 bg-[#FFE600] hover:bg-yellow-400 text-black font-bold text-[10px] rounded-lg border border-black shadow-neo-sm"
+                        >
+                          Gone?
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
               );

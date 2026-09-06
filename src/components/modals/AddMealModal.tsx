@@ -24,8 +24,21 @@ interface AddMealModalProps {
   targetSlot: MealType;
   allMeals?: MealItem[];
   rollingDays?: { dateString: string; dayName: string; dayNumber: number }[];
-  onAddMeal: (meal: Omit<MealItem, 'id'>) => void;
+  onAddMeal?: (meal: Omit<MealItem, 'id'>) => void;
 }
+
+interface BatchPortionConfig {
+  portionNumber: number;
+  date: string;
+  slot: MealType;
+}
+
+const SLOT_PRESETS: { type: MealType; label: string; activeColor: string; textColor: string }[] = [
+  { type: 'breakfast', label: 'Breakfast', activeColor: 'bg-[#FFE600]', textColor: 'text-black' },
+  { type: 'lunch', label: 'Lunch', activeColor: 'bg-[#00E5FF]', textColor: 'text-black' },
+  { type: 'dinner', label: 'Dinner', activeColor: 'bg-[#FF5500]', textColor: 'text-white' },
+  { type: 'snack', label: 'Snack', activeColor: 'bg-[#D4FF00]', textColor: 'text-black' },
+];
 
 export default function AddMealModal({
   isOpen,
@@ -52,6 +65,7 @@ export default function AddMealModal({
 
   // Divide across days (Batch prep)
   const [divideDays, setDivideDays] = useState<number>(1);
+  const [batchAllocations, setBatchAllocations] = useState<BatchPortionConfig[]>([]);
 
   // Typeahead suggestions
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -103,6 +117,44 @@ export default function AddMealModal({
     const past = getRediscoverMeals(allMeals, selectedSlot, targetDate);
     setRediscoverMeals(past);
   }, [selectedSlot, allMeals, targetDate]);
+
+  // Synchronize batch allocations when divideDays, selectedSlot, or targetDate changes
+  useEffect(() => {
+    if (divideDays <= 1) {
+      setBatchAllocations([]);
+      return;
+    }
+
+    const targetIndex = rollingDays.findIndex((d) => d.dateString === targetDate);
+    const startIndex = targetIndex >= 0 ? targetIndex + 1 : 1;
+    const defaultLeftoverSlot: MealType = selectedSlot === 'dinner' ? 'lunch' : 'dinner';
+
+    setBatchAllocations((prev) => {
+      const updated: BatchPortionConfig[] = [];
+      for (let i = 1; i < divideDays; i++) {
+        const nextDay = rollingDays[startIndex + i - 1] || rollingDays[rollingDays.length - 1] || { dateString: targetDate };
+        const existing = prev[i - 1];
+        updated.push({
+          portionNumber: i + 1,
+          date: existing?.date || nextDay.dateString,
+          slot: existing?.slot || defaultLeftoverSlot,
+        });
+      }
+      return updated;
+    });
+  }, [divideDays, selectedSlot, targetDate, rollingDays]);
+
+  const handleUpdateBatchSlot = (idx: number, slot: MealType) => {
+    setBatchAllocations((prev) =>
+      prev.map((item, i) => (i === idx ? { ...item, slot } : item))
+    );
+  };
+
+  const handleUpdateBatchDate = (idx: number, date: string) => {
+    setBatchAllocations((prev) =>
+      prev.map((item, i) => (i === idx ? { ...item, date } : item))
+    );
+  };
 
   // Automatic rough estimation and typeahead filtering whenever title changes
   useEffect(() => {
@@ -246,10 +298,14 @@ export default function AddMealModal({
       const leftoverMeals: MealItem[] = [];
       for (let i = 1; i < divideDays; i++) {
         const nextDay = rollingDays[startIndex + i - 1] || rollingDays[rollingDays.length - 1];
+        const alloc = batchAllocations[i - 1];
+        const assignedDate = alloc?.date || nextDay.dateString;
+        const assignedSlot = alloc?.slot || (selectedSlot === 'dinner' ? 'lunch' : selectedSlot);
+
         leftoverMeals.push({
           id: `leftover-${sourceMealId}-${i}`,
           title: `Leftover: ${dishTitle.trim()}`,
-          mealType: selectedSlot,
+          mealType: assignedSlot,
           calories: calNum,
           protein: pNum,
           carbs: cNum,
@@ -259,7 +315,7 @@ export default function AddMealModal({
           accentColor: accent,
           ingredients: [{ name: dishTitle.trim(), amount: '1 portion' }],
           tags: ['leftover', 'divided-portion'],
-          dateScheduled: nextDay.dateString,
+          dateScheduled: assignedDate,
           isLeftover: true,
           sourceMealId: sourceMealId,
           notes: `Portion #${i + 1} of ${divideDays} batch prepared on ${targetDate}`,
@@ -327,21 +383,34 @@ export default function AddMealModal({
         </div>
 
         {/* Meal Slot Selector */}
-        <div className="flex gap-2 mb-4">
-          {(['breakfast', 'lunch', 'dinner', 'snack'] as MealType[]).map((slot) => (
-            <button
-              key={slot}
-              type="button"
-              onClick={() => setSelectedSlot(slot)}
-              className={`flex-1 py-1.5 px-2 rounded-xl text-xs font-black uppercase transition-all border-2 border-black ${
-                selectedSlot === slot
-                  ? 'bg-[#FFE600] text-black shadow-neo-sm'
-                  : 'bg-[#FAF8F5] dark:bg-[#20222E] text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#282b3a]'
-              }`}
-            >
-              {slot}
-            </button>
-          ))}
+        <div className="grid grid-cols-4 gap-2 mb-4">
+          {SLOT_PRESETS.map((slot) => {
+            const isSelected = selectedSlot === slot.type;
+            return (
+              <button
+                key={slot.type}
+                type="button"
+                onClick={() => {
+                  setSelectedSlot(slot.type);
+                  if (!dishTitle.trim()) {
+                    const est = estimateDishNutrition('', slot.type);
+                    setCalories(String(est.calories));
+                    setProtein(String(est.protein));
+                    setCarbs(String(est.carbs));
+                    setFat(String(est.fat));
+                    setPrepTime(String(est.prepTimeMinutes));
+                  }
+                }}
+                className={`py-2 px-1 text-center font-black text-xs uppercase rounded-xl border-2 transition-all flex items-center justify-center ${
+                  isSelected
+                    ? `${slot.activeColor} ${slot.textColor} border-2 border-black shadow-neo-sm font-black`
+                    : 'bg-[#FAF8F5] dark:bg-[#20222E] text-gray-700 dark:text-gray-300 border-black/30 dark:border-gray-700 hover:border-black'
+                }`}
+              >
+                {slot.label}
+              </button>
+            );
+          })}
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4 flex-1 overflow-y-auto pr-1">
@@ -528,9 +597,55 @@ export default function AddMealModal({
             </div>
 
             {divideDays > 1 && (
-              <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-2 font-bold leading-tight">
-                Will auto-schedule portion for {targetDate} + next {divideDays - 1} rolling days and log remaining to fridge.
-              </p>
+              <div className="mt-3 pt-3 border-t-2 border-black/10 dark:border-gray-700 space-y-2.5">
+                <span className="text-[10px] font-black uppercase tracking-wider text-gray-700 dark:text-gray-300 block">
+                  Customize Remaining {divideDays - 1} Leftover Portion{divideDays > 2 ? 's' : ''}:
+                </span>
+
+                {batchAllocations.map((alloc, idx) => (
+                  <div
+                    key={alloc.portionNumber}
+                    className="p-2.5 bg-white dark:bg-[#16171E] rounded-xl border-2 border-black dark:border-gray-700 shadow-neo-sm space-y-2"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[10px] font-black uppercase px-2 py-0.5 bg-black text-white dark:bg-[#FFE600] dark:text-black rounded-md">
+                        Portion #{alloc.portionNumber}
+                      </span>
+                      <select
+                        value={alloc.date}
+                        onChange={(e) => handleUpdateBatchDate(idx, e.target.value)}
+                        className="bg-[#FAF8F5] dark:bg-[#20222E] border-2 border-black dark:border-gray-700 rounded-lg px-2 py-0.5 text-[11px] font-bold text-gray-800 dark:text-white shadow-neo-sm cursor-pointer"
+                      >
+                        {rollingDays.map((d, dIdx) => (
+                          <option key={d.dateString} value={d.dateString}>
+                            {dIdx === 0 ? `Today (${d.dayName})` : dIdx === 1 ? `Tomorrow (${d.dayName})` : `${d.dayName} (${d.dayNumber})`}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="grid grid-cols-4 gap-1">
+                      {SLOT_PRESETS.map((slot) => {
+                        const isChosen = alloc.slot === slot.type;
+                        return (
+                          <button
+                            key={slot.type}
+                            type="button"
+                            onClick={() => handleUpdateBatchSlot(idx, slot.type)}
+                            className={`py-1 text-center font-black text-[10px] uppercase rounded-lg border transition-all ${
+                              isChosen
+                                ? `${slot.activeColor} ${slot.textColor} border-black font-black shadow-neo-sm`
+                                : 'bg-[#FAF8F5] dark:bg-[#1E202A] text-gray-600 dark:text-gray-400 border-black/20 dark:border-gray-700 hover:border-black'
+                            }`}
+                          >
+                            {slot.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
 

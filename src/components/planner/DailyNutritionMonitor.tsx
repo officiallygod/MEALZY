@@ -27,6 +27,7 @@ export default function DailyNutritionMonitor({
   carbsTarget,
   fatTarget,
   onAutoFillDay,
+  onQuickAddMeal,
 }: DailyNutritionMonitorProps) {
   const totalCalories = meals.reduce((sum, m) => sum + (m.calories || 0), 0);
   const totalProtein = meals.reduce((sum, m) => sum + (m.protein || 0), 0);
@@ -38,7 +39,11 @@ export default function DailyNutritionMonitor({
   const carbsPercent = Math.min(100, Math.round((totalCarbs / (carbsTarget || 240)) * 100));
   const fatPercent = Math.min(100, Math.round((totalFat / (fatTarget || 65)) * 100));
 
-  const hasEmptySlots = meals.length < 4;
+  const existingSlots = new Set(meals.map((m) => m.mealType));
+  const emptySlots: ('breakfast' | 'lunch' | 'dinner' | 'snack')[] = (
+    ['breakfast', 'lunch', 'dinner', 'snack'] as const
+  ).filter((s) => !existingSlots.has(s));
+  const hasEmptySlots = emptySlots.length > 0;
 
   return (
     <div className="bg-white dark:bg-[#16171E] border-2 border-black dark:border-gray-800 rounded-3xl p-5 shadow-neo-lg transition-colors">
@@ -78,16 +83,35 @@ export default function DailyNutritionMonitor({
           </div>
         </div>
 
-        {/* Right: Smart Auto-Fill (Neon Tactile Button) */}
-        {hasEmptySlots && onAutoFillDay && (
-          <div className="flex items-center gap-2 self-stretch sm:self-auto">
-            <button
-              onClick={onAutoFillDay}
-              className="flex-1 sm:flex-initial px-4 py-2.5 bg-[#D4FF00] hover:bg-[#c3ed00] text-black font-black text-xs rounded-xl border-2 border-black shadow-neo hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-neo-lg active:translate-x-0.5 active:translate-y-0.5 transition-all flex items-center justify-center gap-1.5"
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Auto-Fill Empty Slots</span>
-            </button>
+        {/* Right: Quick Add for Empty Slots + Smart Auto-Fill */}
+        {hasEmptySlots && (
+          <div className="flex items-center gap-2 self-stretch sm:self-auto flex-wrap">
+            {emptySlots.length > 0 && onQuickAddMeal && (
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-[10px] font-black uppercase text-gray-500 dark:text-gray-400">
+                  + Add:
+                </span>
+                {emptySlots.map((slot) => (
+                  <button
+                    key={slot}
+                    onClick={() => onQuickAddMeal(slot)}
+                    className="px-2.5 py-1.5 bg-white dark:bg-[#20222E] hover:bg-[#FFE600] hover:text-black dark:hover:bg-[#FFE600] dark:hover:text-black text-gray-800 dark:text-gray-200 font-black text-[10px] uppercase rounded-xl border-2 border-black dark:border-gray-700 shadow-neo-sm active:translate-x-0.5 active:translate-y-0.5 transition-all"
+                  >
+                    {slot}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {onAutoFillDay && (
+              <button
+                onClick={onAutoFillDay}
+                className="px-3.5 py-2 bg-[#D4FF00] hover:bg-[#c3ed00] text-black font-black text-xs rounded-xl border-2 border-black shadow-neo hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-neo-lg active:translate-x-0.5 active:translate-y-0.5 transition-all flex items-center justify-center gap-1.5"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Auto-Fill</span>
+              </button>
+            )}
           </div>
         )}
       </div>
