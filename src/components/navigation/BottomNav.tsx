@@ -26,7 +26,7 @@ export default function BottomNav({ activeTab, onSelectTab, rottingCount = 0 }: 
   ];
 
   return (
-    <nav className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 px-3 py-2 bg-white/95 dark:bg-[#12141B]/90 backdrop-blur-2xl border border-gray-200 dark:border-black rounded-full shadow-lg dark:shadow-[5px_5px_0px_#000000] flex items-center gap-1 sm:gap-2 transition-colors">
+    <nav className="fixed bottom-5 left-1/2 -translate-x-1/2 z-40 px-2 sm:px-3 py-2 bg-white dark:bg-[#16171E] backdrop-blur-2xl border-2 border-black dark:border-gray-700 rounded-full shadow-neo-lg flex items-center gap-1 sm:gap-2 transition-colors">
       {tabs.map((tab) => {
         const Icon = tab.icon;
         const isActive = activeTab === tab.id;
@@ -35,13 +35,13 @@ export default function BottomNav({ activeTab, onSelectTab, rottingCount = 0 }: 
           <button
             key={tab.id}
             onClick={() => onSelectTab(tab.id)}
-            className="relative px-3.5 sm:px-5 py-2 rounded-full font-funky font-black text-xs transition-all flex items-center gap-2"
+            className="relative px-4 sm:px-6 py-2 rounded-full font-funky font-black text-xs transition-all flex items-center gap-2"
           >
             {isActive && (
               <motion.div
                 layoutId="activeTabPill"
-                className="absolute inset-0 bg-lime-400 dark:bg-[#D4FF00] rounded-full border border-black shadow-sm"
-                transition={{ type: 'spring', stiffness: 450, damping: 30 }}
+                className="absolute inset-0 bg-[#FFE600] rounded-full border-2 border-black shadow-neo-sm"
+                transition={{ type: 'spring', stiffness: 500, damping: 32 }}
               />
             )}
 
@@ -49,22 +49,22 @@ export default function BottomNav({ activeTab, onSelectTab, rottingCount = 0 }: 
               <Icon
                 className={`w-4 h-4 transition-colors ${
                   isActive
-                    ? 'text-black'
+                    ? 'text-black stroke-[2.5]'
                     : 'text-gray-500 dark:text-gray-400 group-hover:text-black dark:group-hover:text-white'
                 }`}
               />
               <span
                 className={`${
                   isActive
-                    ? 'text-black font-extrabold'
-                    : 'text-gray-600 dark:text-gray-400'
+                    ? 'text-black font-black uppercase tracking-wider'
+                    : 'text-gray-600 dark:text-gray-400 font-bold'
                 }`}
               >
                 {tab.label}
               </span>
 
               {tab.badge && (
-                <span className="w-4 h-4 rounded-full bg-red-500 text-white text-[9px] font-black flex items-center justify-center">
+                <span className="w-4 h-4 rounded-full bg-rose-500 text-white text-[9px] font-black border border-black flex items-center justify-center">
                   {tab.badge}
                 </span>
               )}

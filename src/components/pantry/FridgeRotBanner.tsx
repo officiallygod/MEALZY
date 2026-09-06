@@ -2,11 +2,12 @@
 
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlertCircle, Clock, Trash2, ArrowRight, Check } from 'lucide-react';
-import { FridgePantryItem } from '@/types/meal';
+import { AlertCircle, Clock, Trash2, CalendarCheck, Check } from 'lucide-react';
+import { FridgePantryItem, MealItem } from '@/types/meal';
 
 interface FridgeRotBannerProps {
   items: FridgePantryItem[];
+  meals?: MealItem[];
   onConsumeItemToday: (item: FridgePantryItem, mealType: 'lunch' | 'dinner') => void;
   onMarkFinishedEarly: (itemId: string, mealTitle: string) => void;
   onDeleteItem: (itemId: string) => void;
@@ -15,74 +16,103 @@ interface FridgeRotBannerProps {
 
 export default function FridgeRotBanner({
   items,
+  meals = [],
   onConsumeItemToday,
   onMarkFinishedEarly,
   onDeleteItem,
   onlyRotting = false,
 }: FridgeRotBannerProps) {
-  const rottingItems = items.filter((i) => i.status === 'rotting' || i.daysInFridge >= 3);
-  const freshItems = items.filter((i) => i.status !== 'rotting' && i.daysInFridge < 3);
+  // Check if an item has been assigned anywhere in scheduled meals
+  const isItemAssigned = (item: FridgePantryItem): boolean => {
+    if (!meals || meals.length === 0) return false;
+    const nameClean = item.name.toLowerCase().replace('leftover:', '').trim();
+    return meals.some((m) => {
+      const mealTitleClean = m.title.toLowerCase().replace('leftover:', '').trim();
+      const matchesSource = m.sourceMealId === item.id || m.sourceMealId === `fridge-batch-${item.id}`;
+      const matchesTitle = mealTitleClean.includes(nameClean) || nameClean.includes(mealTitleClean);
+      return matchesSource || matchesTitle;
+    });
+  };
+
+  // Rotting rule: strictly > 7 days old AND NOT assigned anywhere
+  const rottingItems = items.filter((item) => {
+    const isOverAWeekOld = item.daysInFridge > 7;
+    const assigned = isItemAssigned(item);
+    return isOverAWeekOld && !assigned;
+  });
+
+  // Fresh / scheduled batches
+  const freshItems = items.filter((item) => {
+    const isOverAWeekOld = item.daysInFridge > 7;
+    const assigned = isItemAssigned(item);
+    return !isOverAWeekOld || assigned;
+  });
 
   if (items.length === 0) return null;
   if (onlyRotting && rottingItems.length === 0) return null;
 
   return (
-    <div className="space-y-3 mb-6">
-      {/* COMPACT PERISHABLE NOTIFICATION */}
+    <div className="space-y-4 mb-6">
+      {/* NEO-BRUTALIST CRITICAL SPOILAGE ALERT (> 7 DAYS & UNASSIGNED) */}
       <AnimatePresence>
         {rottingItems.length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: -6 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, height: 0 }}
-            className="bg-rose-50 dark:bg-rose-950/25 border border-rose-200 dark:border-rose-900/60 rounded-2xl p-3.5 transition-colors"
+            className="bg-white dark:bg-[#16171E] border-2 border-black dark:border-rose-800 rounded-3xl p-4 sm:p-5 shadow-neo-lg border-l-[10px] border-l-rose-500 transition-colors"
           >
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-2.5">
-              <div className="flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 text-rose-600 dark:text-rose-400 flex-shrink-0" />
-                <span className="text-xs font-black uppercase tracking-wider text-rose-800 dark:text-rose-300">
-                  Perishable Priority ({rottingItems.length} item{rottingItems.length > 1 ? 's' : ''} past 3 days)
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-3 pb-3 border-b-2 border-black/10 dark:border-gray-800">
+              <div className="flex items-center gap-2.5">
+                <div className="rotate-[-2deg] bg-rose-500 text-white font-black text-xs uppercase px-3 py-1 rounded-xl border-2 border-black shadow-neo-sm flex items-center gap-1.5">
+                  <AlertCircle className="w-3.5 h-3.5 stroke-[2.5]" />
+                  <span>SPOILAGE ALERT</span>
+                </div>
+                <span className="font-funky font-black text-sm text-gray-900 dark:text-white uppercase tracking-tight">
+                  {rottingItems.length} Batch{rottingItems.length > 1 ? 'es' : ''} Past 1 Week Unassigned
                 </span>
               </div>
-              <span className="text-[11px] text-rose-700/80 dark:text-rose-400 font-medium">
-                Consume today to prevent food waste
+              <span className="text-xs font-bold text-rose-600 dark:text-rose-400">
+                Not scheduled anywhere. Consume today to prevent food waste.
               </span>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {rottingItems.map((item) => (
                 <div
                   key={item.id}
-                  className="bg-white dark:bg-[#181A24] border border-rose-200 dark:border-rose-900/50 rounded-xl p-3 flex items-center justify-between gap-3"
+                  className="bg-rose-50/70 dark:bg-[#201820] border-2 border-black dark:border-rose-900/60 rounded-2xl p-3.5 flex items-center justify-between gap-3 shadow-neo-sm"
                 >
-                  <div>
-                    <h5 className="font-bold text-xs text-gray-900 dark:text-white">{item.name}</h5>
-                    <div className="flex items-center gap-2 text-[10px] text-gray-500 dark:text-gray-400 mt-0.5">
-                      <span className="text-rose-600 dark:text-rose-400 font-bold flex items-center gap-1">
-                        <Clock className="w-2.5 h-2.5" /> {item.daysInFridge}d in fridge
+                  <div className="min-w-0">
+                    <h5 className="font-funky font-black text-xs text-gray-900 dark:text-white truncate">
+                      {item.name}
+                    </h5>
+                    <div className="flex items-center gap-2 text-[10px] text-gray-600 dark:text-gray-400 mt-1 font-bold">
+                      <span className="text-rose-600 dark:text-rose-400 font-black flex items-center gap-1">
+                        <Clock className="w-3 h-3" /> {item.daysInFridge}d in fridge (&gt; 7 days)
                       </span>
                       <span>•</span>
                       <span>{item.portionsLeft} portion remaining</span>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                  <div className="flex items-center gap-2 flex-shrink-0">
                     <button
                       onClick={() => onConsumeItemToday(item, 'lunch')}
-                      className="px-2.5 py-1 bg-lime-400 dark:bg-[#D4FF00] hover:bg-lime-300 dark:hover:bg-[#c3ed00] text-black font-black rounded-lg text-[10px] transition-all"
+                      className="px-3 py-1.5 bg-[#D4FF00] hover:bg-[#c3ed00] text-black font-black rounded-xl text-[11px] border-2 border-black shadow-neo-sm active:translate-x-0.5 active:translate-y-0.5 transition-all"
                     >
                       Eat Today
                     </button>
                     <button
                       onClick={() => onMarkFinishedEarly(item.id, item.name)}
-                      className="px-2 py-1 bg-gray-100 dark:bg-[#262938] hover:bg-gray-200 dark:hover:bg-[#34384c] text-gray-700 dark:text-gray-300 font-bold rounded-lg text-[10px]"
+                      className="px-2.5 py-1.5 bg-[#FFE600] hover:bg-yellow-400 text-black font-black rounded-xl text-[11px] border-2 border-black shadow-neo-sm active:translate-x-0.5 active:translate-y-0.5 transition-all"
                       title="Item was finished earlier? Mark completed."
                     >
                       Gone?
                     </button>
                     <button
                       onClick={() => onDeleteItem(item.id)}
-                      className="p-1 text-gray-400 hover:text-rose-500 rounded-lg"
+                      className="p-1.5 bg-gray-100 dark:bg-[#2A2B36] hover:bg-rose-100 text-gray-500 hover:text-rose-600 rounded-xl border border-black/20 transition-colors"
                       title="Discard item"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -95,45 +125,65 @@ export default function FridgeRotBanner({
         )}
       </AnimatePresence>
 
-      {/* FRESH REFRIGERATOR BATCHES (CLEAN COMPACT STRIP) */}
+      {/* REFRIGERATED BATCHES (CLEAN NEO-BRUTALIST INVENTORY) */}
       {!onlyRotting && freshItems.length > 0 && (
-        <div className="bg-white dark:bg-[#12141B] border border-gray-200 dark:border-gray-800 rounded-2xl p-3 transition-colors">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">
-              Refrigerated Batches ({freshItems.length})
+        <div className="bg-white dark:bg-[#16171E] border-2 border-black dark:border-gray-800 rounded-3xl p-5 shadow-neo-lg transition-colors">
+          <div className="flex items-center justify-between mb-3 pb-2 border-b-2 border-black/10 dark:border-gray-800">
+            <div className="flex items-center gap-2.5">
+              <span className="rotate-[-1deg] bg-[#00E5FF] text-black font-black text-xs uppercase px-2.5 py-1 rounded-xl border-2 border-black shadow-neo-sm">
+                INVENTORY
+              </span>
+              <span className="font-funky font-black text-sm text-gray-900 dark:text-white uppercase tracking-tight">
+                Active Batches ({freshItems.length})
+              </span>
+            </div>
+            <span className="text-xs font-bold text-gray-500 dark:text-gray-400">
+              Safe &amp; available to allocate
             </span>
-            <span className="text-[11px] text-gray-500 dark:text-gray-400">Available to allocate</span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-            {freshItems.map((item) => (
-              <div
-                key={item.id}
-                className="bg-gray-50 dark:bg-[#181A24] border border-gray-200 dark:border-gray-800 rounded-xl p-2.5 flex items-center justify-between text-xs"
-              >
-                <div>
-                  <h6 className="font-bold text-gray-900 dark:text-white text-xs">{item.name}</h6>
-                  <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
-                    {item.portionsLeft} portion(s) left
-                  </p>
-                </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+            {freshItems.map((item) => {
+              const assigned = isItemAssigned(item);
 
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => onConsumeItemToday(item, 'lunch')}
-                    className="px-2 py-0.5 bg-gray-200 dark:bg-[#262938] hover:bg-black hover:text-white dark:hover:bg-[#D4FF00] dark:hover:text-black font-bold text-[10px] rounded"
-                  >
-                    Eat
-                  </button>
-                  <button
-                    onClick={() => onMarkFinishedEarly(item.id, item.name)}
-                    className="px-1.5 py-0.5 text-gray-400 hover:text-black dark:hover:text-white text-[10px]"
-                  >
-                    Gone?
-                  </button>
+              return (
+                <div
+                  key={item.id}
+                  className="bg-[#FAF8F5] dark:bg-[#1E202A] border-2 border-black dark:border-gray-700 rounded-2xl p-3.5 flex items-center justify-between gap-3 shadow-neo-sm"
+                >
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <h6 className="font-funky font-bold text-xs text-gray-900 dark:text-white truncate">
+                        {item.name}
+                      </h6>
+                      {assigned && (
+                        <span className="px-1.5 py-0.2 rounded text-[9px] font-black bg-emerald-100 text-emerald-800 border border-emerald-400 flex items-center gap-0.5">
+                          <CalendarCheck className="w-2.5 h-2.5" /> Scheduled
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[10px] text-gray-500 dark:text-gray-400 font-bold mt-0.5">
+                      {item.daysInFridge}d old • {item.portionsLeft} portion(s) left
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                    <button
+                      onClick={() => onConsumeItemToday(item, 'lunch')}
+                      className="px-2.5 py-1 bg-[#D4FF00] hover:bg-[#c3ed00] text-black font-black text-[10px] rounded-lg border border-black shadow-neo-sm transition-all"
+                    >
+                      Eat
+                    </button>
+                    <button
+                      onClick={() => onMarkFinishedEarly(item.id, item.name)}
+                      className="px-2 py-1 bg-[#FFE600] hover:bg-yellow-400 text-black font-bold text-[10px] rounded-lg border border-black shadow-neo-sm"
+                    >
+                      Gone?
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}

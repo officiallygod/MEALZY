@@ -2,15 +2,14 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Lock, Mail, User, Cloud, Sparkles, Key, CheckCircle2, Download, Upload, ExternalLink, ShieldCheck, ChevronDown, ChevronUp } from 'lucide-react';
+import { X, Lock, Mail, User, CheckCircle2, Download, Upload, ExternalLink, ChevronDown, ChevronUp } from 'lucide-react';
 import {
   downloadLocalBackupFile,
   uploadAndRestoreBackup,
-  getSavedGoogleClientId,
   saveGoogleClientId,
   syncToGoogleDriveAppData,
 } from '@/lib/sync/google-drive';
-import { APP_CONFIG, getActiveGoogleClientId } from '@/config/app-config';
+import { getActiveGoogleClientId } from '@/config/app-config';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -19,7 +18,7 @@ interface AuthModalProps {
   onLoginSuccess: (email: string) => void;
 }
 
-export default function AuthModal({ isOpen, onClose, userEmail, onLoginSuccess }: AuthModalProps) {
+export default function AuthModal({ isOpen, onClose, onLoginSuccess }: AuthModalProps) {
   const [tab, setTab] = useState<'login' | 'register'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -69,7 +68,6 @@ export default function AuthModal({ isOpen, onClose, userEmail, onLoginSuccess }
       return;
     }
 
-    // Trigger Google OAuth via Google Identity Services
     if (typeof window !== 'undefined' && (window as any).google?.accounts?.oauth2) {
       const client = (window as any).google.accounts.oauth2.initTokenClient({
         client_id: activeClientId,
@@ -88,7 +86,6 @@ export default function AuthModal({ isOpen, onClose, userEmail, onLoginSuccess }
       });
       client.requestAccessToken();
     } else {
-      // Smooth fallback if running offline or local simulation
       onLoginSuccess('Google Account');
       onClose();
     }
@@ -119,42 +116,42 @@ export default function AuthModal({ isOpen, onClose, userEmail, onLoginSuccess }
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.92, y: 20 }}
         transition={{ type: 'spring', damping: 25, stiffness: 350 }}
-        className="relative w-full max-w-md bg-[#12141B] border-2 border-black rounded-3xl p-6 shadow-[6px_6px_0px_#D4FF00] text-white max-h-[92vh] overflow-y-auto"
+        className="relative w-full max-w-md bg-white dark:bg-[#16171E] border-2 border-black dark:border-gray-700 rounded-3xl p-6 shadow-neo-xl text-gray-900 dark:text-white max-h-[92vh] overflow-y-auto"
       >
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-5 right-5 w-8 h-8 rounded-full bg-[#1C1F2B] border border-gray-700 flex items-center justify-center text-gray-400 hover:text-white hover:border-[#D4FF00] transition-colors"
+          className="absolute top-5 right-5 w-8 h-8 rounded-xl bg-[#FAF8F5] dark:bg-[#20222E] border-2 border-black dark:border-gray-700 flex items-center justify-center text-gray-700 dark:text-gray-300 hover:text-black dark:hover:text-white shadow-neo-sm active:translate-x-0.5 active:translate-y-0.5 transition-all"
         >
-          <X className="w-4 h-4" />
+          <X className="w-4 h-4 stroke-[2.5]" />
         </button>
 
         {/* Header */}
         <div className="text-center mb-6">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-[#D4FF00] text-black font-black text-xl mb-3 shadow-neo">
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-[#FFE600] border-2 border-black text-black font-black text-xl mb-3 shadow-neo">
             M
           </div>
-          <h2 className="text-2xl font-funky font-black tracking-tight text-white">
+          <h2 className="text-2xl font-funky font-black tracking-tight text-gray-900 dark:text-white">
             {tab === 'login' ? 'WELCOME TO MEALZY' : 'CREATE AN ACCOUNT'}
           </h2>
-          <p className="text-xs text-gray-400 mt-1">
-            Sync your meals, track your fridge, and never let food rot.
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 font-bold">
+            Sync your meals, track your fridge, and prevent food spoilage.
           </p>
         </div>
 
         {/* Status Toast */}
         {statusMsg && (
           <div
-            className={`mb-4 p-3 rounded-2xl text-xs flex items-center gap-2 border ${
+            className={`mb-4 p-3 rounded-2xl text-xs flex items-center gap-2 border-2 border-black ${
               statusMsg.type === 'success'
-                ? 'bg-[#22C55E]/20 border-[#22C55E]/40 text-[#22C55E]'
+                ? 'bg-emerald-100 text-emerald-900'
                 : statusMsg.type === 'error'
-                ? 'bg-[#FF5C5C]/20 border-[#FF5C5C]/40 text-[#FF5C5C]'
-                : 'bg-[#C084FC]/20 border-[#C084FC]/40 text-[#C084FC]'
+                ? 'bg-rose-100 text-rose-900'
+                : 'bg-purple-100 text-purple-900'
             }`}
           >
             <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
-            <span>{statusMsg.text}</span>
+            <span className="font-bold">{statusMsg.text}</span>
           </div>
         )}
 
@@ -162,7 +159,7 @@ export default function AuthModal({ isOpen, onClose, userEmail, onLoginSuccess }
         <button
           type="button"
           onClick={handleGoogleSignIn}
-          className="w-full py-3 px-4 bg-white hover:bg-gray-100 text-gray-900 font-extrabold text-xs rounded-xl shadow-neo flex items-center justify-center gap-2.5 transition-all active:translate-x-0.5 active:translate-y-0.5"
+          className="w-full py-3 px-4 bg-white hover:bg-gray-50 text-gray-900 font-black text-xs rounded-2xl border-2 border-black shadow-neo flex items-center justify-center gap-2.5 transition-all active:translate-x-0.5 active:translate-y-0.5"
         >
           <svg className="w-4 h-4" viewBox="0 0 24 24">
             <path
@@ -182,31 +179,31 @@ export default function AuthModal({ isOpen, onClose, userEmail, onLoginSuccess }
               d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
             />
           </svg>
-          <span>Continue with Google</span>
+          <span className="uppercase tracking-wider">Continue with Google</span>
         </button>
 
         <div className="relative flex py-4 items-center">
-          <div className="flex-grow border-t border-gray-800"></div>
+          <div className="flex-grow border-t-2 border-black/10 dark:border-gray-800"></div>
           <span className="flex-shrink mx-3 text-[10px] text-gray-500 font-black uppercase tracking-wider">
             or sign in with email
           </span>
-          <div className="flex-grow border-t border-gray-800"></div>
+          <div className="flex-grow border-t-2 border-black/10 dark:border-gray-800"></div>
         </div>
 
         {/* Tab Switcher for Email */}
-        <div className="flex bg-[#181A24] p-1 rounded-2xl mb-4 border border-gray-800">
+        <div className="flex bg-[#FAF8F5] dark:bg-[#20222E] p-1.5 rounded-2xl mb-4 border-2 border-black dark:border-gray-700 shadow-neo-sm">
           <button
             onClick={() => setTab('login')}
-            className={`flex-1 py-1.5 text-xs font-bold rounded-xl transition-all ${
-              tab === 'login' ? 'bg-[#D4FF00] text-black shadow-sm' : 'text-gray-400 hover:text-white'
+            className={`flex-1 py-1.5 text-xs font-black rounded-xl transition-all ${
+              tab === 'login' ? 'bg-[#FFE600] text-black border-2 border-black shadow-neo-sm' : 'text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white'
             }`}
           >
             Log In
           </button>
           <button
             onClick={() => setTab('register')}
-            className={`flex-1 py-1.5 text-xs font-bold rounded-xl transition-all ${
-              tab === 'register' ? 'bg-[#D4FF00] text-black shadow-sm' : 'text-gray-400 hover:text-white'
+            className={`flex-1 py-1.5 text-xs font-black rounded-xl transition-all ${
+              tab === 'register' ? 'bg-[#FFE600] text-black border-2 border-black shadow-neo-sm' : 'text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white'
             }`}
           >
             Register
@@ -217,82 +214,79 @@ export default function AuthModal({ isOpen, onClose, userEmail, onLoginSuccess }
         <form onSubmit={handleSubmit} className="space-y-3">
           {tab === 'register' && (
             <div>
-              <label className="block text-[11px] font-bold text-gray-400 uppercase mb-1">Your Name</label>
+              <label className="block text-[11px] font-black text-gray-500 uppercase mb-1">Your Name</label>
               <div className="relative">
-                <User className="absolute left-3.5 top-3 w-4 h-4 text-gray-500" />
+                <User className="absolute left-3.5 top-3 w-4 h-4 text-gray-400" />
                 <input
                   type="text"
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. Julia"
-                  className="w-full bg-[#1A1D27] border border-gray-700 rounded-xl pl-10 pr-4 py-2 text-xs text-white focus:outline-none focus:border-[#D4FF00]"
+                  placeholder="e.g. Allen"
+                  className="w-full bg-[#FAF8F5] dark:bg-[#20222E] border-2 border-black dark:border-gray-700 rounded-xl pl-10 pr-4 py-2 text-xs text-gray-900 dark:text-white focus:outline-none"
                 />
               </div>
             </div>
           )}
 
           <div>
-            <label className="block text-[11px] font-bold text-gray-400 uppercase mb-1">Email</label>
+            <label className="block text-[11px] font-black text-gray-500 uppercase mb-1">Email</label>
             <div className="relative">
-              <Mail className="absolute left-3.5 top-3 w-4 h-4 text-gray-500" />
+              <Mail className="absolute left-3.5 top-3 w-4 h-4 text-gray-400" />
               <input
                 type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="chef@mealzy.app"
-                className="w-full bg-[#1A1D27] border border-gray-700 rounded-xl pl-10 pr-4 py-2 text-xs text-white focus:outline-none focus:border-[#D4FF00]"
+                className="w-full bg-[#FAF8F5] dark:bg-[#20222E] border-2 border-black dark:border-gray-700 rounded-xl pl-10 pr-4 py-2 text-xs text-gray-900 dark:text-white focus:outline-none"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-[11px] font-bold text-gray-400 uppercase mb-1">Password</label>
+            <label className="block text-[11px] font-black text-gray-500 uppercase mb-1">Password</label>
             <div className="relative">
-              <Lock className="absolute left-3.5 top-3 w-4 h-4 text-gray-500" />
+              <Lock className="absolute left-3.5 top-3 w-4 h-4 text-gray-400" />
               <input
                 type="password"
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full bg-[#1A1D27] border border-gray-700 rounded-xl pl-10 pr-4 py-2 text-xs text-white focus:outline-none focus:border-[#D4FF00]"
+                className="w-full bg-[#FAF8F5] dark:bg-[#20222E] border-2 border-black dark:border-gray-700 rounded-xl pl-10 pr-4 py-2 text-xs text-gray-900 dark:text-white focus:outline-none"
               />
             </div>
           </div>
 
           <button
             type="submit"
-            className="w-full py-2.5 bg-[#D4FF00] hover:bg-[#c3ed00] text-black font-black text-xs rounded-xl shadow-neo transition-all active:translate-x-0.5 active:translate-y-0.5 mt-1"
+            className="w-full py-3 bg-[#FF5500] hover:bg-[#ff681a] text-white font-black text-xs uppercase tracking-wider rounded-2xl border-2 border-black shadow-neo active:translate-x-0.5 active:translate-y-0.5 transition-all mt-1"
           >
             {tab === 'login' ? 'LOG IN' : 'CREATE ACCOUNT'}
           </button>
         </form>
 
         {/* Guest Mode Instant Entry */}
-        <div className="mt-3 pt-3 border-t border-gray-800 flex items-center justify-between text-xs">
-          <span className="text-gray-400 text-[11px]">Just browsing?</span>
+        <div className="mt-4 pt-3 border-t-2 border-black/10 dark:border-gray-800 flex items-center justify-between text-xs">
+          <span className="text-gray-500 text-[11px] font-bold">Just planning meals?</span>
           <button
             type="button"
             onClick={handleGuestContinue}
-            className="text-[#D4FF00] hover:underline font-bold text-xs"
+            className="text-gray-900 dark:text-[#D4FF00] hover:underline font-black text-xs uppercase tracking-wider"
           >
             Continue as Guest (100% Offline) →
           </button>
         </div>
 
-        {/* COLLAPSIBLE DEVELOPER SETUP (FOR THE APP OWNER) */}
-        <div className="mt-5 pt-3 border-t border-gray-800/80">
+        {/* COLLAPSIBLE DEVELOPER SETUP */}
+        <div className="mt-5 pt-3 border-t-2 border-black/10 dark:border-gray-800">
           <button
             type="button"
             onClick={() => setShowDevPanel(!showDevPanel)}
-            className="w-full flex items-center justify-between text-[11px] font-bold text-gray-400 hover:text-white"
+            className="w-full flex items-center justify-between text-[11px] font-black text-gray-500 hover:text-black dark:hover:text-white uppercase"
           >
-            <span className="flex items-center gap-1.5">
-              <Key className="w-3.5 h-3.5 text-[#C084FC]" />
-              <span>Owner & Developer Settings</span>
-            </span>
+            <span>Developer &amp; Cloud Sync Keys</span>
             {showDevPanel ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
           </button>
 
@@ -302,18 +296,18 @@ export default function AuthModal({ isOpen, onClose, userEmail, onLoginSuccess }
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
-                className="mt-3 p-3.5 rounded-2xl bg-[#181A24] border border-gray-800 space-y-3 text-xs overflow-hidden"
+                className="mt-3 p-3.5 rounded-2xl bg-[#FAF8F5] dark:bg-[#20222E] border-2 border-black dark:border-gray-700 space-y-3 text-xs overflow-hidden shadow-neo-sm"
               >
                 <div>
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-white font-bold text-[11px]">Your Google OAuth Client ID:</span>
+                    <span className="text-gray-900 dark:text-white font-black text-[11px]">Google OAuth Client ID:</span>
                     <a
                       href="https://console.cloud.google.com/apis/credentials"
                       target="_blank"
                       rel="noreferrer"
-                      className="text-[10px] text-[#38BDF8] hover:underline flex items-center gap-1"
+                      className="text-[10px] text-[#00E5FF] font-bold hover:underline flex items-center gap-1"
                     >
-                      <span>Get from Google</span>
+                      <span>Google Console</span>
                       <ExternalLink className="w-3 h-3" />
                     </a>
                   </div>
@@ -322,32 +316,29 @@ export default function AuthModal({ isOpen, onClose, userEmail, onLoginSuccess }
                     value={devClientId}
                     onChange={(e) => setDevClientId(e.target.value)}
                     placeholder="xxxx-yyyy.apps.googleusercontent.com"
-                    className="w-full bg-[#12141B] border border-gray-700 rounded-xl px-2.5 py-1.5 text-[11px] text-white focus:outline-none focus:border-[#D4FF00]"
+                    className="w-full bg-white dark:bg-[#16171E] border-2 border-black dark:border-gray-700 rounded-xl px-2.5 py-1.5 text-[11px] text-gray-900 dark:text-white focus:outline-none"
                   />
-                  <p className="text-[10px] text-gray-400 mt-1">
-                    Once set here (or in <code>src/config/app-config.ts</code> / GitHub Secrets), all visitors can log in with 1 tap.
-                  </p>
                   <button
                     type="button"
                     onClick={handleSaveDevKey}
-                    className="mt-2 w-full py-1.5 bg-[#C084FC] hover:bg-[#b06df7] text-black font-black text-xs rounded-xl transition-all"
+                    className="mt-2 w-full py-1.5 bg-[#FFE600] text-black font-black text-xs rounded-xl border-2 border-black shadow-neo-sm transition-all"
                   >
                     Save Key
                   </button>
                 </div>
 
                 {/* Local Backup Download/Restore */}
-                <div className="pt-2 border-t border-gray-800 flex gap-2">
+                <div className="pt-2 border-t border-black/10 dark:border-gray-800 flex gap-2">
                   <button
                     type="button"
                     onClick={handleBackupDownload}
-                    className="flex-1 py-1.5 px-2 bg-[#262938] hover:bg-[#34384c] text-white font-bold rounded-lg text-[10px] flex items-center justify-center gap-1"
+                    className="flex-1 py-1.5 px-2 bg-white dark:bg-[#16171E] hover:bg-gray-100 dark:hover:bg-[#222432] text-gray-900 dark:text-white font-black rounded-xl border-2 border-black text-[10px] flex items-center justify-center gap-1 shadow-neo-sm"
                   >
-                    <Download className="w-3 h-3 text-[#D4FF00]" />
+                    <Download className="w-3 h-3" />
                     <span>Download JSON</span>
                   </button>
-                  <label className="flex-1 py-1.5 px-2 bg-[#262938] hover:bg-[#34384c] text-white font-bold rounded-lg text-[10px] flex items-center justify-center gap-1 cursor-pointer">
-                    <Upload className="w-3 h-3 text-[#C084FC]" />
+                  <label className="flex-1 py-1.5 px-2 bg-white dark:bg-[#16171E] hover:bg-gray-100 dark:hover:bg-[#222432] text-gray-900 dark:text-white font-black rounded-xl border-2 border-black text-[10px] flex items-center justify-center gap-1 shadow-neo-sm cursor-pointer">
+                    <Upload className="w-3 h-3" />
                     <span>Restore JSON</span>
                     <input type="file" accept=".json" onChange={handleFileUpload} className="hidden" />
                   </label>

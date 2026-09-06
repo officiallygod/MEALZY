@@ -5,17 +5,26 @@
 @tailwind utilities;
 
 :root {
-  --background: #0A0B0E;
+  --background: #0D0E12;
+  --foreground: #FFFFFF;
+}
+
+html.light {
+  --background: #F7F4EE;
+  --foreground: #111215;
+}
+
+html.dark {
+  --background: #0D0E12;
   --foreground: #FFFFFF;
 }
 
 body {
   color: var(--foreground);
-  background: var(--background);
+  background-color: var(--background);
   font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   overflow-x: hidden;
   -webkit-tap-highlight-color: transparent;
-  user-select: none;
 }
 
 /* Funky Gen-Z Typography Classes */
@@ -23,24 +32,65 @@ body {
   font-family: 'Space Grotesk', system-ui, sans-serif;
 }
 
-/* Custom Neo-Brutalist utility classes */
+/* Outline Text utilities matching Allen Benny portfolio */
+.text-stroke-orange {
+  -webkit-text-stroke: 2px #FF5500;
+  color: transparent;
+}
+
+.text-stroke-orange-thick {
+  -webkit-text-stroke: 2.5px #FF5500;
+  color: transparent;
+}
+
+.text-stroke-white {
+  -webkit-text-stroke: 2px #FFFFFF;
+  color: transparent;
+}
+
+.text-stroke-black {
+  -webkit-text-stroke: 2px #000000;
+  color: transparent;
+}
+
+/* Neo-Brutalist Hard Drop Shadows */
+.shadow-neo-sm {
+  box-shadow: 2px 2px 0px #000000;
+}
+
 .shadow-neo {
   box-shadow: 3px 3px 0px #000000;
 }
 
 .shadow-neo-lg {
-  box-shadow: 5px 5px 0px #000000;
+  box-shadow: 4px 4px 0px #000000;
 }
 
-.shadow-neo-lime {
-  box-shadow: 4px 4px 0px #D4FF00;
+.shadow-neo-xl {
+  box-shadow: 6px 6px 0px #000000;
 }
 
-.shadow-neo-pink {
-  box-shadow: 4px 4px 0px #FF3388;
+/* Continuous Marquee Animation */
+@keyframes marquee {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
 }
 
-/* Hide scrollbar for clean horizontal date pill strip */
+.animate-marquee {
+  display: flex;
+  width: max-content;
+  animation: marquee 30s linear infinite;
+}
+
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
+
+/* Hide scrollbars for clean horizontal strips */
 .scrollbar-none::-webkit-scrollbar {
   display: none;
 }
@@ -49,7 +99,6 @@ body {
   scrollbar-width: none;
 }
 
-/* Smooth spring ease */
 * {
   box-sizing: border-box;
 }

@@ -29,7 +29,7 @@ export default function RollingWeekSelector({
   return (
     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
       {/* Date Pill Scroller (Starts specifically with TODAY) */}
-      <div className="w-full sm:w-auto overflow-x-auto pb-2 sm:pb-0 scrollbar-none flex items-center gap-2">
+      <div className="w-full sm:w-auto overflow-x-auto pb-2 sm:pb-0 scrollbar-none flex items-center gap-2.5">
         {days.map((day) => {
           const isSelected = selectedDate === day.dateString && !isAllDaysView;
           const stats = dayMealCounts[day.dateString] || { count: 0, calories: 0 };
@@ -41,10 +41,10 @@ export default function RollingWeekSelector({
                 onToggleAllDaysView(false);
                 onSelectDate(day.dateString);
               }}
-              className={`relative px-4 py-2.5 rounded-2xl flex flex-col items-center justify-center min-w-[76px] transition-all text-center border ${
+              className={`relative px-4 py-2.5 rounded-2xl flex flex-col items-center justify-center min-w-[80px] transition-all text-center border-2 ${
                 isSelected
-                  ? 'bg-white dark:bg-[#181A24] border-black dark:border-[#D4FF00] shadow-md dark:shadow-[3px_3px_0px_#D4FF00] -translate-y-0.5'
-                  : 'bg-white/60 dark:bg-[#12141B] border-gray-200 dark:border-[#262938] hover:border-gray-400 dark:hover:border-gray-600 text-gray-500 dark:text-gray-400'
+                  ? 'bg-white dark:bg-[#1E202A] border-black dark:border-[#D4FF00] shadow-neo -translate-y-1'
+                  : 'bg-white dark:bg-[#16171E] border-black/30 dark:border-gray-800 hover:border-black dark:hover:border-gray-500 shadow-neo-sm text-gray-600 dark:text-gray-300'
               }`}
             >
               <div className="flex items-center gap-1">
@@ -65,8 +65,8 @@ export default function RollingWeekSelector({
               </div>
 
               <span
-                className={`text-lg font-funky font-black mt-0.5 ${
-                  isSelected ? 'text-gray-900 dark:text-white' : 'text-gray-700 dark:text-gray-300'
+                className={`text-xl font-funky font-black mt-0.5 ${
+                  isSelected ? 'text-gray-900 dark:text-white' : 'text-gray-800 dark:text-gray-200'
                 }`}
               >
                 {day.dayNumber}
@@ -74,7 +74,7 @@ export default function RollingWeekSelector({
 
               {/* Meal & Calorie Subtitle */}
               <div className="mt-1 flex items-center gap-1">
-                <span className="text-[9px] font-bold text-gray-500 dark:text-gray-400">
+                <span className="text-[9px] font-black text-gray-500 dark:text-gray-400">
                   {stats.calories > 0 ? `${stats.calories} kcal` : 'Empty'}
                 </span>
               </div>
@@ -84,12 +84,12 @@ export default function RollingWeekSelector({
       </div>
 
       {/* View Mode Toggle: Day Bento vs 7-Day Board */}
-      <div className="flex items-center bg-gray-100 dark:bg-[#12141B] p-1 rounded-2xl border border-gray-200 dark:border-black shadow-sm self-end sm:self-auto">
+      <div className="flex items-center bg-white dark:bg-[#16171E] p-1.5 rounded-2xl border-2 border-black dark:border-gray-700 shadow-neo-sm self-end sm:self-auto">
         <button
           onClick={() => onToggleAllDaysView(false)}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+          className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-black transition-all ${
             !isAllDaysView
-              ? 'bg-lime-400 dark:bg-[#D4FF00] text-black shadow-sm'
+              ? 'bg-[#FFE600] text-black border-2 border-black shadow-neo-sm'
               : 'text-gray-600 dark:text-gray-400 hover:text-black dark:hover:text-white'
           }`}
         >
@@ -99,9 +99,9 @@ export default function RollingWeekSelector({
 
         <button
           onClick={() => onToggleAllDaysView(true)}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+          className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-black transition-all ${
             isAllDaysView
-              ? 'bg-lime-400 dark:bg-[#D4FF00] text-black shadow-sm'
+              ? 'bg-[#FFE600] text-black border-2 border-black shadow-neo-sm'
               : 'text-gray-600 dark:text-gray-400 hover:text-black dark:hover:text-white'
           }`}
         >

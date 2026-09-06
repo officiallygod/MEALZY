@@ -177,26 +177,28 @@ export default function AddMealModal({
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.94, y: 15 }}
         transition={{ type: 'spring', damping: 25, stiffness: 350 }}
-        className="relative w-full max-w-lg bg-white dark:bg-[#12141B] border border-gray-200 dark:border-black rounded-3xl p-6 shadow-2xl text-gray-900 dark:text-white max-h-[92vh] flex flex-col transition-colors overflow-hidden"
+        className="relative w-full max-w-lg bg-white dark:bg-[#16171E] border-2 border-black dark:border-gray-700 rounded-3xl p-6 shadow-neo-xl text-gray-900 dark:text-white max-h-[92vh] flex flex-col transition-colors overflow-hidden"
       >
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-5 right-5 w-8 h-8 rounded-full bg-gray-100 dark:bg-[#1C1F2B] border border-gray-200 dark:border-gray-700 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white transition-colors"
+          className="absolute top-5 right-5 w-8 h-8 rounded-xl bg-[#FAF8F5] dark:bg-[#20222E] border-2 border-black dark:border-gray-700 flex items-center justify-center text-gray-700 dark:text-gray-300 hover:text-black dark:hover:text-white shadow-neo-sm active:translate-x-0.5 active:translate-y-0.5 transition-all"
         >
-          <X className="w-4 h-4" />
+          <X className="w-4 h-4 stroke-[2.5]" />
         </button>
 
         {/* Modal Header */}
         <div className="mb-4">
-          <span className="text-[10px] font-black uppercase tracking-widest text-lime-600 dark:text-[#D4FF00]">
-            QUICK DISH PLANNER
-          </span>
-          <h2 className="font-funky font-black text-xl text-gray-900 dark:text-white mt-0.5">
-            SCHEDULE MEAL
+          <div className="flex items-center gap-2">
+            <span className="rotate-[-2deg] bg-[#FFE600] text-black font-black text-[10px] uppercase px-2.5 py-0.5 rounded-lg border-2 border-black shadow-neo-sm">
+              ✦ DISH PLANNER
+            </span>
+          </div>
+          <h2 className="font-funky font-black text-2xl text-gray-900 dark:text-white mt-1.5">
+            SCHEDULE DISH
           </h2>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-            Planning for <span className="font-bold text-gray-900 dark:text-white">{targetDate}</span>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 font-bold">
+            Planning for <span className="font-black text-gray-900 dark:text-white">{targetDate}</span>
           </p>
         </div>
 
@@ -207,10 +209,10 @@ export default function AddMealModal({
               key={slot}
               type="button"
               onClick={() => setSelectedSlot(slot)}
-              className={`flex-1 py-1.5 px-2 rounded-xl text-xs font-black uppercase transition-all ${
+              className={`flex-1 py-1.5 px-2 rounded-xl text-xs font-black uppercase transition-all border-2 border-black ${
                 selectedSlot === slot
-                  ? 'bg-black text-white dark:bg-[#D4FF00] dark:text-black shadow-sm'
-                  : 'bg-gray-100 dark:bg-[#181A24] text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white border border-gray-200 dark:border-gray-800'
+                  ? 'bg-[#FFE600] text-black shadow-neo-sm'
+                  : 'bg-[#FAF8F5] dark:bg-[#20222E] text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#282b3a]'
               }`}
             >
               {slot}
@@ -447,10 +449,10 @@ export default function AddMealModal({
             </div>
           </div>
 
-          {/* Action Button */}
+          {/* Action Button: Neon Orange like Get In Touch from Portfolio */}
           <button
             type="submit"
-            className="w-full py-3 bg-black hover:bg-gray-800 text-white dark:bg-[#D4FF00] dark:hover:bg-[#c3ed00] dark:text-black font-black text-xs rounded-2xl shadow-sm transition-all flex items-center justify-center gap-2 mt-2"
+            className="w-full py-3 bg-[#FF5500] hover:bg-[#ff681a] text-white font-black text-xs uppercase tracking-wider rounded-2xl border-2 border-black shadow-neo hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-neo-lg active:translate-x-0.5 active:translate-y-0.5 transition-all flex items-center justify-center gap-2 mt-3"
           >
             <span>PLAN DISH FOR {selectedSlot.toUpperCase()}</span>
           </button>

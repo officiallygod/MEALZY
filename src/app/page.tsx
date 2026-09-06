@@ -95,11 +95,18 @@ export default function Home() {
   const todayCalories = dayMealCounts[rollingDays[0].dateString]?.calories || 0;
   const calorieTarget = userPreferences?.calorieTarget || 2200;
 
-  // Rotting items count for the bottom dock badge
-  const rottingCount = fridgeItems.filter((i) => i.status === 'rotting' || i.daysInFridge >= 3).length;
-
-  // AI Smart Suggestions
-  const smartSuggestions = generateSmartSuggestions(meals, fridgeItems);
+  // Rotting items count for the bottom dock badge: strictly > 7 days old AND unassigned
+  const rottingCount = fridgeItems.filter((item) => {
+    const isOverAWeekOld = item.daysInFridge > 7;
+    const nameClean = item.name.toLowerCase().replace('leftover:', '').trim();
+    const isAssigned = meals.some((m) => {
+      const mealTitleClean = m.title.toLowerCase().replace('leftover:', '').trim();
+      const matchesSource = m.sourceMealId === item.id || m.sourceMealId === `fridge-batch-${item.id}`;
+      const matchesTitle = mealTitleClean.includes(nameClean) || nameClean.includes(mealTitleClean);
+      return matchesSource || matchesTitle;
+    });
+    return isOverAWeekOld && !isAssigned;
+  }).length;
 
   // Selected day object and its meals
   const selectedDayObj = rollingDays.find((d) => d.dateString === selectedDate) || rollingDays[0];
@@ -311,7 +318,10 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#0A0B0E] text-gray-900 dark:text-white pb-28 transition-colors duration-200">
+    <div className="min-h-screen bg-[#F7F4EE] dark:bg-[#0D0E12] text-gray-900 dark:text-white pb-32 transition-colors duration-200 relative overflow-x-hidden">
+      {/* Soft Ambient Background Glow (matching Allen Benny Portfolio) */}
+      <div className="fixed top-0 right-0 w-[500px] h-[500px] bg-gradient-to-bl from-pink-500/10 via-orange-400/5 to-transparent rounded-full blur-3xl pointer-events-none -z-10" />
+
       {/* Header */}
       <Header
         onOpenAuth={() => setIsAuthOpen(true)}
@@ -323,6 +333,24 @@ export default function Home() {
         onToggleTheme={handleToggleTheme}
       />
 
+      {/* Marquee Ticker Strip (matching Allen Benny Portfolio) */}
+      <div className="w-full bg-[#FF5500] text-white border-b-2 border-black overflow-hidden py-2 shadow-sm select-none">
+        <div className="animate-marquee text-xs font-black uppercase tracking-wider flex items-center gap-6 whitespace-nowrap">
+          <span>✦ 7-DAY ROLLING TIMELINE</span>
+          <span>✦ ZERO FOOD SPOILAGE</span>
+          <span>✦ NEO-BENTO PLANNING</span>
+          <span>✦ MACROS TRACKED</span>
+          <span>✦ COOK ONCE EAT 3X</span>
+          <span>✦ MEALZY</span>
+          <span>✦ 7-DAY ROLLING TIMELINE</span>
+          <span>✦ ZERO FOOD SPOILAGE</span>
+          <span>✦ NEO-BENTO PLANNING</span>
+          <span>✦ MACROS TRACKED</span>
+          <span>✦ COOK ONCE EAT 3X</span>
+          <span>✦ MEALZY</span>
+        </div>
+      </div>
+
       {/* Main Container */}
       <main className="max-w-7xl mx-auto px-4 sm:px-8 pt-6">
         {/* Early Item Completion Notice */}
@@ -332,17 +360,17 @@ export default function Home() {
               initial={{ opacity: 0, y: -15, scale: 0.96 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -10, scale: 0.96 }}
-              className="mb-6 p-4 rounded-2xl bg-white dark:bg-[#181A24] border border-amber-300 dark:border-amber-500/40 shadow-sm flex items-center justify-between gap-4"
+              className="mb-6 p-4 rounded-3xl bg-white dark:bg-[#16171E] border-2 border-black dark:border-amber-500/40 shadow-neo-lg flex items-center justify-between gap-4"
             >
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-yellow-300 flex items-center justify-center font-bold">
+                <div className="w-9 h-9 rounded-xl bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-yellow-300 border-2 border-black flex items-center justify-center font-black shadow-neo-sm">
                   <CheckCircle2 className="w-5 h-5" />
                 </div>
                 <div>
                   <h4 className="font-funky font-black text-sm text-gray-900 dark:text-white">
                     Completed Ahead of Schedule
                   </h4>
-                  <p className="text-xs text-gray-500 dark:text-gray-300">
+                  <p className="text-xs text-gray-500 dark:text-gray-300 font-medium">
                     Finished &quot;{quickGoneBadge.title}&quot;. Inventory updated.
                   </p>
                 </div>
@@ -353,7 +381,7 @@ export default function Home() {
                   handleQuickAdd(rollingDays[0].dateString, 'dinner');
                   setQuickGoneBadge({ title: '', show: false });
                 }}
-                className="px-3 py-1.5 bg-gray-900 hover:bg-black text-white dark:bg-[#D4FF00] dark:hover:bg-[#c3ed00] dark:text-black font-black text-xs rounded-xl shadow-sm transition-all flex items-center gap-1.5 flex-shrink-0"
+                className="px-3.5 py-2 bg-[#D4FF00] hover:bg-[#c3ed00] text-black font-black text-xs rounded-xl border-2 border-black shadow-neo-sm active:translate-x-0.5 active:translate-y-0.5 transition-all flex items-center gap-1.5 flex-shrink-0"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
                 <span>Re-Plan Meal</span>
@@ -389,9 +417,10 @@ export default function Home() {
               onQuickAddMeal={(slot) => handleQuickAdd(selectedDate, slot)}
             />
 
-            {/* Compact Fridge Rot / Perishable Priority Notification (only urgent items) */}
+            {/* Compact Fridge Rot / Perishable Priority Notification (only urgent unassigned > 7 days) */}
             <FridgeRotBanner
               items={fridgeItems}
+              meals={meals}
               onlyRotting={true}
               onConsumeItemToday={handleConsumeFridgeItem}
               onMarkFinishedEarly={handleMarkGoneEarly}
@@ -421,22 +450,28 @@ export default function Home() {
         {/* TAB 2: FRIDGE RADAR */}
         {activeTab === 'fridge' && (
           <div className="space-y-6">
-            <div className="bg-white dark:bg-[#12141B] border border-gray-200 dark:border-black rounded-3xl p-6 shadow-sm flex items-center justify-between transition-colors">
+            <div className="bg-white dark:bg-[#16171E] border-2 border-black dark:border-gray-800 rounded-3xl p-6 shadow-neo-lg flex items-center justify-between transition-colors">
               <div>
-                <h2 className="font-funky font-black text-xl text-gray-900 dark:text-white">
-                  PERISHABLE INVENTORY & REFRIGERATION
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="rotate-[-2deg] bg-[#FFE600] text-black font-black text-xs uppercase px-3 py-1 rounded-xl border-2 border-black shadow-neo-sm">
+                    PERISHABLE RADAR
+                  </span>
+                </div>
+                <h2 className="font-funky font-black text-xl text-gray-900 dark:text-white mt-1">
+                  INVENTORY &amp; SPOILAGE PREVENTION
                 </h2>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  Tracks prepared batches and leftovers so meals are consumed before spoilage.
+                  Tracks batch portions. Spoilage alert triggers strictly for items older than 7 days that remain unassigned.
                 </p>
               </div>
-              <div className="px-3 py-1.5 rounded-full bg-lime-400 dark:bg-[#D4FF00] text-black font-black text-xs">
+              <div className="px-3.5 py-1.5 rounded-2xl bg-[#D4FF00] text-black font-black text-xs border-2 border-black shadow-neo-sm">
                 {fridgeItems.length} Batches Active
               </div>
             </div>
 
             <FridgeRotBanner
               items={fridgeItems}
+              meals={meals}
               onConsumeItemToday={handleConsumeFridgeItem}
               onMarkFinishedEarly={handleMarkGoneEarly}
               onDeleteItem={(id) => db.fridge.delete(id)}
