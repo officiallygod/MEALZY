@@ -31,7 +31,7 @@ export default function RollingWeekSelector({
   return (
     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
       {/* Date Pill Scroller (Starts specifically with TODAY) */}
-      <div className="w-full sm:w-auto overflow-x-auto pb-2 sm:pb-0 scrollbar-none flex items-center gap-2.5">
+      <div className="w-full sm:w-auto overflow-x-auto pt-2.5 pb-2.5 px-1.5 scrollbar-none flex items-center gap-2.5">
         {days.map((day) => {
           const isSelected = selectedDate === day.dateString && !isAllDaysView;
           const stats = dayMealCounts[day.dateString] || { count: 0, calories: 0 };
@@ -43,7 +43,7 @@ export default function RollingWeekSelector({
                 onToggleAllDaysView(false);
                 onSelectDate(day.dateString);
               }}
-              className={`relative px-4 py-2.5 rounded-2xl flex flex-col items-center justify-center min-w-[80px] transition-all text-center border-2 ${
+              className={`relative px-4 py-2.5 rounded-2xl flex flex-col items-center justify-center min-w-[84px] flex-shrink-0 transition-all text-center border-2 ${
                 isSelected
                   ? 'bg-white dark:bg-[#1E202A] border-black dark:border-[#D4FF00] shadow-neo -translate-y-1'
                   : 'bg-white dark:bg-[#16171E] border-black/30 dark:border-gray-800 hover:border-black dark:hover:border-gray-500 shadow-neo-sm text-gray-600 dark:text-gray-300'

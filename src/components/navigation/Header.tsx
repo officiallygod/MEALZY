@@ -28,9 +28,9 @@ export default function Header({
 
   return (
     <header className="sticky top-0 z-40 bg-[#FAF8F5]/95 dark:bg-[#0D0E12]/95 backdrop-blur-xl border-b-2 border-black dark:border-gray-800 px-4 sm:px-8 py-3 transition-colors">
-      <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+      <div className="max-w-7xl mx-auto flex items-center justify-between gap-2 sm:gap-4">
         {/* Logo & Funky Stickers */}
-        <div className="flex items-center gap-3 sm:gap-4">
+        <div className="flex items-center gap-3 sm:gap-4 flex-shrink-0">
           <div className="flex items-center tracking-tight">
             <span className="font-funky font-black text-2xl sm:text-3xl text-gray-900 dark:text-white">
               MEAL
@@ -52,7 +52,7 @@ export default function Header({
         </div>
 
         {/* Center: Habit Streak & Daily Energy */}
-        <div className="hidden lg:flex items-center gap-3">
+        <div className="hidden xl:flex items-center gap-3 flex-shrink-0">
           {/* Consistency Streak */}
           <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white dark:bg-[#16171E] border-2 border-black dark:border-gray-700 text-xs font-black text-orange-600 dark:text-orange-400 shadow-neo-sm">
             <Flame className="w-3.5 h-3.5 fill-orange-500 text-orange-500" />
@@ -71,23 +71,23 @@ export default function Header({
         </div>
 
         {/* Right Actions */}
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2 sm:gap-2.5 flex-shrink-0">
           {/* Neo-Brutalist Theme Toggle (Pill like Portfolio) */}
           <button
             onClick={onToggleTheme}
             aria-label="Toggle Theme"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white dark:bg-[#16171E] border-2 border-black dark:border-gray-700 text-xs font-black text-gray-900 dark:text-white shadow-neo-sm hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-neo active:translate-x-0.5 active:translate-y-0.5 transition-all"
+            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full bg-white dark:bg-[#16171E] border-2 border-black dark:border-gray-700 text-xs font-black text-gray-900 dark:text-white shadow-neo-sm hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-neo active:translate-x-0.5 active:translate-y-0.5 transition-all flex-shrink-0"
             title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
           >
             {theme === 'dark' ? (
               <>
                 <Sun className="w-3.5 h-3.5 text-yellow-400" />
-                <span className="text-[11px] font-bold">Light</span>
+                <span className="hidden sm:inline text-[11px] font-bold">Light</span>
               </>
             ) : (
               <>
                 <Moon className="w-3.5 h-3.5 text-slate-800" />
-                <span className="text-[11px] font-bold">Dark</span>
+                <span className="hidden sm:inline text-[11px] font-bold">Dark</span>
               </>
             )}
           </button>
@@ -97,7 +97,7 @@ export default function Header({
             <button
               onClick={onExportWeekImage}
               aria-label="Save Week Image"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#FFE600] hover:bg-yellow-400 text-black font-black text-xs border-2 border-black shadow-neo-sm hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-neo active:translate-x-0.5 active:translate-y-0.5 transition-all"
+              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-[#FFE600] hover:bg-yellow-400 text-black font-black text-xs border-2 border-black shadow-neo-sm hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-neo active:translate-x-0.5 active:translate-y-0.5 transition-all flex-shrink-0"
               title="Generate & Save 7-Day Plan Image for Phone"
             >
               <Smartphone className="w-3.5 h-3.5" />
@@ -105,19 +105,19 @@ export default function Header({
             </button>
           )}
 
-          {/* Primary Action Button: Neon Orange "ADD MEAL" (Get in Touch Style) */}
+          {/* Primary Action Button: Neon Orange "ADD MEAL" */}
           <button
             onClick={onOpenAddMeal}
-            className="flex items-center gap-1.5 px-4 py-1.5 bg-[#FF5500] hover:bg-[#ff681a] text-white font-black text-xs rounded-xl border-2 border-black shadow-neo hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-neo-lg active:translate-x-0.5 active:translate-y-0.5 transition-all"
+            className="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 bg-[#FF5500] hover:bg-[#ff681a] text-white font-black text-xs rounded-xl border-2 border-black shadow-neo hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-neo-lg active:translate-x-0.5 active:translate-y-0.5 transition-all flex-shrink-0"
           >
             <Plus className="w-3.5 h-3.5 stroke-[3]" />
-            <span>ADD MEAL</span>
+            <span className="hidden xs:inline">ADD MEAL</span>
           </button>
 
           {/* User Auth Pill */}
           <button
             onClick={onOpenAuth}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-[#16171E] hover:bg-gray-100 dark:hover:bg-[#20222D] border-2 border-black dark:border-gray-700 text-gray-900 dark:text-white shadow-neo-sm active:translate-x-0.5 active:translate-y-0.5 transition-all text-xs font-black"
+            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-white dark:bg-[#16171E] hover:bg-gray-100 dark:hover:bg-[#20222D] border-2 border-black dark:border-gray-700 text-gray-900 dark:text-white shadow-neo-sm active:translate-x-0.5 active:translate-y-0.5 transition-all text-xs font-black flex-shrink-0"
           >
             <div className="w-5 h-5 rounded-md bg-black dark:bg-[#D4FF00] text-white dark:text-black flex items-center justify-center text-[10px] font-black">
               {userEmail ? userEmail[0].toUpperCase() : <User className="w-3 h-3" />}
@@ -128,6 +128,7 @@ export default function Header({
           </button>
         </div>
       </div>
+
     </header>
   );
 }
