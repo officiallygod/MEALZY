@@ -1,22 +1,60 @@
-# MEALZY
+<div align="center">
 
-MEALZY is a responsive, cross-platform meal planning and food inventory management application designed for web browsers, progressive web applications (PWA), and native mobile operating systems (iOS and Android via Capacitor).
+  <img src="./public/logo.jpg" alt="MEALZY Logo - EST. 2026" width="180" style="border-radius: 28px; box-shadow: 4px 4px 0px #000000; border: 3px solid #000000;" />
 
-The system addresses meal scheduling, macro tracking, leftover distribution, and perishable food monitoring through a local-first, privacy-focused architecture.
+  # MEALZY
+  ### The Neo-Brutalist, Zero-Waste 7-Day Meal Planner
+
+  [![Next.js](https://img.shields.io/badge/Next.js%2015-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)](https://nextjs.org/)
+  [![React 19](https://img.shields.io/badge/React%2019-00E5FF?style=for-the-badge&logo=react&logoColor=black)](https://react.dev/)
+  [![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+  [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38BDF8?style=for-the-badge&logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
+  [![Dexie.js](https://img.shields.io/badge/Dexie.js-IndexedDB-10B981?style=for-the-badge&logo=databricks&logoColor=white)](https://dexie.org/)
+  [![Capacitor](https://img.shields.io/badge/Capacitor%206-Mobile-119EFF?style=for-the-badge&logo=capacitor&logoColor=white)](https://capacitorjs.com/)
+  [![License: MIT](https://img.shields.io/badge/License-MIT-FFE600?style=for-the-badge&logoColor=black)](LICENSE)
+  [![Made by Allen Benny](https://img.shields.io/badge/Made%20by-Allen%20Benny-FF5500?style=for-the-badge&logo=githubsponsors&logoColor=white)](https://allenbenny.me/)
+
+  <p align="center">
+    <b>Plan what to make. Track macros in real time. Zero food rot. Zero cloud subscription fees.</b>
+    <br />
+    A local-first, privacy-respecting meal planner with seamless Google Drive sync and high-energy Neo-Brutalist design.
+  </p>
+
+  [Live Demo](https://officiallygod.github.io/MEALZY) • [Documentation](#overview) • [Architecture](#system-architecture) • [Getting Started](#local-development--compilation)
+
+</div>
+
+---
+
+## Visual Tour & Screenshots
+
+<div align="center">
+
+### Desktop 7-Day Bento Board & Real-Time Macro Tracker
+<img src="./public/screenshots/mealzy-desktop.png" alt="Mealzy Desktop Bento Board" width="95%" style="border-radius: 12px; border: 2px solid #000000; box-shadow: 4px 4px 0px #000000;" />
+
+<br/><br/>
+
+| Mobile Day Bento View | Mobile Zero-Waste Fridge Radar |
+| :---: | :---: |
+| <img src="./public/screenshots/mealzy-mobile-bento.png" alt="Mealzy Mobile Bento View" width="340" style="border-radius: 16px; border: 2px solid #000000; box-shadow: 3px 3px 0px #000000;" /> | <img src="./public/screenshots/mealzy-mobile-radar.png" alt="Mealzy Mobile Fridge Radar" width="340" style="border-radius: 16px; border: 2px solid #000000; box-shadow: 3px 3px 0px #000000;" /> |
+
+</div>
 
 ---
 
 ## Overview
 
-Traditional meal planning applications often introduce cognitive friction through outdated calendar interfaces, rigid ingredient structures, or reliance on costly proprietary cloud backends. MEALZY provides a streamlined, responsive solution with:
+Traditional meal planning applications often introduce cognitive friction through rigid calendar grids, complex recipes, or costly proprietary cloud backends. MEALZY provides a streamlined, responsive solution with:
 
-- A rolling seven-day timeline anchored to the current day, eliminating historical dates from the active planning view.
-- A hybrid schedule interface offering both a daily Bento-style focus and a comprehensive seven-day Kanban overview.
-- Fluid drag-and-drop scheduling across meal slots (Breakfast, Lunch, Dinner, Snack).
-- Multi-portion leftover scheduling ("Cook Once, Eat Multiple") that automatically allocates subsequent portions across future days.
-- A perishable inventory monitor (Fridge Radar) that tracks cooked meals and alerts users to items approaching extended shelf life.
-- Client-side heuristic recommendation logic to identify user dietary trends and propose recipe variations without external API dependencies.
-- A zero-cost, privacy-preserving cloud synchronization layer utilizing user-owned Google Drive application storage (`appDataFolder`).
+- **Rolling 7-Day Timeline:** Anchored strictly to today. Past days drop off automatically, so you only focus on upcoming meals.
+- **Hybrid Bento Interface:** Effortlessly toggle between single-day deep focus (Day Bento) and a full-week bird's-eye view (7-Day Kanban).
+- **Tactile Drag-and-Drop & Quick Move:** Fluidly organize Breakfast, Lunch, Dinner, and Snacks.
+- **Smart "Ate Out / Dining Out" Engine:** Going to a restaurant or ordering takeout? Log it in seconds, and Mealzy automatically pushes your planned dishes to tomorrow (or saves them to the fridge), complete with leftover takeout tracking.
+- **Cook Once, Eat Multiple:** Mark batch dishes with multi-portion yields (2x to 4x). Subsequent meals are automatically scheduled across upcoming days with linked tags.
+- **Perishable Fridge Radar:** Tracks home-cooked batches and alerts you before items reach extended storage limits (3+ days and 7+ days).
+- **Client-Side AI Heuristics:** Curated recipes, instant Smart Auto-Fill for empty slots, and pantry rescue recommendations without external API dependencies.
+- **Zero-Cost Google Drive Sync:** Keep all your data completely private in your own Google Drive `appDataFolder`. No central database or third-party tracking.
 
 ---
 
@@ -39,28 +77,28 @@ MEALZY is structured as a local-first Progressive Web Application with client-si
 | Google Identity Services -> Google Drive (appDataFolder)   |
 +-------------------------------------------------------------+
 |                   Native Runtime Target                     |
-| Capacitor 6 (iOS & Android Native Webview Packaging)       |
+| Capacitor 6 (Mobile Native Webview Packaging)              |
 +-------------------------------------------------------------+
 ```
 
 ### Technology Stack
 
-- Framework: Next.js 15 (React 19, Static HTML Export)
-- Styling: Tailwind CSS
-- Animation Engine: Framer Motion
-- Client Database: Dexie.js (IndexedDB wrapper)
-- Icons: Lucide React
-- Mobile Runtime: Capacitor 6 Core & CLI
-- Continuous Deployment: GitHub Actions to GitHub Pages
+- **Framework:** Next.js 15 (React 19, Static HTML Export)
+- **Styling:** Tailwind CSS with custom Neo-Brutalist design tokens
+- **Motion & Interactions:** Framer Motion + Canvas Confetti
+- **Client Database:** Dexie.js (IndexedDB with live reactive hooks)
+- **Icons:** Lucide React
+- **Mobile Runtime:** Capacitor 6 Core & CLI
+- **Continuous Deployment:** GitHub Actions to GitHub Pages
 
 ---
 
-## Functional Specifications
+## Key Features
 
 ### 1. Rolling Seven-Day Planner
 The application dynamically calculates a rolling seven-day window starting from today. Past days are omitted from the primary interface to preserve planning focus. Users can toggle between:
-- Day Bento View: Detailed inspection of individual meal slots, macros, and preparation metadata.
-- Seven-Day Overview: Comprehensive visual board across all upcoming dates.
+- **Day Bento View:** Detailed inspection of individual meal slots, macros, and preparation metadata.
+- **Seven-Day Overview:** Comprehensive visual board across all upcoming dates.
 
 ### 2. Leftover Distribution Engine
 When recording a meal as cooked, users can specify portion yield (1x to 4x portions). The system automatically creates linked leftover records in subsequent meal slots and registers the batch within the perishable inventory tracker.
@@ -70,17 +108,14 @@ Cooked batches and refrigerated meals are timestamped. If an item remains uncons
 - Assign the item to today's schedule with a single interaction.
 - Log early completion ("Gone Already"), which removes related pending leftovers and issues a replan prompt.
 
-### 4. Client-Side Recommendation Heuristics
-An embedded heuristic model evaluates scheduling history, preferred macro distributions, and recurring dietary patterns to generate:
-- Repeat recommendations for frequent choices.
-- Recipe variations ("Flavors with a Twist") that modify familiar base recipes.
-- Fridge rescue suggestions pairing aging perishables into cohesive meals.
+### 4. Smart Auto-Fill & Nutrition Monitor
+The header monitor tracks daily caloric intake and macronutrient splits (Protein, Carbs, Fats) against personal targets. Click the tactile Sparkle button to instantly Auto-Fill any unassigned meal slots using smart dietary heuristics.
 
-### 5. Curated Culinary Catalog and Fallback Rendering
-The system incorporates an extensive catalog of popular meals complete with nutritional benchmarks. For custom dishes without associated photographic assets, the interface procedurally generates high-contrast typographic badge graphics, eliminating missing asset placeholders.
-
-### 6. Privacy & Cookie Compliance
-An integrated consent interface allows granular configuration of client-side storage behaviors, distinguishing between essential scheduling tokens, inventory state preservation, and local analytical preferences.
+### 5. Instant "Ate Out" Redistribution
+When dining out or ordering takeout:
+- Pick whether to push your planned meals forward to tomorrow or save them in the fridge.
+- Specify leftover takeout portions to reheat for tomorrow's lunch.
+- Includes a 5-second undo toast with celebratory confetti!
 
 ---
 
@@ -89,10 +124,10 @@ An integrated consent interface allows granular configuration of client-side sto
 MEALZY uses a zero-cost, decentralized cloud synchronization model that requires no centralized database infrastructure.
 
 ### Google Drive AppData Synchronization
-- Protocol: Google OAuth 2.0 (PKCE via Google Identity Services)
-- Scope: `https://www.googleapis.com/auth/drive.appdata`
-- Storage: An encrypted snapshot file (`mealzy_sync.json`) stored within the user's private Google Drive application data folder.
-- Benefits:
+- **Protocol:** Google OAuth 2.0 (PKCE via Google Identity Services)
+- **Scope:** `https://www.googleapis.com/auth/drive.appdata`
+- **Storage:** An encrypted snapshot file (`mealzy_sync.json`) stored within the user's private Google Drive application data folder.
+- **Benefits:**
   - Zero centralized infrastructure overhead or database hosting costs.
   - User meal history and dietary data remain strictly within the user's personal Google account.
   - Multi-device synchronization functions across web browsers, tablets, and native mobile installs.
@@ -176,6 +211,12 @@ To activate automated deployment:
 
 ---
 
+## Author
+
+Crafted with love by **[Allen Benny](https://allenbenny.me/)**.
+
+---
+
 ## License
 
-This project is distributed under the MIT License. See LICENSE for details.
+This project is distributed under the MIT License. See [LICENSE](LICENSE) for details.

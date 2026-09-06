@@ -1,7 +1,42 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
-  <rect x="2" y="2" width="28" height="28" rx="7" fill="#FF5500" stroke="#000000" stroke-width="2.5"/>
-  <!-- Stylized M -->
-  <path d="M7 23V9.5L13.5 17.5L20 9.5V23" stroke="#FFFFFF" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-  <!-- Neon Lime Accent Sparkle -->
-  <path d="M25 5L25.8 7.2L28 8L25.8 8.8L25 11L24.2 8.8L22 8L24.2 7.2Z" fill="#D4FF00" stroke="#000000" stroke-width="0.8"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%" fill="none">
+  <defs>
+    <!-- Cyan to Neon Lime Gradient for Outer M Legs -->
+    <linearGradient id="mealzyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#00E5FF" />
+      <stop offset="70%" stop-color="#00E5FF" />
+      <stop offset="100%" stop-color="#D4FF00" />
+    </linearGradient>
+    <linearGradient id="cyanHighlight" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#7CFAFF" />
+      <stop offset="100%" stop-color="#00E5FF" />
+    </linearGradient>
+  </defs>
+
+  <!-- 1. Hard Offset Neo-Brutalist Black Drop Shadow with EST. 2026 -->
+  <g transform="translate(4, 5)">
+    <path d="M 22 24 C 17 24 14 27 14 32 L 14 78 C 14 83 18 86 24 86 L 80 86 C 86 86 90 82 90 77 L 90 32 C 90 27 87 24 82 24 L 63 24 L 59 18 L 47 18 L 43 24 Z" fill="#000000" />
+    <rect x="52" y="80" width="38" height="11" rx="4" fill="#000000" />
+    <text x="86" y="89" fill="#00E5FF" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-weight="900" font-size="6.5" letter-spacing="0.6" text-anchor="end">EST. 2026</text>
+  </g>
+
+  <!-- 2. Die-Cut White Sticker Outline -->
+  <path d="M 20 22 C 14 22 10 26 10 32 L 10 78 C 10 84 15 88 22 88 L 78 88 C 85 88 89 83 89 77 L 89 31 C 89 25 85 22 79 22 L 62 22 L 58 15 L 45 15 L 41 22 Z" fill="#FFFFFF" stroke="#000000" stroke-width="3" stroke-linejoin="round" />
+
+  <!-- 3. The Streetwear "M" - Left Leg (Cyan Gradient) -->
+  <path d="M 18 29 L 34 29 L 34 50 L 39 59 L 32 79 L 18 79 Z" fill="url(#mealzyGrad)" stroke="#000000" stroke-width="3.2" stroke-linejoin="round" />
+  <path d="M 21 33 L 30 33 L 30 46" stroke="url(#cyanHighlight)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+
+  <!-- 4. The Streetwear "M" - Right Leg (Cyan Gradient) -->
+  <path d="M 64 29 L 80 29 L 80 79 L 66 79 L 59 59 L 64 50 Z" fill="url(#mealzyGrad)" stroke="#000000" stroke-width="3.2" stroke-linejoin="round" />
+  <path d="M 68 33 L 77 33 L 77 46" stroke="url(#cyanHighlight)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+
+  <!-- 5. The Centerpiece Neon Lime Fork -->
+  <path d="M 40 28 L 44 28 L 44 45 L 47 45 L 47 28 L 50 28 L 50 45 L 53 45 L 53 28 L 57 28 L 57 49 C 57 56 53 58 53 64 L 53 80 L 44 80 L 44 64 C 44 58 40 56 40 49 Z" fill="#D4FF00" stroke="#000000" stroke-width="3" stroke-linejoin="round" />
+
+  <!-- 6. Surrounding Neon Lime Acid Sparkle Stars ✦ -->
+  <path d="M 77 15 L 79.5 22.5 L 87 25 L 79.5 27.5 L 77 35 L 74.5 27.5 L 67 25 L 74.5 22.5 Z" fill="#D4FF00" stroke="#000000" stroke-width="2" stroke-linejoin="round" />
+  <path d="M 62 12 L 63.5 16.5 L 68 18 L 63.5 19.5 L 62 24 L 60.5 19.5 L 56 18 L 60.5 16.5 Z" fill="#D4FF00" stroke="#000000" stroke-width="1.6" stroke-linejoin="round" />
+  <path d="M 87 37 L 88.5 41 L 93 42.5 L 88.5 44 L 87 48 L 85.5 44 L 81 42.5 L 85.5 41 Z" fill="#D4FF00" stroke="#000000" stroke-width="1.6" stroke-linejoin="round" />
+  <path d="M 21 68 L 23.5 74.5 L 30 77 L 23.5 79.5 L 21 86 L 18.5 79.5 L 12 77 L 18.5 74.5 Z" fill="#D4FF00" stroke="#000000" stroke-width="2" stroke-linejoin="round" />
+  <path d="M 13 56 L 14.5 60 L 19 61.5 L 14.5 63 L 13 67 L 11.5 63 L 7 61.5 L 11.5 60 Z" fill="#D4FF00" stroke="#000000" stroke-width="1.5" stroke-linejoin="round" />
 </svg>

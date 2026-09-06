@@ -53,10 +53,24 @@ export default function SplashScreen({ isReady, onFinished }: SplashScreenProps)
             transition={{ type: 'spring', damping: 12, stiffness: 200 }}
             className="flex items-center gap-3 mb-6"
           >
-            <div className="w-14 h-14 rounded-2xl bg-[#FF5500] border-2 border-black flex items-center justify-center shadow-neo">
-              <svg viewBox="0 0 32 32" className="w-8 h-8 fill-none">
-                <path d="M7 23V9.5L13.5 17.5L20 9.5V23" stroke="#FFFFFF" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" />
-                <path d="M25 5L25.8 7.2L28 8L25.8 8.8L25 11L24.2 8.8L22 8L24.2 7.2Z" fill="#D4FF00" stroke="#000000" strokeWidth="0.8" />
+            <div className="w-14 h-14 rounded-2xl bg-white dark:bg-[#16171E] border-2 border-black flex items-center justify-center shadow-neo p-1">
+              <svg viewBox="0 0 100 100" className="w-full h-full fill-none">
+                <defs>
+                  <linearGradient id="splashMealzyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stopColor="#00E5FF" />
+                    <stop offset="70%" stopColor="#00E5FF" />
+                    <stop offset="100%" stopColor="#D4FF00" />
+                  </linearGradient>
+                </defs>
+                {/* Left Pillar */}
+                <path d="M 18 29 L 34 29 L 34 50 L 39 59 L 32 79 L 18 79 Z" fill="url(#splashMealzyGrad)" stroke="#000000" strokeWidth="4" strokeLinejoin="round" />
+                {/* Right Pillar */}
+                <path d="M 64 29 L 80 29 L 80 79 L 66 79 L 59 59 L 64 50 Z" fill="url(#splashMealzyGrad)" stroke="#000000" strokeWidth="4" strokeLinejoin="round" />
+                {/* Center Lime Fork */}
+                <path d="M 40 28 L 44 28 L 44 45 L 47 45 L 47 28 L 50 28 L 50 45 L 53 45 L 53 28 L 57 28 L 57 49 C 57 56 53 58 53 64 L 53 80 L 44 80 L 44 64 C 44 58 40 56 40 49 Z" fill="#D4FF00" stroke="#000000" strokeWidth="4" strokeLinejoin="round" />
+                {/* Sparkle Stars */}
+                <path d="M 77 15 L 79.5 22.5 L 87 25 L 79.5 27.5 L 77 35 L 74.5 27.5 L 67 25 L 74.5 22.5 Z" fill="#D4FF00" stroke="#000000" strokeWidth="2.5" strokeLinejoin="round" />
+                <path d="M 21 68 L 23.5 74.5 L 30 77 L 23.5 79.5 L 21 86 L 18.5 79.5 L 12 77 L 18.5 74.5 Z" fill="#D4FF00" stroke="#000000" strokeWidth="2.5" strokeLinejoin="round" />
               </svg>
             </div>
             <div className="flex items-center tracking-tight">
