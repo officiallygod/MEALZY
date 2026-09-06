@@ -5,7 +5,7 @@ import { Heart, Database } from 'lucide-react';
 
 export default function Footer() {
   return (
-    <footer className="mt-16 border-t-2 border-black/10 dark:border-gray-800 bg-[#FAF8F5]/80 dark:bg-[#0D0E12]/80 backdrop-blur-md pt-8 pb-28 px-4 text-center transition-colors">
+    <footer className="mt-12 border-t-2 border-black/10 dark:border-gray-800 bg-[#FAF8F5]/80 dark:bg-[#0D0E12]/80 backdrop-blur-md pt-6 pb-24 px-4 text-center transition-colors">
       <div className="max-w-4xl mx-auto flex flex-col items-center gap-2.5">
         {/* Brand & Made with Love by Allen Benny */}
         <div className="flex items-center gap-2 flex-wrap justify-center">

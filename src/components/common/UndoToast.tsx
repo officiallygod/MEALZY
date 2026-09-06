@@ -44,31 +44,26 @@ export default function UndoToast({ action, onDismiss }: UndoToastProps) {
   return (
     <AnimatePresence>
       {action && (
-        <motion.div
-          key={action.id}
-          initial={{ opacity: 0, y: 35, scale: 0.95 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: 20, scale: 0.95 }}
-          transition={{ type: 'spring', damping: 25, stiffness: 350 }}
-          className="fixed bottom-20 sm:bottom-24 left-1/2 -translate-x-1/2 z-50 w-[92%] max-w-md bg-[#16171E] dark:bg-[#FFE600] text-white dark:text-black border-2 border-black rounded-2xl shadow-neo p-3.5 flex flex-col gap-2.5 select-none"
-        >
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex items-start gap-2.5 min-w-0 flex-1">
-              <div className="w-7 h-7 rounded-xl bg-[#FF5500] text-white border-2 border-black flex items-center justify-center flex-shrink-0 font-black text-xs shadow-neo-sm mt-0.5">
-                {action.badge ? action.badge : <Sparkles className="w-3.5 h-3.5" />}
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-xs font-black leading-tight text-white dark:text-black truncate">
-                  {action.message}
-                </p>
-                {action.funSubtext && (
-                  <p className="text-[11px] font-bold text-[#D4FF00] dark:text-gray-800 mt-0.5 leading-snug">
-                    {action.funSubtext}
-                  </p>
-                )}
-              </div>
+        <div className="fixed bottom-20 sm:bottom-24 inset-x-0 z-50 flex justify-center pointer-events-none px-3">
+          <motion.div
+            key={action.id}
+            initial={{ opacity: 0, y: 15, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 10, scale: 0.95 }}
+            transition={{ type: 'spring', damping: 25, stiffness: 350 }}
+            className="pointer-events-auto relative overflow-hidden bg-[#16171E] dark:bg-[#FFE600] text-white dark:text-black border-2 border-black rounded-2xl shadow-neo px-3 py-2 flex items-center gap-2.5 select-none max-w-[92vw] sm:max-w-sm"
+          >
+            {/* Quick Badge / Icon */}
+            <div className="w-5 h-5 rounded-lg bg-[#FF5500] text-white border border-black flex items-center justify-center flex-shrink-0 font-black text-[11px] shadow-sm">
+              {action.badge ? action.badge : <Sparkles className="w-2.5 h-2.5" />}
             </div>
 
+            {/* Crisp, Concise Message */}
+            <span className="text-xs font-black leading-tight text-white dark:text-black truncate min-w-0 flex-1">
+              {action.message}
+            </span>
+
+            {/* Actions: UNDO + Close */}
             <div className="flex items-center gap-1.5 flex-shrink-0">
               {action.onUndo && (
                 <button
@@ -77,9 +72,9 @@ export default function UndoToast({ action, onDismiss }: UndoToastProps) {
                     if (action.onUndo) action.onUndo();
                     onDismiss();
                   }}
-                  className="px-3 py-1 bg-[#D4FF00] dark:bg-black text-black dark:text-[#D4FF00] font-black text-xs rounded-xl border-2 border-black shadow-neo-sm active:scale-95 transition-all flex items-center gap-1 cursor-pointer"
+                  className="px-2.5 py-1 bg-[#D4FF00] dark:bg-black text-black dark:text-[#D4FF00] font-black text-[10px] rounded-lg border border-black shadow-neo-sm active:scale-95 transition-all flex items-center gap-1 cursor-pointer"
                 >
-                  <RotateCcw className="w-3.5 h-3.5 stroke-[2.5]" />
+                  <RotateCcw className="w-2.5 h-2.5 stroke-[3]" />
                   <span>UNDO</span>
                 </button>
               )}
@@ -88,21 +83,21 @@ export default function UndoToast({ action, onDismiss }: UndoToastProps) {
                 type="button"
                 onClick={onDismiss}
                 aria-label="Dismiss toast"
-                className="w-6 h-6 rounded-lg border border-black/30 dark:border-black/50 flex items-center justify-center text-gray-400 hover:text-white dark:text-black/60 dark:hover:text-black active:scale-95"
+                className="w-5 h-5 rounded-lg border border-black/30 dark:border-black/50 flex items-center justify-center text-gray-400 hover:text-white dark:text-black/60 dark:hover:text-black active:scale-95 cursor-pointer"
               >
-                <X className="w-3.5 h-3.5" />
+                <X className="w-3 h-3" />
               </button>
             </div>
-          </div>
 
-          {/* 5-second animated countdown timer bar */}
-          <div className="w-full h-1 bg-white/20 dark:bg-black/20 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-[#FF5500] dark:bg-black transition-all duration-75"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-        </motion.div>
+            {/* Integrated micro progress line */}
+            <div className="absolute bottom-0 inset-x-0 h-0.5 bg-white/20 dark:bg-black/20">
+              <div
+                className="h-full bg-[#FF5500] dark:bg-black transition-all duration-75"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+          </motion.div>
+        </div>
       )}
     </AnimatePresence>
   );

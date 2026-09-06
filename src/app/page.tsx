@@ -703,16 +703,14 @@ export default function Home() {
 
   if (!isClient) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-[#0A0B0E] flex items-center justify-center">
-        <div className="w-10 h-10 rounded-xl bg-black dark:bg-[#D4FF00] flex items-center justify-center text-white dark:text-black font-black text-lg">
-          M
-        </div>
+      <div className="min-h-screen bg-[#FAF8F5] dark:bg-[#0D0E12] flex items-center justify-center">
+        <SplashScreen isReady={false} />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#F7F4EE] dark:bg-[#0D0E12] text-gray-900 dark:text-white pb-32 transition-colors duration-200 relative overflow-x-hidden">
+    <div className="min-h-screen bg-[#F7F4EE] dark:bg-[#0D0E12] text-gray-900 dark:text-white pb-0 transition-colors duration-200 relative overflow-x-hidden">
       {/* Soft Ambient Background Glow (matching Allen Benny Portfolio) */}
       <div className="fixed top-0 right-0 w-[500px] h-[500px] bg-gradient-to-bl from-pink-500/10 via-orange-400/5 to-transparent rounded-full blur-3xl pointer-events-none -z-10" />
 

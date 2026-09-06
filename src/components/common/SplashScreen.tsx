@@ -20,22 +20,22 @@ export default function SplashScreen({ isReady, onFinished }: SplashScreenProps)
   const [msgIndex, setMsgIndex] = useState(0);
 
   useEffect(() => {
-    const timer = setInterval(() => {
+    // Cycle through 4 messages across 3 seconds (~750ms each)
+    const msgTimer = setInterval(() => {
       setMsgIndex((prev) => (prev < FUNKY_MESSAGES.length - 1 ? prev + 1 : prev));
-    }, 350);
+    }, 750);
 
-    return () => clearInterval(timer);
-  }, []);
+    // 3-second startup window for behind-the-scenes background sync & setup
+    const exitTimer = setTimeout(() => {
+      setIsVisible(false);
+      if (onFinished) onFinished();
+    }, 3000);
 
-  useEffect(() => {
-    if (isReady) {
-      const timeout = setTimeout(() => {
-        setIsVisible(false);
-        if (onFinished) onFinished();
-      }, 750);
-      return () => clearTimeout(timeout);
-    }
-  }, [isReady, onFinished]);
+    return () => {
+      clearInterval(msgTimer);
+      clearTimeout(exitTimer);
+    };
+  }, [onFinished]);
 
   return (
     <AnimatePresence>
@@ -85,11 +85,11 @@ export default function SplashScreen({ isReady, onFinished }: SplashScreenProps)
           </div>
 
           {/* Animated Progress Bar */}
-          <div className="w-48 h-2 bg-gray-200 dark:bg-gray-800 rounded-full border-2 border-black dark:border-gray-700 mt-4 overflow-hidden shadow-neo-sm">
+          <div className="w-52 h-2.5 bg-gray-200 dark:bg-gray-800 rounded-full border-2 border-black dark:border-gray-700 mt-4 overflow-hidden shadow-neo-sm">
             <motion.div
-              initial={{ width: '10%' }}
-              animate={{ width: isReady ? '100%' : '75%' }}
-              transition={{ duration: 0.6, ease: 'easeOut' }}
+              initial={{ width: '5%' }}
+              animate={{ width: '100%' }}
+              transition={{ duration: 2.9, ease: 'easeInOut' }}
               className="h-full bg-[#FF5500]"
             />
           </div>

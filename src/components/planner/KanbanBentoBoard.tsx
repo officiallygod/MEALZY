@@ -147,10 +147,7 @@ export default function KanbanBentoBoard({
       onTriggerToast({
         id: `snacks-pref-${Date.now()}`,
         badge: '🍱',
-        message: minimized ? 'Snacks Minimized to Side Tab' : '4 Dedicated Columns Kept',
-        funSubtext: minimized
-          ? 'Breakfast, Lunch, and Dinner expanded to 33% each!'
-          : 'All 4 columns visible side-by-side.',
+        message: minimized ? 'Snacks Minimized' : 'Snacks Expanded',
         onUndo: () => {
           handleSetSnacksPreference(!minimized);
         },
@@ -167,10 +164,7 @@ export default function KanbanBentoBoard({
       onTriggerToast({
         id: `snacks-toggle-${Date.now()}`,
         badge: val ? '🍱' : '🍪',
-        message: val ? 'Snacks Minimized to Side Tab' : 'Snacks Column Expanded',
-        funSubtext: val
-          ? 'Tucked into the vertical side tab next to Dinner.'
-          : 'Dedicated snacking headquarters open!',
+        message: val ? 'Snacks Minimized' : 'Snacks Expanded',
         onUndo: () => {
           toggleSnacksMinimized(!val);
         },
