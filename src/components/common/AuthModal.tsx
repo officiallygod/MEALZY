@@ -103,16 +103,7 @@ export default function AuthModal({
         cancel_on_tap_outside: true,
       });
 
-      if (googleBtnRef.current) {
-        googleBtnRef.current.innerHTML = '';
-        (window as any).google.accounts.id.renderButton(googleBtnRef.current, {
-          theme: 'filled_black',
-          size: 'large',
-          shape: 'pill',
-          width: 320,
-          text: 'continue_with',
-        });
-      }
+      // Google Identity initialized for One-Tap or Credential response
     } catch (err) {
       console.warn('Google Identity initialization notice:', err);
     }
@@ -148,13 +139,17 @@ export default function AuthModal({
           if (tokenResponse?.error) {
             console.error('Google OAuth error:', tokenResponse);
             if (tokenResponse.error === 'access_denied') {
+              if (requestDriveScope) {
+                handleGoogleSignInPopup(false);
+                return;
+              }
               setStatusMsg({
-                text: 'Access Denied: Add your email to "Test users" in Google Cloud Console, or use "Sign In (Profile Only)" below.',
+                text: 'Google Sign-In canceled or access was denied.',
                 type: 'error',
               });
             } else {
               setStatusMsg({
-                text: `Google Sign-In canceled or blocked (${tokenResponse.error_description || tokenResponse.error}).`,
+                text: `Google Sign-In canceled (${tokenResponse.error_description || tokenResponse.error}).`,
                 type: 'error',
               });
             }
@@ -556,15 +551,15 @@ export default function AuthModal({
               </p>
             </div>
 
-            {/* PRIMARY ACTION: POPUP GOOGLE SIGN-IN */}
+            {/* Theme-Matching Neo-Brutalist Google Sign-In Button */}
             <button
               type="button"
               onClick={() => handleGoogleSignInPopup(true)}
               disabled={isSigningIn}
-              className="w-full py-3.5 px-4 bg-white hover:bg-gray-50 text-gray-900 font-black text-sm rounded-2xl border-2 border-black shadow-neo flex items-center justify-center gap-3 transition-colors active:scale-[0.98] cursor-pointer disabled:opacity-60"
+              className="w-full py-3.5 px-4 bg-white dark:bg-[#1E202B] hover:bg-gray-50 dark:hover:bg-[#282B3A] text-gray-900 dark:text-white font-black text-sm rounded-2xl border-2 border-black dark:border-gray-700 shadow-neo hover:shadow-neo-lg active:translate-x-0.5 active:translate-y-0.5 flex items-center justify-center gap-3 transition-all cursor-pointer disabled:opacity-60 select-none"
             >
               {isSigningIn ? (
-                <RefreshCw className="w-5 h-5 animate-spin text-gray-600" />
+                <RefreshCw className="w-5 h-5 animate-spin text-[#FF5500]" />
               ) : (
                 <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24">
                   <path
@@ -585,27 +580,10 @@ export default function AuthModal({
                   />
                 </svg>
               )}
-              <span className="uppercase tracking-wider">
+              <span className="font-funky uppercase tracking-wider">
                 {isSigningIn ? 'Connecting to Google...' : 'Sign In with Google'}
               </span>
             </button>
-
-            {/* INSTANT BASIC PROFILE OPTION (NEVER BLOCKED BY GOOGLE VERIFICATION) */}
-            <div className="text-center pt-0.5">
-              <button
-                type="button"
-                onClick={() => handleGoogleSignInPopup(false)}
-                disabled={isSigningIn}
-                className="text-xs font-bold text-gray-600 dark:text-gray-300 hover:text-black dark:hover:text-white underline decoration-black/30 dark:decoration-white/30 hover:decoration-black transition-colors cursor-pointer py-1 inline-flex items-center gap-1"
-              >
-                <span>Or Sign In with Basic Profile (Instant)</span>
-              </button>
-            </div>
-
-            {/* Official Rendered Google Button Container (Fallback / One Tap) */}
-            <div className="flex justify-center pt-1">
-              <div ref={googleBtnRef} className="min-h-[40px] flex items-center justify-center" />
-            </div>
 
             {/* Daily Maintenance Calories Setting Card */}
             <div className="p-4 rounded-2xl bg-[#FAF8F5] dark:bg-[#20222E] border-2 border-black dark:border-gray-700 shadow-neo-sm space-y-3">

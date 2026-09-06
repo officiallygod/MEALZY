@@ -172,15 +172,6 @@ export default function Header({
             </button>
           )}
 
-          {/* Primary Action Button: Neon Orange "ADD MEAL" */}
-          <button
-            onClick={onOpenAddMeal}
-            className="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 bg-[#FF5500] hover:bg-[#ff681a] text-white font-black text-xs rounded-xl border-2 border-black shadow-neo active:scale-[0.98] transition-colors flex-shrink-0"
-          >
-            <Plus className="w-3.5 h-3.5 stroke-[3]" />
-            <span className="hidden xs:inline">ADD MEAL</span>
-          </button>
-
           {/* User Auth Pill */}
           <button
             onClick={onOpenAuth}

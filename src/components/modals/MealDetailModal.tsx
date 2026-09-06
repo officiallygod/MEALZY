@@ -5,7 +5,6 @@ import { motion } from 'framer-motion';
 import {
   X,
   Clock,
-  ChefHat,
   Trash2,
   RotateCcw,
   Sparkles,
@@ -34,7 +33,7 @@ interface MealDetailModalProps {
   meal: MealItem | null;
   isOpen: boolean;
   onClose: () => void;
-  onCookClick: (meal: MealItem) => void;
+  onCookClick?: (meal: MealItem) => void;
   onAteOutClick?: (meal: MealItem) => void;
   onMarkGoneEarly: (mealId: string, mealTitle: string) => void;
   onDeleteMeal: (mealId: string) => void;
@@ -138,17 +137,41 @@ export default function MealDetailModal({
             </div>
           </div>
 
-          <button
-            onClick={onClose}
-            aria-label="Close"
-            className="w-8 h-8 rounded-xl bg-[#FAF8F5] dark:bg-[#20222E] border-2 border-black dark:border-gray-700 flex items-center justify-center text-gray-700 dark:text-gray-300 hover:text-black dark:hover:text-white shadow-neo-sm active:scale-95 transition-colors"
-          >
-            <X className="w-4 h-4 stroke-[2.5]" />
-          </button>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <button
+              type="button"
+              onClick={async () => {
+                onClose();
+                if (onDuplicateMeal) {
+                  onDuplicateMeal(meal);
+                } else {
+                  const id = `meal-dup-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+                  await db.meals.add({
+                    ...meal,
+                    id,
+                  });
+                  confetti({ particleCount: 40, spread: 60, origin: { y: 0.6 } });
+                }
+              }}
+              className="w-8 h-8 rounded-xl bg-[#FAF8F5] dark:bg-[#20222E] hover:bg-[#D4FF00] hover:text-black dark:hover:bg-[#D4FF00] dark:hover:text-black border-2 border-black dark:border-gray-700 flex items-center justify-center text-gray-700 dark:text-gray-300 shadow-neo-sm active:scale-95 transition-all cursor-pointer"
+              title="Duplicate Meal"
+              aria-label="Duplicate Meal"
+            >
+              <Copy className="w-4 h-4 stroke-[2.5]" />
+            </button>
+
+            <button
+              onClick={onClose}
+              aria-label="Close"
+              className="w-8 h-8 rounded-xl bg-[#FAF8F5] dark:bg-[#20222E] border-2 border-black dark:border-gray-700 flex items-center justify-center text-gray-700 dark:text-gray-300 hover:text-black dark:hover:text-white shadow-neo-sm active:scale-95 transition-colors cursor-pointer"
+            >
+              <X className="w-4 h-4 stroke-[2.5]" />
+            </button>
+          </div>
         </div>
 
         {/* Modal Body */}
-        <div className="p-6 overflow-y-auto scrollbar-none space-y-5 flex-1">
+        <div className="p-4 sm:p-6 overflow-y-auto scrollbar-none space-y-4 sm:space-y-5 flex-1 min-h-0">
           {/* Metadata Chips */}
           <div className="flex items-center gap-2 flex-wrap">
             <div className="px-3 py-1 rounded-full bg-[#FAF8F5] dark:bg-[#1E202A] text-xs font-black text-gray-700 dark:text-gray-300 border-2 border-black dark:border-gray-700 flex items-center gap-1.5 shadow-neo-sm">
@@ -247,7 +270,7 @@ export default function MealDetailModal({
         </div>
 
         {/* Footer Actions */}
-        <div className="p-4 bg-[#FAF8F5] dark:bg-[#16171E] border-t-2 border-black/10 dark:border-gray-800 transition-all">
+        <div className="p-3 sm:p-4 bg-[#FAF8F5] dark:bg-[#16171E] border-t-2 border-black/10 dark:border-gray-800 transition-all flex-shrink-0">
           {isMoveOpen ? (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
@@ -349,90 +372,60 @@ export default function MealDetailModal({
               </div>
             </div>
           ) : (
-            <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-              {!meal.isLeftover && (
-                <button
-                  onClick={() => {
-                    onClose();
-                    onCookClick(meal);
-                  }}
-                  className="flex-1 py-2.5 px-3 bg-[#FF5500] hover:bg-[#ff681a] text-white font-black text-xs uppercase rounded-xl border-2 border-black shadow-neo active:scale-95 transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap"
-                >
-                  <ChefHat className="w-4 h-4 flex-shrink-0" />
-                  <span>COOK</span>
-                </button>
-              )}
-
+            <div className="flex items-center gap-1.5 sm:gap-2 w-full">
               {onAteOutClick && (
                 <button
+                  type="button"
                   onClick={() => {
                     onClose();
                     onAteOutClick(meal);
                   }}
-                  className="flex-1 py-2.5 px-3 bg-[#00E5FF] hover:bg-[#00cbe2] text-black font-black text-xs uppercase rounded-xl border-2 border-black shadow-neo active:scale-95 transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap"
+                  className="flex-1 min-w-0 py-2.5 px-2 sm:px-3 bg-[#00E5FF] hover:bg-[#00cbe2] text-black font-black text-[11px] sm:text-xs uppercase rounded-xl border-2 border-black shadow-neo-sm active:scale-95 transition-colors flex items-center justify-center gap-1 sm:gap-1.5 whitespace-nowrap cursor-pointer"
                   title="Ate out or had something else? Log meal and save leftovers."
                 >
-                  <Utensils className="w-4 h-4 flex-shrink-0" />
-                  <span>ATE OUT?</span>
+                  <Utensils className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
+                  <span className="truncate">ATE OUT?</span>
                 </button>
               )}
 
-              {/* Duplicate Meal Action */}
-              <button
-                type="button"
-                onClick={async () => {
-                  onClose();
-                  if (onDuplicateMeal) {
-                    onDuplicateMeal(meal);
-                  } else {
-                    const id = `meal-dup-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
-                    await db.meals.add({
-                      ...meal,
-                      id,
-                    });
-                    confetti({ particleCount: 40, spread: 60, origin: { y: 0.6 } });
-                  }
-                }}
-                className="flex-1 py-2.5 px-3 bg-[#D4FF00] hover:bg-[#c3ed00] text-black font-black text-xs uppercase rounded-xl border-2 border-black shadow-neo active:scale-95 transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer"
-                title="Duplicate this meal right next to the original"
-              >
-                <Copy className="w-3.5 h-3.5 flex-shrink-0" />
-                <span>DUPLICATE</span>
-              </button>
-
               {onMoveMealSlot && (
                 <button
+                  type="button"
                   onClick={() => {
                     setIsMoveOpen(true);
                     setMoveTargetDate(meal.dateScheduled || rollingDays?.[0]?.dateString || '');
                     setShowMoveDayPicker(false);
                   }}
-                  className="flex-1 py-2.5 px-3 bg-white dark:bg-[#20222E] hover:bg-[#FFE600] hover:text-black dark:hover:bg-[#FFE600] dark:hover:text-black text-gray-800 dark:text-white font-black text-xs uppercase rounded-xl border-2 border-black shadow-neo active:scale-95 transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap"
+                  className="flex-1 min-w-0 py-2.5 px-2 sm:px-3 bg-white dark:bg-[#20222E] hover:bg-[#FFE600] hover:text-black dark:hover:bg-[#FFE600] dark:hover:text-black text-gray-800 dark:text-white font-black text-[11px] sm:text-xs uppercase rounded-xl border-2 border-black shadow-neo-sm active:scale-95 transition-colors flex items-center justify-center gap-1 sm:gap-1.5 whitespace-nowrap cursor-pointer"
                   title="Move to another meal slot or day"
                 >
                   <ArrowLeftRight className="w-3.5 h-3.5 flex-shrink-0" />
-                  <span>MOVE</span>
+                  <span className="truncate">MOVE</span>
                 </button>
               )}
 
               <button
+                type="button"
                 onClick={() => {
                   onMarkGoneEarly(meal.id, meal.title);
                   onClose();
                 }}
-                className="flex-1 py-2.5 px-3 bg-[#FFE600] hover:bg-yellow-400 text-black font-black text-xs uppercase rounded-xl border-2 border-black shadow-neo active:scale-95 transition-colors flex items-center justify-center gap-1 whitespace-nowrap"
+                className="flex-1 min-w-0 py-2.5 px-2 sm:px-3 bg-[#FFE600] hover:bg-yellow-400 text-black font-black text-[11px] sm:text-xs uppercase rounded-xl border-2 border-black shadow-neo-sm active:scale-95 transition-colors flex items-center justify-center gap-1 whitespace-nowrap cursor-pointer"
+                title="Mark dish as gone early"
               >
                 <RotateCcw className="w-3.5 h-3.5 flex-shrink-0" />
-                <span>GONE?</span>
+                <span className="truncate">GONE?</span>
               </button>
 
               <button
+                type="button"
                 onClick={() => {
                   onDeleteMeal(meal.id);
                   onClose();
                 }}
-                className="p-2.5 bg-white dark:bg-[#20222E] hover:bg-rose-100 text-gray-500 hover:text-rose-600 rounded-xl border-2 border-black shadow-neo-sm active:scale-95 transition-colors flex-shrink-0"
+                className="w-9 h-9 sm:w-10 sm:h-10 flex-shrink-0 bg-white dark:bg-[#20222E] hover:bg-rose-100 text-gray-500 hover:text-rose-600 rounded-xl border-2 border-black shadow-neo-sm active:scale-95 transition-colors flex items-center justify-center cursor-pointer"
                 title="Delete meal"
+                aria-label="Delete meal"
               >
                 <Trash2 className="w-4 h-4" />
               </button>

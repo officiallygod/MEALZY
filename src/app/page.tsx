@@ -960,6 +960,7 @@ export default function Home() {
               onUpdateCalorieTarget={handleUpdateCalorieTarget}
               onAutoFillDay={() => handleAutoFillClick(selectedDate)}
               onQuickAddMeal={(slot) => handleQuickAdd(selectedDate, slot)}
+              onOpenAddMeal={() => handleQuickAdd(selectedDate, 'lunch')}
               onAteOut={() =>
                 setAteOutTarget({
                   dateString: selectedDate,
