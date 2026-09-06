@@ -353,6 +353,10 @@ export default function Home() {
               onCookMeal={(meal) => setMealToCook(meal)}
               onMarkGoneEarly={handleMarkGoneEarly}
               onDeleteMeal={handleDeleteMeal}
+              onFocusDay={(d) => {
+                setSelectedDate(d);
+                setIsAllDaysView(false);
+              }}
             />
           </div>
         )}
