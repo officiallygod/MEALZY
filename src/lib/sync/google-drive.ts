@@ -8,19 +8,16 @@ export interface MealzyBackupPayload {
   preferences: any;
 }
 
-// Client ID Management (reads from localStorage or .env)
+import { getActiveGoogleClientId, APP_CONFIG } from '@/config/app-config';
+
+// Client ID Management: reads from app-config, environment variables, or dev override
 export function getSavedGoogleClientId(): string {
-  if (typeof window === 'undefined') return '';
-  return (
-    localStorage.getItem('mealzy_google_client_id') ||
-    process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ||
-    ''
-  );
+  return getActiveGoogleClientId();
 }
 
 export function saveGoogleClientId(clientId: string): void {
   if (typeof window === 'undefined') return;
-  localStorage.setItem('mealzy_google_client_id', clientId.trim());
+  localStorage.setItem('mealzy_dev_google_client_id', clientId.trim());
 }
 
 export async function exportLocalDataToPayload(): Promise<MealzyBackupPayload> {
