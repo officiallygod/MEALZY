@@ -199,20 +199,28 @@ export const CURATED_FOODS: CuratedFood[] = [
   },
 ];
 
+export function cleanMealTitle(title: string): string {
+  if (!title) return '';
+  return title
+    .replace(/^(fridge rescue|friday rescue|leftover|reheated|rescue):\s*/i, '')
+    .trim();
+}
+
 export function getMealAccent(title: string): string {
-  const clean = title.toLowerCase();
+  const clean = cleanMealTitle(title).toLowerCase();
   if (clean.includes('oat') || clean.includes('egg') || clean.includes('toast')) return '#A855F7';
   if (clean.includes('salmon') || clean.includes('fish') || clean.includes('tuna')) return '#84CC16';
   if (clean.includes('pasta') || clean.includes('noodle') || clean.includes('ramen')) return '#06B6D4';
-  if (clean.includes('chicken') || clean.includes('beef') || clean.includes('burger')) return '#F43F5E';
+  if (clean.includes('chicken') || clean.includes('tikka') || clean.includes('beef') || clean.includes('burger')) return '#F43F5E';
   if (clean.includes('salad') || clean.includes('quinoa') || clean.includes('avocado')) return '#10B981';
   return '#6366F1';
 }
 
 export function getMealInitials(title: string): string {
-  const words = title.trim().split(/\s+/);
+  const clean = cleanMealTitle(title);
+  const words = clean.split(/\s+/).filter(Boolean);
   if (words.length >= 2) {
     return (words[0][0] + words[1][0]).toUpperCase();
   }
-  return title.slice(0, 2).toUpperCase();
+  return clean.slice(0, 2).toUpperCase();
 }

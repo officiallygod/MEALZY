@@ -1,5 +1,5 @@
 import { MealItem, FridgePantryItem, AISuggestion } from '@/types/meal';
-import { CURATED_FOODS } from './curated-foods';
+import { CURATED_FOODS, cleanMealTitle } from './curated-foods';
 
 export interface FlavorTwistRule {
   triggerPattern: string;
@@ -107,7 +107,7 @@ export function generateSmartSuggestions(
   if (rottingItem) {
     suggestions.push({
       id: 'sugg-rot-rescue',
-      title: `Consume: ${rottingItem.name}`,
+      title: `Consume: ${cleanMealTitle(rottingItem.name)}`,
       type: 'fridge_rescue',
       headline: 'Perishable Priority Notice',
       reason: `Cooked ${rottingItem.daysInFridge} days ago with ${rottingItem.portionsLeft} portion(s) remaining in refrigeration. Recommend allocating to lunch or dinner today.`,
@@ -116,7 +116,7 @@ export function generateSmartSuggestions(
       prepTime: '3 min reheat',
       accentColor: '#F43F5E',
       suggestedMeal: {
-        title: `Leftover: ${rottingItem.name}`,
+        title: cleanMealTitle(rottingItem.name),
         calories: 500,
         protein: 25,
         carbs: 60,

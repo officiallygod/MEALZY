@@ -1,5 +1,5 @@
-// High-Resolution Week Plan Image Generator for Mobile Wallpaper and Bento Cards
 import { MealItem, MealType } from '@/types/meal';
+import { cleanMealTitle } from './curated-foods';
 
 export interface ExportDayData {
   dateString: string;
@@ -241,7 +241,7 @@ export async function generateWeekPlanImage({
         ctx.textAlign = 'left';
         ctx.font = '700 12px "Inter", -apple-system, sans-serif';
         ctx.fillStyle = meal ? textColor : (isDark ? '#4B5563' : '#9CA3AF');
-        const titleText = meal ? meal.title : '— Empty';
+        const titleText = meal ? cleanMealTitle(meal.title) : '— Empty';
         const truncated = truncateText(ctx, titleText, slotWidth - 14);
         ctx.fillText(truncated, slotX + 8, slotY + 38);
 
@@ -352,7 +352,7 @@ export async function generateWeekPlanImage({
         ctx.textAlign = 'left';
         ctx.font = '700 13px "Inter", -apple-system, sans-serif';
         ctx.fillStyle = meal ? textColor : (isDark ? '#4B5563' : '#9CA3AF');
-        const mTitle = meal ? meal.title : '— Empty';
+        const mTitle = meal ? cleanMealTitle(meal.title) : '— Empty';
         ctx.fillText(truncateText(ctx, mTitle, slotW - 20), sX + 10, sY + 54);
 
         if (meal && meal.protein) {

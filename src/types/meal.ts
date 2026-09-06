@@ -24,6 +24,7 @@ export interface MealItem {
   totalPortionsCooked?: number;
   portionsRemaining?: number;
   notes?: string;
+  portions?: number;
   accentColor?: string;
   dateScheduled?: string; // YYYY-MM-DD
 }

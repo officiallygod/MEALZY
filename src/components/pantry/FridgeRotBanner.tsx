@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AlertCircle, Clock, Trash2, CalendarCheck, Check, X } from 'lucide-react';
 import { FridgePantryItem, MealItem, MealType } from '@/types/meal';
+import { cleanMealTitle } from '@/lib/curated-foods';
 
 interface FridgeRotBannerProps {
   items: FridgePantryItem[];
@@ -26,9 +27,9 @@ export default function FridgeRotBanner({
   // Check if an item has been assigned anywhere in scheduled meals
   const isItemAssigned = (item: FridgePantryItem): boolean => {
     if (!meals || meals.length === 0) return false;
-    const nameClean = item.name.toLowerCase().replace('leftover:', '').trim();
+    const nameClean = cleanMealTitle(item.name).toLowerCase();
     return meals.some((m) => {
-      const mealTitleClean = m.title.toLowerCase().replace('leftover:', '').trim();
+      const mealTitleClean = cleanMealTitle(m.title).toLowerCase();
       const matchesSource = m.sourceMealId === item.id || m.sourceMealId === `fridge-batch-${item.id}`;
       const matchesTitle = mealTitleClean.includes(nameClean) || nameClean.includes(mealTitleClean);
       return matchesSource || matchesTitle;
@@ -86,7 +87,7 @@ export default function FridgeRotBanner({
                 >
                   <div className="min-w-0">
                     <h5 className="font-funky font-black text-xs text-gray-900 dark:text-white truncate">
-                      {item.name}
+                      {cleanMealTitle(item.name)}
                     </h5>
                     <div className="flex items-center gap-2 text-[10px] text-gray-600 dark:text-gray-400 mt-1 font-bold">
                       <span className="text-rose-600 dark:text-rose-400 font-black flex items-center gap-1">
@@ -189,7 +190,7 @@ export default function FridgeRotBanner({
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <h6 className="font-funky font-bold text-xs text-gray-900 dark:text-white truncate">
-                        {item.name}
+                        {cleanMealTitle(item.name)}
                       </h6>
                       {assigned && (
                         <span className="px-1.5 py-0.2 rounded text-[9px] font-black bg-emerald-100 text-emerald-800 border border-emerald-400 flex items-center gap-0.5">

@@ -17,7 +17,7 @@ import AuthModal from '@/components/common/AuthModal';
 import ExportWeekModal from '@/components/modals/ExportWeekModal';
 import AteOutModal, { AteOutConfirmData } from '@/components/modals/AteOutModal';
 import { generateSmartSuggestions } from '@/lib/ai-engine';
-import { CURATED_FOODS } from '@/lib/curated-foods';
+import { CURATED_FOODS, cleanMealTitle } from '@/lib/curated-foods';
 import confetti from 'canvas-confetti';
 import { RotateCcw, CheckCircle2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -59,10 +59,61 @@ export default function Home() {
   const fridgeItems = useLiveQuery(() => db.fridge?.toArray(), []) || [];
   const userPreferences = useLiveQuery(() => db.preferences?.get('user-default-settings'), []);
 
+  // Auto-sanitize existing database: strip ugly prefixes ("Fridge Rescue:", "Leftover:", etc.)
+  // and consolidate duplicate meals in the same slot into a single card with portions count
+  const sanitizeDatabase = async () => {
+    try {
+      const allMeals = await db.meals.toArray();
+      const seenMap = new Map<string, MealItem>();
+
+      for (const meal of allMeals) {
+        const cleanTitle = cleanMealTitle(meal.title);
+        const hasPrefix = /^(fridge rescue|friday rescue|leftover|reheated|rescue):\s*/i.test(meal.title);
+        const key = `${meal.dateScheduled || ''}_${meal.mealType}_${cleanTitle.toLowerCase()}`;
+
+        if (seenMap.has(key)) {
+          // Consolidate duplicate meals in same slot on same date
+          const existing = seenMap.get(key)!;
+          const combinedPortions = (existing.portions || 1) + (meal.portions || 1);
+          await db.meals.update(existing.id, {
+            portions: combinedPortions,
+          });
+          await db.meals.delete(meal.id);
+        } else {
+          if (hasPrefix || cleanTitle !== meal.title) {
+            await db.meals.update(meal.id, {
+              title: cleanTitle,
+              isLeftover: true,
+            });
+            meal.title = cleanTitle;
+            meal.isLeftover = true;
+          }
+          seenMap.set(key, meal);
+        }
+      }
+
+      // Also clean fridge item names
+      const allFridge = await db.fridge.toArray();
+      for (const item of allFridge) {
+        const cleanName = cleanMealTitle(item.name);
+        if (cleanName !== item.name) {
+          await db.fridge.update(item.id, {
+            name: cleanName,
+            originalMealTitle: cleanMealTitle(item.originalMealTitle || cleanName),
+          });
+        }
+      }
+    } catch (e) {
+      console.warn('DB Sanitization notice:', e);
+    }
+  };
+
   // Initialize theme and database on client mount
   useEffect(() => {
     setIsClient(true);
-    seedInitialDataIfEmpty();
+    seedInitialDataIfEmpty().then(() => {
+      sanitizeDatabase();
+    });
     setRollingDays(getRollingWeekDates());
 
     const savedTheme = (localStorage.getItem('mealzy_theme') as 'dark' | 'light') || 'dark';
@@ -106,9 +157,9 @@ export default function Home() {
   // Rotting items count for the bottom dock badge: strictly > 7 days old AND unassigned
   const rottingCount = fridgeItems.filter((item) => {
     const isOverAWeekOld = item.daysInFridge > 7;
-    const nameClean = item.name.toLowerCase().replace('leftover:', '').trim();
+    const nameClean = cleanMealTitle(item.name).toLowerCase();
     const isAssigned = meals.some((m) => {
-      const mealTitleClean = m.title.toLowerCase().replace('leftover:', '').trim();
+      const mealTitleClean = cleanMealTitle(m.title).toLowerCase();
       const matchesSource = m.sourceMealId === item.id || m.sourceMealId === `fridge-batch-${item.id}`;
       const matchesTitle = mealTitleClean.includes(nameClean) || nameClean.includes(mealTitleClean);
       return matchesSource || matchesTitle;
@@ -181,7 +232,20 @@ export default function Home() {
   };
 
   const handleDeleteMeal = async (mealId: string) => {
-    await db.meals.delete(mealId);
+    const m = await db.meals.get(mealId);
+    if (m) {
+      const clean = cleanMealTitle(m.title).toLowerCase();
+      const dupes = await db.meals
+        .where('dateScheduled')
+        .equals(m.dateScheduled || '')
+        .and((other) => other.mealType === m.mealType && cleanMealTitle(other.title).toLowerCase() === clean)
+        .toArray();
+      for (const d of dupes) {
+        await db.meals.delete(d.id);
+      }
+    } else {
+      await db.meals.delete(mealId);
+    }
   };
 
   // Cook Once, Eat N Times Leftover Generator
@@ -195,9 +259,11 @@ export default function Home() {
       portionsRemaining: portions - 1,
     });
 
+    const cleanDish = cleanMealTitle(sourceMeal.title);
+
     const leftoverMeals: MealItem[] = targetSlots.map((slot, idx) => ({
       id: `leftover-${sourceMeal.id}-${idx + 1}`,
-      title: `Leftover: ${sourceMeal.title}`,
+      title: cleanDish,
       mealType: slot.slot,
       calories: sourceMeal.calories,
       protein: sourceMeal.protein,
@@ -207,6 +273,7 @@ export default function Home() {
       ingredients: sourceMeal.ingredients,
       tags: ['leftover', 'quick-heat'],
       isLeftover: true,
+      portions: 1,
       sourceMealId: sourceMeal.id,
       dateScheduled: slot.date,
       accentColor: sourceMeal.accentColor || '#10B981',
@@ -219,8 +286,8 @@ export default function Home() {
 
     await db.fridge.put({
       id: `fridge-batch-${sourceMeal.id}`,
-      name: sourceMeal.title,
-      originalMealTitle: sourceMeal.title,
+      name: cleanDish,
+      originalMealTitle: cleanDish,
       cookedAt: new Date().toISOString(),
       daysInFridge: 0,
       status: 'fresh',
@@ -234,9 +301,15 @@ export default function Home() {
   const handleMarkGoneEarly = async (mealIdOrFridgeId: string, mealTitle: string) => {
     const item = await db.meals.get(mealIdOrFridgeId);
     if (item) {
-      await db.meals.delete(mealIdOrFridgeId);
-      if (item.sourceMealId) {
-        await db.fridge.delete(`fridge-batch-${item.sourceMealId}`);
+      if (item.portions && item.portions > 1) {
+        await db.meals.update(item.id, {
+          portions: item.portions - 1,
+        });
+      } else {
+        await db.meals.delete(mealIdOrFridgeId);
+        if (item.sourceMealId) {
+          await db.fridge.delete(`fridge-batch-${item.sourceMealId}`);
+        }
       }
     } else {
       await db.fridge.delete(mealIdOrFridgeId);
@@ -262,21 +335,39 @@ export default function Home() {
   // Consume Fridge Item Today
   const handleConsumeFridgeItem = async (item: FridgePantryItem, slot: MealType) => {
     const today = rollingDays[0].dateString;
-    await db.meals.add({
-      id: `meal-consumed-${Date.now()}`,
-      title: `Reheated: ${item.name}`,
-      mealType: slot,
-      calories: 520,
-      protein: 26,
-      carbs: 58,
-      fat: 18,
-      prepTimeMinutes: 3,
-      ingredients: [{ name: item.name, amount: '1 portion' }],
-      tags: ['leftover', 'reheated'],
-      isLeftover: true,
-      dateScheduled: today,
-      accentColor: item.accentColor || '#10B981',
-    });
+    const cleanName = cleanMealTitle(item.name);
+
+    // Consolidate if this meal is already in this slot today to prevent taking up space
+    const existingInSlot = await db.meals
+      .where('dateScheduled')
+      .equals(today)
+      .and((m) => m.mealType === slot && cleanMealTitle(m.title).toLowerCase() === cleanName.toLowerCase())
+      .first();
+
+    if (existingInSlot) {
+      const newPortions = (existingInSlot.portions || 1) + 1;
+      await db.meals.update(existingInSlot.id, {
+        portions: newPortions,
+        notes: `${newPortions} portions prepared from fridge batch.`,
+      });
+    } else {
+      await db.meals.add({
+        id: `meal-consumed-${Date.now()}`,
+        title: cleanName,
+        mealType: slot,
+        calories: 520,
+        protein: 26,
+        carbs: 58,
+        fat: 18,
+        prepTimeMinutes: 3,
+        ingredients: [{ name: cleanName, amount: '1 portion' }],
+        tags: ['leftover', 'reheated'],
+        isLeftover: true,
+        portions: 1,
+        dateScheduled: today,
+        accentColor: item.accentColor || '#10B981',
+      });
+    }
 
     if (item.portionsLeft <= 1) {
       await db.fridge.delete(item.id);
@@ -302,10 +393,11 @@ export default function Home() {
           notes: `${data.originalMeal.notes ? data.originalMeal.notes + ' • ' : ''}Pushed from ${data.dateScheduled} (ate out).`,
         });
       } else if (data.originalMealAction === 'save_fridge') {
+        const origClean = cleanMealTitle(data.originalMeal.title);
         await db.fridge.put({
           id: `fridge-pushed-${data.originalMeal.id}`,
-          name: data.originalMeal.title,
-          originalMealTitle: data.originalMeal.title,
+          name: origClean,
+          originalMealTitle: origClean,
           cookedAt: new Date().toISOString(),
           daysInFridge: 0,
           status: 'fresh',
@@ -321,16 +413,17 @@ export default function Home() {
 
     // 2. Log the "Ate Out / Something Else" dish in this slot
     const ateOutId = `ate-out-${Date.now()}`;
+    const cleanAteOutTitle = cleanMealTitle(data.title || 'Ate Out');
     await db.meals.add({
       id: ateOutId,
-      title: data.title || 'Ate Out',
+      title: cleanAteOutTitle,
       mealType: data.mealType,
       calories: data.calories || 750,
       protein: Math.round((data.calories || 750) * 0.04),
       carbs: Math.round((data.calories || 750) * 0.12),
       fat: Math.round((data.calories || 750) * 0.04),
       prepTimeMinutes: 0,
-      ingredients: [{ name: data.title || 'Dining Out / Takeout', amount: '1 meal' }],
+      ingredients: [{ name: cleanAteOutTitle, amount: '1 meal' }],
       tags: ['ate-out', 'dining-out', 'no-cooking'],
       dateScheduled: data.dateScheduled,
       accentColor: '#00E5FF',
@@ -339,7 +432,7 @@ export default function Home() {
 
     // 3. Handle Leftover (if user selected YES)
     if (data.hasLeftover) {
-      const leftoverTitle = `Leftover: ${data.title || 'Takeout'}`;
+      const leftoverTitle = cleanMealTitle(data.title || 'Takeout');
 
       if (data.leftoverDestination === 'schedule') {
         await db.meals.add({
@@ -355,14 +448,15 @@ export default function Home() {
           ingredients: [{ name: leftoverTitle, amount: `${data.leftoverPortions} portion` }],
           tags: ['leftover', 'takeout-box', 'quick-heat'],
           isLeftover: true,
+          portions: data.leftoverPortions || 1,
           accentColor: '#A855F7',
-          notes: `Brought home from ${data.title}. Reheat and enjoy!`,
+          notes: `Brought home from ${cleanAteOutTitle}. Reheat and enjoy!`,
         });
       } else {
         await db.fridge.put({
           id: `fridge-leftover-${ateOutId}`,
           name: leftoverTitle,
-          originalMealTitle: data.title || 'Takeout',
+          originalMealTitle: cleanAteOutTitle,
           cookedAt: new Date().toISOString(),
           daysInFridge: 0,
           status: 'fresh',

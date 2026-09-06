@@ -1,4 +1,5 @@
 import { MealType } from '@/types/meal';
+import { cleanMealTitle } from './curated-foods';
 
 export interface OpenSourceDish {
   id: string;
@@ -641,7 +642,7 @@ export function getRediscoverMeals(
 
   for (const m of allMeals) {
     if (m.mealType !== currentSlot || !m.dateScheduled) continue;
-    const cleanTitle = m.title.replace(/^leftover:\s*/i, '').trim();
+    const cleanTitle = cleanMealTitle(m.title);
     const mealTime = new Date(m.dateScheduled).getTime();
     const daysDiff = Math.round((targetTime - mealTime) / (1000 * 60 * 60 * 24));
 

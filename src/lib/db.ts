@@ -141,7 +141,7 @@ export async function seedInitialDataIfEmpty() {
     },
     {
       id: 'meal-seed-5',
-      title: 'Leftover: Pistachio Pesto Rigatoni',
+      title: 'Green Pistachio Pesto Rigatoni',
       mealType: 'lunch',
       calories: 545,
       protein: 20,

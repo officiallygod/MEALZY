@@ -4,7 +4,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { X, Clock, ChefHat, Trash2, RotateCcw, Sparkles, Utensils } from 'lucide-react';
 import { MealItem } from '@/types/meal';
-import { getMealAccent, getMealInitials } from '@/lib/curated-foods';
+import { getMealAccent, getMealInitials, cleanMealTitle } from '@/lib/curated-foods';
 import { getTwistForDishTitle } from '@/lib/dish-database';
 import { db } from '@/lib/db';
 import confetti from 'canvas-confetti';
@@ -78,7 +78,7 @@ export default function MealDetailModal({
                 {meal.mealType}
               </span>
               <h2 className="font-funky font-black text-xl text-gray-900 dark:text-white leading-snug">
-                {meal.title}
+                {cleanMealTitle(meal.title)}
               </h2>
             </div>
           </div>
@@ -103,6 +103,12 @@ export default function MealDetailModal({
             {meal.isLeftover && (
               <span className="px-3 py-1 rounded-full bg-purple-100 text-purple-800 border-2 border-black text-xs font-black shadow-neo-sm">
                 Reheated Leftover
+              </span>
+            )}
+
+            {meal.portions && meal.portions > 1 && (
+              <span className="px-3 py-1 rounded-full bg-amber-100 text-amber-900 border-2 border-black text-xs font-black shadow-neo-sm">
+                {meal.portions} Portions
               </span>
             )}
 

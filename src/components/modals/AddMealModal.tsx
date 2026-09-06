@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Search, Sparkles, Plus, Clock, Link as LinkIcon, RotateCcw, ChevronDown, ChevronUp, Check } from 'lucide-react';
 import { MealItem, MealType } from '@/types/meal';
-import { getMealAccent, getMealInitials } from '@/lib/curated-foods';
+import { getMealAccent, getMealInitials, cleanMealTitle } from '@/lib/curated-foods';
 import {
   searchDishCatalog,
   getTwistForDishTitle,
@@ -304,7 +304,7 @@ export default function AddMealModal({
 
         leftoverMeals.push({
           id: `leftover-${sourceMealId}-${i}`,
-          title: `Leftover: ${dishTitle.trim()}`,
+          title: cleanMealTitle(dishTitle.trim()),
           mealType: assignedSlot,
           calories: calNum,
           protein: pNum,
@@ -313,10 +313,11 @@ export default function AddMealModal({
           prepTimeMinutes: 3,
           recipeUrl: recipeUrl.trim() || undefined,
           accentColor: accent,
-          ingredients: [{ name: dishTitle.trim(), amount: '1 portion' }],
+          ingredients: [{ name: cleanMealTitle(dishTitle.trim()), amount: '1 portion' }],
           tags: ['leftover', 'divided-portion'],
           dateScheduled: assignedDate,
           isLeftover: true,
+          portions: 1,
           sourceMealId: sourceMealId,
           notes: `Portion #${i + 1} of ${divideDays} batch prepared on ${targetDate}`,
         });

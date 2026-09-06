@@ -15,7 +15,7 @@ import {
   ArrowLeftRight,
 } from 'lucide-react';
 import { MealItem, MealType } from '@/types/meal';
-import { getMealAccent, getMealInitials } from '@/lib/curated-foods';
+import { getMealAccent, getMealInitials, cleanMealTitle } from '@/lib/curated-foods';
 
 interface KanbanBentoBoardProps {
   days: {
@@ -157,9 +157,32 @@ export default function KanbanBentoBoard({
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 w-full">
             {MEAL_SLOTS.map((slot) => {
               const SlotIcon = slot.icon;
-              const slotMeals = meals.filter(
+              const rawSlotMeals = meals.filter(
                 (m) => m.dateScheduled === activeDayObj.dateString && m.mealType === slot.type
               );
+
+              // Consolidate duplicate dishes in the same slot into a single card with portion count
+              // to prevent taking up vertical space with identical repetitive cards
+              const slotMeals: MealItem[] = [];
+              const seenTitles = new Map<string, MealItem>();
+
+              for (const m of rawSlotMeals) {
+                const clean = cleanMealTitle(m.title).toLowerCase();
+                if (seenTitles.has(clean)) {
+                  const existing = seenTitles.get(clean)!;
+                  existing.portions = (existing.portions || 1) + (m.portions || 1);
+                  existing.isLeftover = existing.isLeftover || m.isLeftover;
+                } else {
+                  const copy: MealItem = {
+                    ...m,
+                    title: cleanMealTitle(m.title),
+                    portions: m.portions || 1,
+                  };
+                  seenTitles.set(clean, copy);
+                  slotMeals.push(copy);
+                }
+              }
+
               const zoneKey = `${activeDayObj.dateString}_${slot.type}`;
               const isHovered = activeDropZone === zoneKey;
 
@@ -239,11 +262,16 @@ export default function KanbanBentoBoard({
                                   <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-1.5 flex-wrap">
                                       <h4 className="font-funky font-black text-xs text-gray-900 dark:text-white truncate group-hover:underline">
-                                        {meal.title}
+                                        {cleanMealTitle(meal.title)}
                                       </h4>
                                       {meal.isLeftover && (
                                         <span className="px-1.5 py-0.2 rounded text-[8px] font-black bg-purple-100 text-purple-800 border border-purple-400">
                                           LEFTOVER
+                                        </span>
+                                      )}
+                                      {meal.portions && meal.portions > 1 && (
+                                        <span className="px-1.5 py-0.2 rounded text-[8px] font-black bg-amber-100 text-amber-900 border border-amber-400">
+                                          {meal.portions}x PORTIONS
                                         </span>
                                       )}
                                     </div>
