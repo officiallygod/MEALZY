@@ -14,6 +14,7 @@ import AddMealModal from '@/components/modals/AddMealModal';
 import MealDetailModal from '@/components/modals/MealDetailModal';
 import CookMealModal from '@/components/modals/CookMealModal';
 import AuthModal from '@/components/common/AuthModal';
+import ExportWeekModal from '@/components/modals/ExportWeekModal';
 import { generateSmartSuggestions } from '@/lib/ai-engine';
 import { CURATED_FOODS } from '@/lib/curated-foods';
 import confetti from 'canvas-confetti';
@@ -34,6 +35,7 @@ export default function Home() {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [userEmail, setUserEmail] = useState<string | undefined>(undefined);
   const [isAddMealOpen, setIsAddMealOpen] = useState(false);
+  const [isExportWeekOpen, setIsExportWeekOpen] = useState(false);
   const [addMealSlot, setAddMealSlot] = useState<MealType>('lunch');
   const [addMealDate, setAddMealDate] = useState<string>(rollingDays[0].dateString);
 
@@ -326,6 +328,7 @@ export default function Home() {
       <Header
         onOpenAuth={() => setIsAuthOpen(true)}
         onOpenAddMeal={() => handleQuickAdd(selectedDate, 'lunch')}
+        onExportWeekImage={() => setIsExportWeekOpen(true)}
         userEmail={userEmail}
         todayCalories={todayCalories}
         calorieTarget={calorieTarget}
@@ -401,6 +404,7 @@ export default function Home() {
               isAllDaysView={isAllDaysView}
               onToggleAllDaysView={(val) => setIsAllDaysView(val)}
               dayMealCounts={dayMealCounts}
+              onExportWeekImage={() => setIsExportWeekOpen(true)}
             />
 
             {/* Daily Nutrition & Engagement Monitor */}
@@ -520,6 +524,14 @@ export default function Home() {
         onClose={() => setIsAuthOpen(false)}
         userEmail={userEmail}
         onLoginSuccess={(email) => setUserEmail(email)}
+      />
+
+      <ExportWeekModal
+        isOpen={isExportWeekOpen}
+        onClose={() => setIsExportWeekOpen(false)}
+        days={rollingDays}
+        meals={meals}
+        calorieTarget={calorieTarget}
       />
     </div>
   );

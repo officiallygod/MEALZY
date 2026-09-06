@@ -1,11 +1,12 @@
 'use client';
 
 import React from 'react';
-import { Flame, Plus, User, Sun, Moon } from 'lucide-react';
+import { Flame, Plus, User, Sun, Moon, Smartphone } from 'lucide-react';
 
 interface HeaderProps {
   onOpenAuth: () => void;
   onOpenAddMeal: () => void;
+  onExportWeekImage?: () => void;
   userEmail?: string;
   todayCalories: number;
   calorieTarget: number;
@@ -16,6 +17,7 @@ interface HeaderProps {
 export default function Header({
   onOpenAuth,
   onOpenAddMeal,
+  onExportWeekImage,
   userEmail,
   todayCalories,
   calorieTarget,
@@ -89,6 +91,19 @@ export default function Header({
               </>
             )}
           </button>
+
+          {/* Save Week Plan Image */}
+          {onExportWeekImage && (
+            <button
+              onClick={onExportWeekImage}
+              aria-label="Save Week Image"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#FFE600] hover:bg-yellow-400 text-black font-black text-xs border-2 border-black shadow-neo-sm hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-neo active:translate-x-0.5 active:translate-y-0.5 transition-all"
+              title="Generate & Save 7-Day Plan Image for Phone"
+            >
+              <Smartphone className="w-3.5 h-3.5" />
+              <span className="hidden md:inline">SAVE IMAGE</span>
+            </button>
+          )}
 
           {/* Primary Action Button: Neon Orange "ADD MEAL" (Get in Touch Style) */}
           <button

@@ -2,7 +2,18 @@
 
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Clock, Trash2, ChevronRight, Sun, Utensils, Moon, Coffee, CalendarDays } from 'lucide-react';
+import {
+  Plus,
+  Clock,
+  Trash2,
+  ChevronRight,
+  Sun,
+  Utensils,
+  Moon,
+  Coffee,
+  CalendarDays,
+  ArrowLeftRight,
+} from 'lucide-react';
 import { MealItem, MealType } from '@/types/meal';
 import { getMealAccent, getMealInitials } from '@/lib/curated-foods';
 
@@ -54,16 +65,31 @@ export default function KanbanBentoBoard({
 }: KanbanBentoBoardProps) {
   const [draggedMealId, setDraggedMealId] = useState<string | null>(null);
   const [activeDropZone, setActiveDropZone] = useState<string | null>(null);
+  const [movingMealId, setMovingMealId] = useState<string | null>(null);
 
   const handleDragStart = (e: React.DragEvent, mealId: string) => {
     e.dataTransfer.setData('text/plain', mealId);
+    e.dataTransfer.effectAllowed = 'move';
     setDraggedMealId(mealId);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedMealId(null);
+    setActiveDropZone(null);
   };
 
   const handleDragOver = (e: React.DragEvent, zoneKey: string) => {
     e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
     if (activeDropZone !== zoneKey) {
       setActiveDropZone(zoneKey);
+    }
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    if (e.currentTarget && !e.currentTarget.contains(e.relatedTarget as Node)) {
+      setActiveDropZone(null);
     }
   };
 
@@ -139,11 +165,11 @@ export default function KanbanBentoBoard({
                 <div
                   key={slot.type}
                   onDragOver={(e) => handleDragOver(e, zoneKey)}
-                  onDragLeave={() => setActiveDropZone(null)}
+                  onDragLeave={handleDragLeave}
                   onDrop={(e) => handleDrop(e, activeDayObj.dateString, slot.type)}
-                  className={`min-h-[300px] rounded-3xl p-4 transition-all flex flex-col justify-between border-2 bg-white dark:bg-[#16171E] ${
+                  className={`min-h-[300px] rounded-3xl p-4 transition-colors flex flex-col justify-between border-2 bg-white dark:bg-[#16171E] relative ${
                     isHovered
-                      ? 'border-2 border-dashed border-[#D4FF00] bg-[#D4FF00]/10 scale-[1.01]'
+                      ? 'border-2 border-[#D4FF00] bg-[#D4FF00]/5 ring-4 ring-[#D4FF00]/30 shadow-neo-lg'
                       : 'border-black dark:border-gray-800 shadow-neo-lg'
                   }`}
                 >
@@ -168,10 +194,10 @@ export default function KanbanBentoBoard({
                       </button>
                     </div>
 
-                    {/* Drop Target Indicator */}
-                    {isHovered && (
-                      <div className="py-6 text-center text-xs font-black text-black dark:text-[#D4FF00] border-2 border-dashed border-black dark:border-[#D4FF00] rounded-2xl mb-3 bg-[#D4FF00]/20">
-                        DROP DISH HERE
+                    {/* Non-shifting Drop Target Indicator */}
+                    {isHovered && draggedMealId && (
+                      <div className="pointer-events-none mb-3 py-2 text-center text-xs font-black text-black dark:text-[#D4FF00] border-2 border-dashed border-[#D4FF00] rounded-xl bg-[#D4FF00]/15">
+                        ✦ Drop in {slot.title}
                       </div>
                     )}
 
@@ -185,13 +211,15 @@ export default function KanbanBentoBoard({
                           return (
                             <motion.div
                               key={meal.id}
-                              layout
                               initial={{ opacity: 0, y: 8 }}
                               animate={{ opacity: 1, y: 0 }}
                               exit={{ opacity: 0, scale: 0.95 }}
                               draggable
                               onDragStart={(e: any) => handleDragStart(e, meal.id)}
-                              className={`group relative bg-[#FAF8F5] dark:bg-[#1E202A] hover:bg-white dark:hover:bg-[#252834] border-2 border-black dark:border-gray-700 rounded-2xl p-3.5 shadow-neo-sm cursor-grab active:cursor-grabbing transition-all border-l-[6px] ${slot.stripeColor}`}
+                              onDragEnd={handleDragEnd}
+                              className={`group relative bg-[#FAF8F5] dark:bg-[#1E202A] hover:bg-white dark:hover:bg-[#252834] border-2 border-black dark:border-gray-700 rounded-2xl p-3.5 shadow-neo-sm cursor-grab active:cursor-grabbing border-l-[6px] ${slot.stripeColor} ${
+                                draggedMealId === meal.id ? 'opacity-30 border-dashed scale-[0.98]' : 'opacity-100'
+                              }`}
                             >
                               <div
                                 onClick={() => onSelectMeal(meal)}
@@ -240,11 +268,11 @@ export default function KanbanBentoBoard({
 
                               {/* Card Actions (Tactile Neo-Brutalist Buttons) */}
                               <div className="mt-2.5 pt-2 border-t-2 border-black/10 dark:border-gray-800 flex items-center justify-between text-[10px]">
-                                <div className="flex items-center gap-1.5">
+                                <div className="flex items-center gap-1.5 flex-wrap">
                                   {!meal.isLeftover && (
                                     <button
                                       onClick={() => onCookMeal(meal)}
-                                      className="px-2.5 py-1 rounded-lg bg-[#D4FF00] hover:bg-[#c3ed00] text-black font-black border border-black shadow-neo-sm active:translate-x-0.5 active:translate-y-0.5 transition-all"
+                                      className="px-2 py-1 rounded-lg bg-[#D4FF00] hover:bg-[#c3ed00] text-black font-black border border-black shadow-neo-sm active:translate-x-0.5 active:translate-y-0.5 transition-all"
                                     >
                                       Cook
                                     </button>
@@ -255,6 +283,14 @@ export default function KanbanBentoBoard({
                                     title="Finished earlier than expected? Clear and replan."
                                   >
                                     Gone?
+                                  </button>
+                                  <button
+                                    onClick={() => setMovingMealId(movingMealId === meal.id ? null : meal.id)}
+                                    className="px-2 py-1 rounded-lg bg-white dark:bg-[#20222E] hover:bg-[#00E5FF] hover:text-black dark:hover:bg-[#00E5FF] dark:hover:text-black text-gray-700 dark:text-gray-300 font-black border border-black shadow-neo-sm active:translate-x-0.5 active:translate-y-0.5 transition-all flex items-center gap-1"
+                                    title="Move to another meal slot"
+                                  >
+                                    <ArrowLeftRight className="w-2.5 h-2.5 stroke-[2.5]" />
+                                    <span>Move</span>
                                   </button>
                                 </div>
 
@@ -275,6 +311,35 @@ export default function KanbanBentoBoard({
                                   </button>
                                 </div>
                               </div>
+
+                              {/* 1-Tap Quick Move Selector (Zero Jitter alternative) */}
+                              {movingMealId === meal.id && (
+                                <div className="mt-2 p-2 rounded-xl bg-white dark:bg-[#16171E] border-2 border-black dark:border-gray-700 shadow-neo-sm space-y-1.5">
+                                  <div className="flex items-center justify-between text-[9px] font-black uppercase text-gray-500">
+                                    <span>Move to Slot:</span>
+                                    <button
+                                      onClick={() => setMovingMealId(null)}
+                                      className="text-gray-400 hover:text-black dark:hover:text-white font-bold px-1"
+                                    >
+                                      ✕
+                                    </button>
+                                  </div>
+                                  <div className="grid grid-cols-3 gap-1">
+                                    {MEAL_SLOTS.filter((s) => s.type !== meal.mealType).map((targetSlot) => (
+                                      <button
+                                        key={targetSlot.type}
+                                        onClick={() => {
+                                          onMoveMealSlot(meal.id, activeDayObj.dateString, targetSlot.type);
+                                          setMovingMealId(null);
+                                        }}
+                                        className="py-1 text-center font-black text-[10px] uppercase rounded-lg border border-black bg-[#FAF8F5] dark:bg-[#20222E] hover:bg-[#FFE600] hover:text-black transition-all shadow-neo-sm"
+                                      >
+                                        {targetSlot.title}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
                             </motion.div>
                           );
                         })}
