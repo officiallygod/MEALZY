@@ -112,7 +112,7 @@ export default function AuthModal({
   if (!isOpen) return null;
 
   // Real Google OAuth2 Popup Dialog
-  const handleGoogleSignInPopup = () => {
+  const handleGoogleSignInPopup = (requestDriveScope: boolean = true) => {
     setStatusMsg(null);
     setIsSigningIn(true);
 
@@ -128,18 +128,29 @@ export default function AuthModal({
       return;
     }
 
+    const scope = requestDriveScope
+      ? 'email profile https://www.googleapis.com/auth/drive.appdata'
+      : 'email profile openid';
+
     try {
       const client = googleObj.accounts.oauth2.initTokenClient({
         client_id: activeClientId,
-        scope: 'email profile https://www.googleapis.com/auth/drive.appdata',
+        scope,
         prompt: 'select_account',
         callback: async (tokenResponse: any) => {
           if (tokenResponse?.error) {
             console.error('Google OAuth error:', tokenResponse);
-            setStatusMsg({
-              text: `Google Sign-In canceled or blocked (${tokenResponse.error_description || tokenResponse.error}).`,
-              type: 'error',
-            });
+            if (tokenResponse.error === 'access_denied') {
+              setStatusMsg({
+                text: 'Access Denied: Add your email to "Test users" in Google Cloud Console, or use "Sign In (Profile Only)" below.',
+                type: 'error',
+              });
+            } else {
+              setStatusMsg({
+                text: `Google Sign-In canceled or blocked (${tokenResponse.error_description || tokenResponse.error}).`,
+                type: 'error',
+              });
+            }
             setIsSigningIn(false);
             return;
           }
@@ -159,8 +170,14 @@ export default function AuthModal({
                 const name = profile.name || profile.given_name || 'Google Chef';
                 const avatar = profile.picture;
 
-                // 2. Perform silent initial Google Drive sync
-                await syncToGoogleDriveAppData(tokenResponse.access_token);
+                // 2. Perform silent initial Google Drive sync if scope was granted
+                if (requestDriveScope) {
+                  try {
+                    await syncToGoogleDriveAppData(tokenResponse.access_token);
+                  } catch (syncErr) {
+                    console.warn('Initial drive sync skipped:', syncErr);
+                  }
+                }
 
                 onLoginSuccess(email, name, avatar);
                 onClose();
@@ -355,7 +372,7 @@ export default function AuthModal({
             {/* PRIMARY ACTION: POPUP GOOGLE SIGN-IN */}
             <button
               type="button"
-              onClick={handleGoogleSignInPopup}
+              onClick={() => handleGoogleSignInPopup(true)}
               disabled={isSigningIn}
               className="w-full py-3.5 px-4 bg-white hover:bg-gray-50 text-gray-900 font-black text-sm rounded-2xl border-2 border-black shadow-neo flex items-center justify-center gap-3 transition-colors active:scale-[0.98] cursor-pointer disabled:opacity-60"
             >
@@ -385,6 +402,18 @@ export default function AuthModal({
                 {isSigningIn ? 'Connecting to Google...' : 'Sign In with Google'}
               </span>
             </button>
+
+            {/* INSTANT BASIC PROFILE OPTION (NEVER BLOCKED BY GOOGLE VERIFICATION) */}
+            <div className="text-center pt-0.5">
+              <button
+                type="button"
+                onClick={() => handleGoogleSignInPopup(false)}
+                disabled={isSigningIn}
+                className="text-xs font-bold text-gray-600 dark:text-gray-300 hover:text-black dark:hover:text-white underline decoration-black/30 dark:decoration-white/30 hover:decoration-black transition-colors cursor-pointer py-1 inline-flex items-center gap-1"
+              >
+                <span>Or Sign In with Basic Profile (Instant)</span>
+              </button>
+            </div>
 
             {/* Official Rendered Google Button Container (Fallback / One Tap) */}
             <div className="flex justify-center pt-1">
