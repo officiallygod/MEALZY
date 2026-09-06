@@ -2,9 +2,12 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { X, Clock, ChefHat, ExternalLink, Trash2, RotateCcw } from 'lucide-react';
+import { X, Clock, ChefHat, Trash2, RotateCcw, Sparkles, Check } from 'lucide-react';
 import { MealItem } from '@/types/meal';
 import { getMealAccent, getMealInitials } from '@/lib/curated-foods';
+import { getTwistForDishTitle } from '@/lib/dish-database';
+import { db } from '@/lib/db';
+import confetti from 'canvas-confetti';
 
 interface MealDetailModalProps {
   meal: MealItem | null;
@@ -27,6 +30,28 @@ export default function MealDetailModal({
 
   const initials = getMealInitials(meal.title);
   const accent = meal.accentColor || getMealAccent(meal.title);
+  const twist = getTwistForDishTitle(meal.title);
+  const isTwistAlreadyApplied = meal.tags?.includes('twist-applied');
+
+  const handleApplyTwist = async () => {
+    if (!twist) return;
+
+    await db.meals.update(meal.id, {
+      title: twist.title,
+      calories: meal.calories + twist.caloriesDelta,
+      protein: meal.protein + twist.proteinDelta,
+      tags: [...(meal.tags || []).filter((t) => t !== 'twist-applied'), 'twist-applied'],
+    });
+
+    confetti({
+      particleCount: 40,
+      spread: 50,
+      origin: { y: 0.6 },
+      colors: ['#D4FF00', '#10B981', '#06B6D4'],
+    });
+
+    onClose();
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
@@ -79,20 +104,29 @@ export default function MealDetailModal({
               </span>
             )}
 
-            {meal.tags?.map((t) => (
-              <span
-                key={t}
-                className="px-2.5 py-1 rounded-lg bg-gray-100 dark:bg-[#181A24] text-gray-500 dark:text-gray-400 text-xs font-bold"
-              >
-                #{t}
+            {isTwistAlreadyApplied && (
+              <span className="px-2.5 py-1 rounded-lg bg-lime-100 dark:bg-[#D4FF00]/20 text-lime-800 dark:text-[#D4FF00] border border-lime-300 dark:border-[#D4FF00]/40 text-xs font-bold flex items-center gap-1">
+                <Sparkles className="w-3 h-3" />
+                <span>Twist Applied</span>
               </span>
-            ))}
+            )}
+
+            {meal.tags
+              ?.filter((t) => t !== 'twist-applied')
+              .map((t) => (
+                <span
+                  key={t}
+                  className="px-2.5 py-1 rounded-lg bg-gray-100 dark:bg-[#181A24] text-gray-500 dark:text-gray-400 text-xs font-bold"
+                >
+                  #{t}
+                </span>
+              ))}
           </div>
 
           {/* Macro Bento Stats */}
           <div className="grid grid-cols-4 gap-2 text-center">
             <div className="bg-gray-50 dark:bg-[#181A24] border border-gray-100 dark:border-gray-800 rounded-2xl p-2.5">
-              <span className="text-xs text-gray-400 font-bold block">Calories</span>
+              <span className="text-xs text-gray-400 font-bold block">Energy</span>
               <span className="text-base font-black text-gray-900 dark:text-[#D4FF00]">{meal.calories}</span>
               <span className="text-[9px] text-gray-400 block">kcal</span>
             </div>
@@ -116,42 +150,34 @@ export default function MealDetailModal({
             </div>
           </div>
 
-          {/* Ingredients */}
-          {meal.ingredients && meal.ingredients.length > 0 && (
-            <div>
-              <h4 className="text-xs font-black uppercase text-gray-400 tracking-wider mb-2">
-                Ingredients
-              </h4>
-              <div className="flex flex-wrap gap-1.5">
-                {meal.ingredients.map((ing, idx) => (
-                  <div
-                    key={idx}
-                    className="px-3 py-1.5 rounded-xl bg-gray-50 dark:bg-[#181A24] border border-gray-200 dark:border-gray-800 text-xs font-medium flex items-center gap-1.5"
-                  >
-                    <span className="text-gray-900 dark:text-white font-bold">{ing.name}</span>
-                    <span className="text-gray-500 dark:text-gray-400 text-[11px]">({ing.amount})</span>
-                  </div>
-                ))}
+          {/* Contextual Flavor Twist Recommendation */}
+          {twist && !isTwistAlreadyApplied && (
+            <div className="bg-lime-50/75 dark:bg-[#181A24] border border-lime-300 dark:border-[#D4FF00]/30 rounded-2xl p-4 transition-colors">
+              <div className="flex items-center justify-between gap-2 mb-1.5">
+                <span className="text-[10px] font-black uppercase tracking-wider text-lime-800 dark:text-[#D4FF00] flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Chef&apos;s Twist Idea</span>
+                </span>
+                <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400">
+                  +{twist.caloriesDelta} kcal • +{twist.proteinDelta}g P
+                </span>
               </div>
-            </div>
-          )}
 
-          {/* External Recipe Link */}
-          {meal.recipeUrl && (
-            <div className="bg-gray-50 dark:bg-[#181A24] border border-gray-200 dark:border-gray-800 rounded-2xl p-3 flex items-center justify-between">
-              <div className="text-xs truncate mr-2">
-                <span className="text-gray-400 block text-[10px]">Reference Link</span>
-                <span className="text-blue-600 dark:text-sky-400 font-bold truncate block">{meal.recipeUrl}</span>
-              </div>
-              <a
-                href={meal.recipeUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="py-1.5 px-3 bg-gray-200 dark:bg-[#262938] hover:bg-gray-300 dark:hover:bg-[#34384c] text-gray-900 dark:text-white font-bold text-xs rounded-xl flex items-center gap-1 flex-shrink-0"
+              <h4 className="font-bold text-xs text-gray-900 dark:text-white">
+                {twist.title}
+              </h4>
+              <p className="text-[11px] text-gray-600 dark:text-gray-300 mt-1 leading-relaxed">
+                {twist.description}
+              </p>
+
+              <button
+                type="button"
+                onClick={handleApplyTwist}
+                className="mt-3 px-3 py-1.5 bg-lime-400 dark:bg-[#D4FF00] hover:bg-lime-300 dark:hover:bg-[#c3ed00] text-black font-black text-xs rounded-xl shadow-sm transition-all flex items-center gap-1.5"
               >
-                <span>Open</span>
-                <ExternalLink className="w-3.5 h-3.5" />
-              </a>
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Switch to This Twist</span>
+              </button>
             </div>
           )}
         </div>

@@ -95,7 +95,7 @@ export default function CookieConsent() {
                   </div>
 
                   <div className="flex items-center justify-between p-2 rounded-xl bg-gray-50 dark:bg-[#1A1D27]">
-                    <span>Local Recommendation Heuristics</span>
+                    <span>Smart Suggestions & Twists</span>
                     <input
                       type="checkbox"
                       checked={preferences.tasteAnalytics}

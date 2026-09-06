@@ -1,10 +1,10 @@
 'use client';
 
 import React from 'react';
-import { Calendar, Layers, BookMarked, Sparkles } from 'lucide-react';
+import { Calendar, Layers } from 'lucide-react';
 import { motion } from 'framer-motion';
 
-export type ActiveTab = 'planner' | 'fridge' | 'vault' | 'twists';
+export type ActiveTab = 'planner' | 'fridge';
 
 interface BottomNavProps {
   activeTab: ActiveTab;
@@ -23,8 +23,6 @@ export default function BottomNav({ activeTab, onSelectTab, rottingCount = 0 }: 
   const tabs: TabItem[] = [
     { id: 'planner', label: 'Plan', icon: Calendar },
     { id: 'fridge', label: 'Fridge Radar', icon: Layers, badge: rottingCount > 0 ? rottingCount : undefined },
-    { id: 'vault', label: 'Recipes', icon: BookMarked },
-    { id: 'twists', label: 'AI Twists', icon: Sparkles },
   ];
 
   return (

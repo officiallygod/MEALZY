@@ -10,8 +10,6 @@ import RollingWeekSelector from '@/components/planner/RollingWeekSelector';
 import DailyNutritionMonitor from '@/components/planner/DailyNutritionMonitor';
 import KanbanBentoBoard from '@/components/planner/KanbanBentoBoard';
 import FridgeRotBanner from '@/components/pantry/FridgeRotBanner';
-import RecipeVault from '@/components/recipes/RecipeVault';
-import AITwistsView from '@/components/recipes/AITwistsView';
 import AddMealModal from '@/components/modals/AddMealModal';
 import MealDetailModal from '@/components/modals/MealDetailModal';
 import CookMealModal from '@/components/modals/CookMealModal';
@@ -444,23 +442,6 @@ export default function Home() {
               onDeleteItem={(id) => db.fridge.delete(id)}
             />
           </div>
-        )}
-
-        {/* TAB 3: RECIPE VAULT */}
-        {activeTab === 'vault' && (
-          <RecipeVault
-            onScheduleMeal={handleAddMealConfirm}
-            rollingDays={rollingDays}
-          />
-        )}
-
-        {/* TAB 4: RECOMMENDATIONS */}
-        {activeTab === 'twists' && (
-          <AITwistsView
-            suggestions={smartSuggestions}
-            onApplySuggestion={handleApplySuggestion}
-            rollingDays={rollingDays}
-          />
         )}
       </main>
 
