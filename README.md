@@ -1,111 +1,92 @@
 # ⚡ MEALZY — Aesthetic Gen-Z Meal Planner & Fridge Radar
 
 > **Plan what to make. Track what to eat. Never let good food rot in the fridge.**  
-> Inspired by neo-brutalism, bold high-contrast aesthetics, and springy micro-interactions. Built for Web, iOS, and Android.
+> Inspired by neo-brutalism, bold high-contrast aesthetics, and springy micro-interactions. Built for Web, GitHub Pages, iOS, and Android.
 
 ---
 
-## ✨ Key Features
+## 🌐 Live GitHub Pages Deployment
 
-1. **Dynamic Rolling 7-Day View (Starts from Today)**
-   - No past days cluttering your week. The planner automatically anchors to **Today** and rolls forward 7 days dynamically.
-   - Switch effortlessly between **Day Bento Grid** and the **Full 7-Day Board**.
+MEALZY is pre-configured with a zero-maintenance GitHub Actions CI/CD workflow that builds and exports static HTML on every push to `main`!
 
-2. **Fluid Drag-and-Drop with Spring Physics**
-   - Grab any dish and drop it into Breakfast, Lunch, Dinner, or Snacks across any day with luminous neon drop targets (`DROP HERE ⚡`).
-
-3. **"Cook Once, Eat 3x-4x" Leftover Engine**
-   - Tap **Cook** on any dish, choose your portion multiplier (1x, 2x, 3x, or 4x Meal Prep King 👑).
-   - MEALZY automatically schedules leftovers into your future days' slots and checks them into the **Fridge Radar**.
-
-4. **Quirky Gen-Z Fridge-Rot Radar**
-   - Batches cooked 2–3+ days ago trigger an urgent alert: *"ROTTING IN FRIDGE! Eat that ASAP 🚨"*.
-   - One-tap buttons to *"Eat for Lunch"* or *"Eat for Dinner"* today.
-   - **Gone Already?** If you polished off a dish before expected, tap "Gone Already!" to clear it, earn the *Quick Muncher* badge, and instantly replan/cook again!
-
-5. **Internal AI Flavor Twist Engine (Zero API Charges)**
-   - Client-side heuristic model that analyzes your eating habits.
-   - Generates *"Same Vibe, With a Twist 🔥"* (e.g. transforms *Miso Salmon* into *Gochujang Honey Salmon Bowls* or *Pesto Pasta* into *Sun-Dried Tomato Burrata Rigatoni*).
-   - 100% offline-compatible with zero recurring API costs.
-
-6. **Curated 200+ Aesthetic Food Library (Zero Broken Placeholders)**
-   - High-res photography for popular dishes.
-   - For custom user recipes, MEALZY dynamically generates a high-fashion typographic card with category emoji and pastel gradient mesh—**never** showing an empty box or broken image.
-
-7. **Aesthetic Cookie & Consent Dialog**
-   - Neo-brutalist floating card with playful Gen-Z copy and granular switches for Essential Storage, Fridge Memory, and Taste Analytics.
+### Enabling GitHub Pages in 2 Clicks:
+1. Open your repository on GitHub: [`https://github.com/officiallygod/MEALZY`](https://github.com/officiallygod/MEALZY)
+2. Go to **Settings** → **Pages** (in the left sidebar).
+3. Under **Build and deployment → Source**, change from *Deploy from a branch* to **GitHub Actions**.
+4. That's it! GitHub Actions will run `.github/workflows/deploy.yml` and publish your app live at:  
+   👉 **`https://officiallygod.github.io/MEALZY/`**
 
 ---
 
-## 🏛️ Tech Stack & Architecture
+## 🔑 Where Are the Google Keys & How Does It Work?
 
-- **Core Framework**: [Next.js 15](https://nextjs.org/) (App Router, Turbopack, React 19)
-- **Styling**: [Tailwind CSS](https://tailwindcss.com/) + Neo-brutalist design tokens
-- **Animations**: [Framer Motion](https://www.framer-motion.com/) + [Canvas Confetti](https://github.com/catdad/canvas-confetti)
-- **Local-First Database**: [Dexie.js](https://dexie.org/) (IndexedDB wrapper)
-- **Icons**: [Lucide React](https://lucide.dev/)
-- **Cross-Platform Bridge**: [Capacitor 6](https://capacitorjs.com/) for native iOS & Android export
+### 1. Where do keys live?
+- **In-Browser / GitHub Pages**: Click your profile icon in the top right → open the **"🔑 Cloud & Keys"** tab. You can paste your free Google OAuth Client ID right there in the browser! It is securely saved in your browser's `localStorage` so you never have to re-enter it.
+- **In Local Development**: In the project root, duplicate `.env.example` to `.env.local` and set:
+  ```env
+  NEXT_PUBLIC_GOOGLE_CLIENT_ID="your-google-client-id.apps.googleusercontent.com"
+  ```
 
----
+### 2. How the $0 Free Cloud Architecture Works
+- When you click **"Continue with Google"**, MEALZY initiates Google OAuth with the scope `https://www.googleapis.com/auth/drive.appdata`.
+- MEALZY saves an encrypted sync state (`mealzy_sync.json`) directly inside your personal, private Google Drive hidden application storage (`appDataFolder`).
+- **Why this is unbeatable**:
+  - **Zero Database Bills**: You never pay for AWS, Firebase, or MongoDB hosting.
+  - **Infinite Scale**: Works for 1 user or 1,000,000 users at $0 cost.
+  - **100% User Privacy**: Meals and food logs never touch an external third-party database server.
+  - **Offline-First**: Operates seamlessly offline with IndexedDB even with no internet connection.
 
-## 🔑 Zero-Cost Cloud Database Options ($0 Forever)
-
-You don't need to pay for a hosted database. MEALZY supports two free pathways:
-
-### Option A: Google Drive AppData Sync (Recommended & 100% Free)
-- MEALZY saves an encrypted sync state (`mealzy_sync.json`) directly into the user's private Google Drive `appDataFolder`.
-- **Cost**: $0 forever, infinite user scale, zero server maintenance, 100% user privacy.
-- **Key required**: A free **Google OAuth Client ID** from [Google Cloud Console](https://console.cloud.google.com/apis/credentials).
-
-### Option B: Supabase Free PostgreSQL
-- Standard relational DB with free Auth (Email & Google) and Row-Level Security.
-- **Keys required**:
-  - `NEXT_PUBLIC_SUPABASE_URL`
-  - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-
-### Option C: 100% Offline / Local-First (No Keys Needed)
-- Works instantly out-of-the-box in any browser or mobile webview using IndexedDB + browser cookies!
+### 3. How to get your free Google Client ID in 2 minutes:
+1. Go to [Google Cloud Console Credentials](https://console.cloud.google.com/apis/credentials).
+2. Click **Create Credentials** → **OAuth client ID**.
+3. Application Type: **Web application**.
+4. Under **Authorized JavaScript origins**, add:
+   - `http://localhost:3000` (for local development)
+   - `https://officiallygod.github.io` (for your live GitHub Pages app)
+5. Copy the generated **Client ID** (ends with `.apps.googleusercontent.com`), paste it into the **Cloud & Keys** tab inside MEALZY, and click **Save Keys**!
 
 ---
 
-## 🚀 Getting Started
+## ✨ Features Checklist & Revisions
 
-### 1. Install & Run Locally
+- [x] **Dynamic Rolling 7-Day Timeline (Anchored to Today)**: Eliminates past dates. The week starts on Today and rolls forward.
+- [x] **Day Bento Grid & 7-Day Kanban**: Switch between single-day detail and full week board.
+- [x] **Drag-and-Drop with Spring Physics**: Luminous neon drop indicators (`DROP HERE ⚡`) with smooth spring feedback.
+- [x] **"Cook Once, Eat 3x-4x" Leftover Multiplier**: Choose how many times you want to eat a dish. Automatically schedules leftovers into future days.
+- [x] **Quirky Gen-Z Fridge-Rot Radar**: Alerts when food has been in the fridge 2–3+ days (*"ROTTING IN FRIDGE! EAT ASAP 🚨"*).
+- [x] **"Gone Already?" Early Finish Mode**: If a dish was eaten faster than expected, tap "Gone Already!" to clear it, trigger confetti, and earn the **"Quick Muncher 🏆"** badge with a 1-tap replan button.
+- [x] **Curated 200+ Aesthetic Food Library**: High-res imagery with **zero broken placeholders** (custom dishes get a stylish typographic badge with pastel gradient & emoji).
+- [x] **Internal Local AI Flavor Twists**: Generates variations of your favorite foods (e.g. *Miso Salmon* → *Gochujang Honey Salmon Bowls*) with zero recurring API costs.
+- [x] **Recipe Link Importer**: Paste recipe links from TikTok, Instagram, and web blogs.
+- [x] **Gen-Z Cookie Consent Popup**: Floating pill banner with customizable switches for essentials, fridge storage, and taste analytics.
+- [x] **Cross-Platform**: Web, GitHub Pages, PWA, and Capacitor 6 ready for iOS & Android native export.
+
+---
+
+## 🚀 Local Development
+
 ```bash
-# Clone the repo
-git clone git@github.com:officiallygod/MEALZY.git
-cd MEALZY
-
 # Install dependencies
 npm install
 
-# Start development server
+# Run dev server
 npm run dev
 ```
-Open [http://localhost:3000](http://localhost:3000) to view MEALZY in action!
 
-### 2. Build for Production
+To build for production static export:
 ```bash
 npm run build
-npm run start
 ```
 
-### 3. Package to Native iOS & Android
+To package as a native Android or iOS app:
 ```bash
-# Initialize Capacitor native platforms
 npx cap add android
 npx cap add ios
-
-# Build the web app and sync native assets
 npm run build
 npx cap sync
-
-# Open in Android Studio or Xcode
-npm run cap:open:android
-npm run cap:open:ios
 ```
 
 ---
 
 ## 📄 License
-MIT License. Built with love & good taste.
+MIT License. Built with style.

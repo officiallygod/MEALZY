@@ -8,6 +8,21 @@ export interface MealzyBackupPayload {
   preferences: any;
 }
 
+// Client ID Management (reads from localStorage or .env)
+export function getSavedGoogleClientId(): string {
+  if (typeof window === 'undefined') return '';
+  return (
+    localStorage.getItem('mealzy_google_client_id') ||
+    process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ||
+    ''
+  );
+}
+
+export function saveGoogleClientId(clientId: string): void {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem('mealzy_google_client_id', clientId.trim());
+}
+
 export async function exportLocalDataToPayload(): Promise<MealzyBackupPayload> {
   const meals = await db.meals.toArray();
   const fridge = await db.fridge.toArray();
@@ -35,7 +50,7 @@ export async function restoreDataFromPayload(payload: MealzyBackupPayload): Prom
   });
 }
 
-// Download manual JSON file backup directly in the browser
+// Download manual JSON file backup directly in browser
 export async function downloadLocalBackupFile() {
   const payload = await exportLocalDataToPayload();
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
@@ -66,7 +81,7 @@ export async function uploadAndRestoreBackup(file: File): Promise<boolean> {
   });
 }
 
-// Google Drive AppData Sync Guide & Implementation
+// Google Drive AppData Sync Implementation ($0 cost cloud)
 // Scope: 'https://www.googleapis.com/auth/drive.appdata'
 export async function syncToGoogleDriveAppData(accessToken: string): Promise<boolean> {
   const payload = await exportLocalDataToPayload();
@@ -91,4 +106,32 @@ export async function syncToGoogleDriveAppData(accessToken: string): Promise<boo
   });
 
   return response.ok;
+}
+
+// Download and restore sync file from Google Drive appDataFolder
+export async function pullFromGoogleDriveAppData(accessToken: string): Promise<boolean> {
+  try {
+    const listRes = await fetch(
+      "https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name='mealzy_sync.json'&fields=files(id,name)",
+      {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      }
+    );
+    if (!listRes.ok) return false;
+    const listData = await listRes.json();
+    if (!listData.files || listData.files.length === 0) return false;
+
+    const fileId = listData.files[0].id;
+    const downloadRes = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!downloadRes.ok) return false;
+
+    const payload = await downloadRes.json();
+    await restoreDataFromPayload(payload);
+    return true;
+  } catch (err) {
+    console.error('Failed to pull from Google Drive:', err);
+    return false;
+  }
 }
