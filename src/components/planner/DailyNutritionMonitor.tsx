@@ -105,12 +105,13 @@ function DailyNutritionMonitor({
         <div className="flex items-center gap-2 self-end md:self-auto flex-shrink-0">
           {hasEmptySlots && onAutoFillDay && (
             <button
+              type="button"
               onClick={onAutoFillDay}
-              className="p-1.5 sm:px-3 sm:py-1.5 bg-[#D4FF00] hover:bg-[#c3ed00] text-black font-black text-[11px] rounded-xl border border-black shadow-neo-sm active:translate-x-0.5 active:translate-y-0.5 transition-all flex items-center gap-1.5 leading-none cursor-pointer"
+              className="w-8 h-8 rounded-xl bg-[#D4FF00] hover:bg-[#c3ed00] text-black font-black border-2 border-black shadow-neo-sm active:scale-95 transition-all flex items-center justify-center cursor-pointer flex-shrink-0"
               title="Automatically schedule healthy meals in empty slots"
+              aria-label="Auto-Fill meals"
             >
-              <Sparkles className="w-3.5 h-3.5 stroke-[2.5]" />
-              <span className="hidden lg:inline">Auto-Fill</span>
+              <Sparkles className="w-4 h-4 stroke-[2.5]" />
             </button>
           )}
 

@@ -58,6 +58,19 @@ interface AteOutModalProps {
   onConfirmAteOut: (data: AteOutConfirmData) => void;
 }
 
+export function getNextDayString(dateStr: string, days?: { dateString: string }[]): string {
+  if (days && days.length > 0) {
+    const idx = days.findIndex((d) => d.dateString === dateStr);
+    if (idx >= 0 && idx + 1 < days.length) {
+      return days[idx + 1].dateString;
+    }
+  }
+  if (!dateStr) return '';
+  const d = new Date(dateStr + 'T12:00:00');
+  d.setDate(d.getDate() + 1);
+  return d.toISOString().split('T')[0];
+}
+
 export default function AteOutModal({
   isOpen,
   onClose,
@@ -79,18 +92,17 @@ export default function AteOutModal({
   const [leftoverPortions, setLeftoverPortions] = useState<number>(1);
   const [leftoverDestination, setLeftoverDestination] = useState<'schedule' | 'fridge'>('schedule');
 
-  // Tomorrow by default
-  const tomorrow = rollingDays[1]?.dateString || rollingDays[0]?.dateString || targetDate;
+  // Next day relative to the targetDate being eaten out
+  const nextDay = getNextDayString(targetDate, rollingDays);
   const defaultLeftoverSlot: MealType = selectedSlot === 'dinner' ? 'lunch' : 'dinner';
-  const [leftoverDate, setLeftoverDate] = useState<string>(tomorrow);
+  const [leftoverDate, setLeftoverDate] = useState<string>(nextDay);
   const [leftoverSlot, setLeftoverSlot] = useState<MealType>(defaultLeftoverSlot);
   const [showAdvancedLeftoverDate, setShowAdvancedLeftoverDate] = useState<boolean>(false);
 
-  // Original planned meal action (simplified 1-click default: push_tomorrow)
+  // Original planned meal action (simplified 1-click default: push to next day)
   const [originalMealAction, setOriginalMealAction] = useState<'push_tomorrow' | 'save_fridge' | 'replace'>('push_tomorrow');
-  const [originalMealPushDate, setOriginalMealPushDate] = useState<string>(tomorrow);
+  const [originalMealPushDate, setOriginalMealPushDate] = useState<string>(nextDay);
   const [originalMealPushSlot, setOriginalMealPushSlot] = useState<MealType>(selectedSlot);
-  const [showAdvancedPushPicker, setShowAdvancedPushPicker] = useState<boolean>(false);
 
   // Subtle optional calorie tracking
   const [trackCalories, setTrackCalories] = useState<boolean>(false);
@@ -98,27 +110,35 @@ export default function AteOutModal({
   const [caloriePreset, setCaloriePreset] = useState<number>(750);
   const [customCalories, setCustomCalories] = useState<string>('750');
 
-  // Planned meals for the currently selected slot on targetDate
-  const effectiveMeals = (targetMeals && targetMeals.length > 0) ? targetMeals : (targetMeal ? [targetMeal] : []);
-  const activePlannedMeals = allMeals
-    ? allMeals.filter((m) => m.dateScheduled === targetDate && m.mealType === selectedSlot)
-    : (selectedSlot === targetSlot ? effectiveMeals : []);
+  // Planned meals for the currently selected slot on targetDate (excluding previous ate-out logs)
+  const activePlannedMeals = React.useMemo(() => {
+    const rawPlanned = (allMeals || []).filter(
+      (m) => m.dateScheduled === targetDate && m.mealType === selectedSlot && !m.tags?.includes('ate-out')
+    );
+    if (rawPlanned.length > 0) return rawPlanned;
+
+    const fallbackList = (targetMeals && targetMeals.length > 0) ? targetMeals : (targetMeal ? [targetMeal] : []);
+    return fallbackList.filter(
+      (m) => (!m.dateScheduled || m.dateScheduled === targetDate) && m.mealType === selectedSlot && !m.tags?.includes('ate-out')
+    );
+  }, [allMeals, targetDate, selectedSlot, targetMeals, targetMeal]);
 
   useEffect(() => {
     if (isOpen) {
       const initialSlot = targetSlot || 'dinner';
+      const initialNextDay = getNextDayString(targetDate, rollingDays);
+
       setSelectedSlot(initialSlot);
       setHasLeftover(false);
       setLeftoverPortions(1);
       setLeftoverDestination('schedule');
-      setLeftoverDate(tomorrow);
+      setLeftoverDate(initialNextDay);
       setLeftoverSlot(initialSlot === 'dinner' ? 'lunch' : 'dinner');
       setShowAdvancedLeftoverDate(false);
 
       setOriginalMealAction('push_tomorrow');
-      setOriginalMealPushDate(tomorrow);
+      setOriginalMealPushDate(initialNextDay);
       setOriginalMealPushSlot(initialSlot);
-      setShowAdvancedPushPicker(false);
 
       setTrackCalories(false);
       const slotCap = initialSlot.charAt(0).toUpperCase() + initialSlot.slice(1);
@@ -126,7 +146,7 @@ export default function AteOutModal({
       setCaloriePreset(750);
       setCustomCalories('750');
     }
-  }, [isOpen, targetMeal, targetMeals, targetDate, targetSlot, tomorrow]);
+  }, [isOpen, targetMeal, targetMeals, targetDate, targetSlot, rollingDays]);
 
   // When selectedSlot changes, update default push slot and title
   const handleSlotChange = (slot: MealType) => {
@@ -134,6 +154,16 @@ export default function AteOutModal({
     setOriginalMealPushSlot(slot);
     const slotCap = slot.charAt(0).toUpperCase() + slot.slice(1);
     setDishTitle(`Ate Out (${slotCap})`);
+  };
+
+  const getDayLabel = (dateStr: string) => {
+    if (!dateStr) return '';
+    const found = rollingDays.find((d) => d.dateString === dateStr);
+    if (found) {
+      if (found.isToday) return `Today (${found.dayNumber})`;
+      return `${found.dayName} ${found.dayNumber}`;
+    }
+    return dateStr;
   };
 
   if (!isOpen) return null;
@@ -149,6 +179,12 @@ export default function AteOutModal({
       ? dishTitle.trim()
       : `Ate Out (${selectedSlot.charAt(0).toUpperCase() + selectedSlot.slice(1)})`;
 
+    const nextDaySafe = getNextDayString(targetDate, rollingDays);
+    let finalPushDate = originalMealPushDate;
+    if (!finalPushDate || (finalPushDate === targetDate && originalMealPushSlot === selectedSlot)) {
+      finalPushDate = nextDaySafe;
+    }
+
     onConfirmAteOut({
       dateScheduled: targetDate,
       mealType: selectedSlot,
@@ -157,10 +193,10 @@ export default function AteOutModal({
       hasLeftover,
       leftoverPortions,
       leftoverDestination,
-      leftoverScheduleDate: leftoverDate,
+      leftoverScheduleDate: leftoverDate || nextDaySafe,
       leftoverScheduleSlot: leftoverSlot,
       originalMealAction: activePlannedMeals.length > 0 ? originalMealAction : undefined,
-      originalMealPushDate: activePlannedMeals.length > 0 && originalMealAction === 'push_tomorrow' ? originalMealPushDate : undefined,
+      originalMealPushDate: activePlannedMeals.length > 0 && originalMealAction === 'push_tomorrow' ? finalPushDate : undefined,
       originalMealPushSlot: activePlannedMeals.length > 0 && originalMealAction === 'push_tomorrow' ? originalMealPushSlot : undefined,
       originalMeal: activePlannedMeals[0],
       originalMeals: activePlannedMeals,
@@ -494,54 +530,74 @@ export default function AteOutModal({
                 </button>
               </div>
 
-              {/* Clean Progressive Disclosure: Only show custom day picker if user explicitly opens it */}
+              {/* Progressive & Clear Destination Selector for Pushed Meals */}
               {originalMealAction === 'push_tomorrow' && (
-                <div>
-                  <button
-                    type="button"
-                    onClick={() => setShowAdvancedPushPicker(!showAdvancedPushPicker)}
-                    className="text-[10px] text-gray-500 hover:text-black dark:hover:text-white font-bold underline flex items-center gap-1 mt-1 cursor-pointer"
-                  >
-                    <span>{showAdvancedPushPicker ? 'Hide date selector' : `Move to different day than tomorrow (${originalMealPushDate})?`}</span>
-                    {showAdvancedPushPicker ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-                  </button>
+                <div className="p-3.5 rounded-2xl bg-white dark:bg-[#16171E] border-2 border-black dark:border-gray-700 shadow-neo-sm space-y-3">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-black uppercase text-gray-500 dark:text-gray-400 text-[10px] tracking-wider">
+                      Destination:
+                    </span>
+                    <span className="font-black text-xs text-black dark:text-[#D4FF00] bg-[#FFE600]/40 dark:bg-[#D4FF00]/20 px-2.5 py-1 rounded-xl border border-black dark:border-gray-600 shadow-neo-sm">
+                      {getDayLabel(originalMealPushDate)} • {originalMealPushSlot.toUpperCase()}
+                    </span>
+                  </div>
 
-                  {showAdvancedPushPicker && (
-                    <div className="mt-2 p-2.5 bg-white dark:bg-[#16171E] rounded-xl border border-black/20 dark:border-gray-700 space-y-2">
-                      <div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar pb-1">
-                        {rollingDays.map((d, dIdx) => (
+                  <div>
+                    <span className="text-[10px] font-black uppercase text-gray-500 dark:text-gray-400 block mb-1.5">
+                      Select Day to Move Dishes To:
+                    </span>
+                    <div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar pb-1">
+                      {rollingDays.map((d) => {
+                        const isSelected = originalMealPushDate === d.dateString;
+                        const isCurrentDay = d.dateString === targetDate;
+                        const isNextDay = d.dateString === nextDay;
+
+                        return (
                           <button
                             key={d.dateString}
                             type="button"
                             onClick={() => setOriginalMealPushDate(d.dateString)}
-                            className={`px-2.5 py-1 rounded-lg text-[10px] font-black border transition-colors flex-shrink-0 cursor-pointer ${
-                              originalMealPushDate === d.dateString
+                            className={`px-3 py-1.5 rounded-xl text-[11px] font-black border-2 transition-all flex-shrink-0 cursor-pointer active:scale-95 flex items-center gap-1 ${
+                              isSelected
                                 ? 'bg-[#FFE600] text-black border-black shadow-neo-sm'
-                                : 'bg-[#FAF8F5] dark:bg-[#20222E] text-gray-700 dark:text-gray-300 border-black/20 dark:border-gray-700'
+                                : 'bg-[#FAF8F5] dark:bg-[#20222E] text-gray-700 dark:text-gray-300 border-black/20 dark:border-gray-700 hover:border-black'
                             }`}
                           >
-                            {dIdx === 0 ? 'Today' : dIdx === 1 ? 'Tomorrow' : d.dayName}
+                            <span>{d.dayName} {d.dayNumber}</span>
+                            {isCurrentDay && <span className="text-[8px] opacity-60">(Current)</span>}
+                            {isNextDay && <span className="text-[8px] font-black text-emerald-600 dark:text-emerald-400">(Next)</span>}
                           </button>
-                        ))}
-                      </div>
-
-                      <div className="grid grid-cols-4 gap-1">
-                        {(['breakfast', 'lunch', 'dinner', 'snack'] as MealType[]).map((slot) => (
-                          <button
-                            key={slot}
-                            type="button"
-                            onClick={() => setOriginalMealPushSlot(slot)}
-                            className={`py-1 text-center text-[10px] font-black uppercase rounded-lg border transition-colors cursor-pointer ${
-                              originalMealPushSlot === slot
-                                ? 'bg-[#00E5FF] text-black border-black shadow-neo-sm'
-                                : 'bg-[#FAF8F5] dark:bg-[#20222E] text-gray-700 dark:text-gray-300 border-black/20 dark:border-gray-700'
-                            }`}
-                          >
-                            {slot === 'breakfast' ? 'Bfast' : slot}
-                          </button>
-                        ))}
-                      </div>
+                        );
+                      })}
                     </div>
+                  </div>
+
+                  <div>
+                    <span className="text-[10px] font-black uppercase text-gray-500 dark:text-gray-400 block mb-1.5">
+                      Select Slot in Destination Day:
+                    </span>
+                    <div className="grid grid-cols-4 gap-1.5">
+                      {(['breakfast', 'lunch', 'dinner', 'snack'] as MealType[]).map((slot) => (
+                        <button
+                          key={slot}
+                          type="button"
+                          onClick={() => setOriginalMealPushSlot(slot)}
+                          className={`py-1.5 text-center text-[10px] font-black uppercase rounded-xl border-2 transition-all cursor-pointer active:scale-95 ${
+                            originalMealPushSlot === slot
+                              ? 'bg-[#00E5FF] text-black border-black shadow-neo-sm'
+                              : 'bg-[#FAF8F5] dark:bg-[#20222E] text-gray-700 dark:text-gray-300 border-black/20 dark:border-gray-700 hover:border-black'
+                          }`}
+                        >
+                          {slot === 'breakfast' ? 'Bfast' : slot}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {originalMealPushDate === targetDate && originalMealPushSlot === selectedSlot && (
+                    <p className="text-[11px] font-bold text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-950/60 p-2.5 rounded-xl border-2 border-amber-500/50">
+                      ⚠️ You chose the same day and slot. To push meals away, please pick another day above.
+                    </p>
                   )}
                 </div>
               )}

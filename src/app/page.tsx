@@ -18,7 +18,7 @@ import AddFridgeItemModal from '@/components/modals/AddFridgeItemModal';
 import AuthModal from '@/components/common/AuthModal';
 import ErrorBoundary from '@/components/common/ErrorBoundary';
 import ExportWeekModal from '@/components/modals/ExportWeekModal';
-import AteOutModal, { AteOutConfirmData } from '@/components/modals/AteOutModal';
+import AteOutModal, { AteOutConfirmData, getNextDayString } from '@/components/modals/AteOutModal';
 import AutoFillSuggestionModal from '@/components/modals/AutoFillSuggestionModal';
 import UndoToast, { UndoAction } from '@/components/common/UndoToast';
 import SplashScreen from '@/components/common/SplashScreen';
@@ -675,19 +675,35 @@ export default function Home() {
 
   // Handle Ate Out / Ate Something Else with Slot-Level Food Movement & Undo
   const handleConfirmAteOut = async (data: AteOutConfirmData) => {
-    const tomorrow = rollingDays[1]?.dateString || rollingDays[0]?.dateString;
+    const nextDayFromTarget = getNextDayString(data.dateScheduled, rollingDays);
 
-    // 1. Handle original meal(s) scheduled for this slot
-    const targetMealsToProcess = (data.originalMeals && data.originalMeals.length > 0)
-      ? data.originalMeals
-      : (data.originalMeal ? [data.originalMeal] : []);
+    // 1. Gather all actual planned meals scheduled in this slot (excluding previous ate-out logs)
+    const dbExistingInSlot = await db.meals
+      .where('dateScheduled')
+      .equals(data.dateScheduled)
+      .filter((m) => m.mealType === data.mealType && !m.tags?.includes('ate-out'))
+      .toArray();
 
+    const targetMealsMap = new Map<string, MealItem>();
+    (data.originalMeals || []).forEach((m) => {
+      if (!m.tags?.includes('ate-out')) targetMealsMap.set(m.id, m);
+    });
+    if (data.originalMeal && !data.originalMeal.tags?.includes('ate-out')) {
+      targetMealsMap.set(data.originalMeal.id, data.originalMeal);
+    }
+    dbExistingInSlot.forEach((m) => targetMealsMap.set(m.id, m));
+
+    const targetMealsToProcess = Array.from(targetMealsMap.values());
     const originalMealBackups: MealItem[] = targetMealsToProcess.map((m) => ({ ...m }));
 
     if (targetMealsToProcess.length > 0) {
       for (const origMeal of targetMealsToProcess) {
         if (data.originalMealAction === 'push_tomorrow') {
-          const targetPushDate = data.originalMealPushDate || tomorrow;
+          let targetPushDate = data.originalMealPushDate || nextDayFromTarget;
+          // Guard: Never push to the same date if push_tomorrow is intended
+          if (targetPushDate === data.dateScheduled) {
+            targetPushDate = nextDayFromTarget;
+          }
           const targetPushSlot = data.originalMealPushSlot || origMeal.mealType;
           await db.meals.update(origMeal.id, {
             dateScheduled: targetPushDate,
@@ -736,13 +752,17 @@ export default function Home() {
     // 3. Handle Leftover (if user selected YES)
     if (data.hasLeftover) {
       const leftoverTitle = cleanMealTitle(data.title || 'Takeout');
+      let leftoverDate = data.leftoverScheduleDate || nextDayFromTarget;
+      if (leftoverDate === data.dateScheduled && data.leftoverDestination === 'schedule') {
+        leftoverDate = nextDayFromTarget;
+      }
 
       if (data.leftoverDestination === 'schedule') {
         await db.meals.add({
           id: `leftover-${ateOutId}`,
           title: leftoverTitle,
           mealType: data.leftoverScheduleSlot || 'lunch',
-          dateScheduled: data.leftoverScheduleDate || tomorrow,
+          dateScheduled: leftoverDate,
           calories: Math.round((data.calories || 750) * 0.75),
           protein: Math.round((data.calories || 750) * 0.035),
           carbs: Math.round((data.calories || 750) * 0.1),
@@ -786,8 +806,11 @@ export default function Home() {
           await db.meals.put(orig);
           await db.fridge.delete(`fridge-pushed-${orig.id}`);
         }
+        scheduleBackgroundDriveSync(1000);
       },
     });
+
+    scheduleBackgroundDriveSync(1000);
 
     // Celebration Confetti
     confetti({

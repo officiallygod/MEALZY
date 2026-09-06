@@ -108,155 +108,7 @@ const MEAL_SLOTS: {
   },
 ];
 
-// Interactive Quick Actions Circular Menu around the OG Plus turned X icon
-function MealActionNavMenu({
-  meal,
-  dayDateString,
-  slotType,
-  onMoveClick,
-  onDeleteClick,
-  onAddClick,
-  onDuplicateClick,
-}: {
-  meal: MealItem;
-  dayDateString: string;
-  slotType: MealType;
-  onMoveClick: (meal: MealItem) => void;
-  onDeleteClick: (mealId: string) => void;
-  onAddClick: (dateString: string, slotType: MealType) => void;
-  onDuplicateClick: (meal: MealItem) => void;
-}) {
-  const [isOpen, setIsOpen] = useState(false);
 
-  useEffect(() => {
-    if (!isOpen) return;
-    const handleOutside = () => {
-      setIsOpen(false);
-    };
-    window.addEventListener('click', handleOutside);
-    window.addEventListener('touchstart', handleOutside);
-    return () => {
-      window.removeEventListener('click', handleOutside);
-      window.removeEventListener('touchstart', handleOutside);
-    };
-  }, [isOpen]);
-
-  const R = 27;
-
-  return (
-    <div
-      className="relative inline-flex items-center justify-center flex-shrink-0 z-30"
-      onMouseEnter={() => setIsOpen(true)}
-      onMouseLeave={() => setIsOpen(false)}
-      onClick={(e) => e.stopPropagation()}
-    >
-      {/* Center Trigger: OG Plus button that rotates 45deg to become X icon */}
-      <button
-        type="button"
-        onClick={(e) => {
-          e.stopPropagation();
-          setIsOpen((prev) => !prev);
-        }}
-        className={`w-6 h-6 rounded-full border-2 border-black flex items-center justify-center transition-all shadow-neo-sm cursor-pointer z-40 ${
-          isOpen
-            ? 'bg-black text-white dark:bg-[#FFE600] dark:text-black scale-110 shadow-neo'
-            : 'bg-[#FFE600] hover:bg-[#ffe000] text-black hover:scale-110'
-        }`}
-        title={isOpen ? 'Close actions' : 'Meal actions (Move, Add, Duplicate, Delete)'}
-        aria-label={isOpen ? 'Close actions' : 'Meal actions (Move, Add, Duplicate, Delete)'}
-      >
-        <Plus
-          className={`w-3.5 h-3.5 stroke-[3] transition-transform duration-200 ${
-            isOpen ? 'rotate-45' : 'rotate-0'
-          }`}
-        />
-      </button>
-
-      {/* 4 Circular Satellite Action Buttons orbiting the OG Plus-turned-X icon */}
-      <AnimatePresence>
-        {isOpen && (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-50">
-            {/* 1. MOVE (North / Top) */}
-            <motion.button
-              type="button"
-              initial={{ x: 0, y: 0, scale: 0, opacity: 0 }}
-              animate={{ x: 0, y: -R, scale: 1, opacity: 1 }}
-              exit={{ x: 0, y: 0, scale: 0, opacity: 0 }}
-              transition={{ type: 'spring', damping: 20, stiffness: 400 }}
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsOpen(false);
-                onMoveClick(meal);
-              }}
-              className="absolute pointer-events-auto w-6 h-6 rounded-full bg-[#FFE600] hover:bg-[#ffd900] text-black border-2 border-black flex items-center justify-center shadow-neo-sm hover:scale-125 active:scale-95 transition-transform cursor-pointer"
-              title="Move dish to another day or slot"
-              aria-label="Move dish"
-            >
-              <ArrowLeftRight className="w-3 h-3 stroke-[2.5]" />
-            </motion.button>
-
-            {/* 2. ADD (East / Right) */}
-            <motion.button
-              type="button"
-              initial={{ x: 0, y: 0, scale: 0, opacity: 0 }}
-              animate={{ x: R, y: 0, scale: 1, opacity: 1 }}
-              exit={{ x: 0, y: 0, scale: 0, opacity: 0 }}
-              transition={{ type: 'spring', damping: 20, stiffness: 400, delay: 0.02 }}
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsOpen(false);
-                onAddClick(dayDateString, slotType);
-              }}
-              className="absolute pointer-events-auto w-6 h-6 rounded-full bg-[#00E5FF] hover:bg-[#00cbe2] text-black border-2 border-black flex items-center justify-center shadow-neo-sm hover:scale-125 active:scale-95 transition-transform cursor-pointer"
-              title="Add dish to this slot"
-              aria-label="Add dish"
-            >
-              <Plus className="w-3.5 h-3.5 stroke-[3]" />
-            </motion.button>
-
-            {/* 3. DUPLICATE (South / Bottom) */}
-            <motion.button
-              type="button"
-              initial={{ x: 0, y: 0, scale: 0, opacity: 0 }}
-              animate={{ x: 0, y: R, scale: 1, opacity: 1 }}
-              exit={{ x: 0, y: 0, scale: 0, opacity: 0 }}
-              transition={{ type: 'spring', damping: 20, stiffness: 400, delay: 0.04 }}
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsOpen(false);
-                onDuplicateClick(meal);
-              }}
-              className="absolute pointer-events-auto w-6 h-6 rounded-full bg-[#D4FF00] hover:bg-[#c3ed00] text-black border-2 border-black flex items-center justify-center shadow-neo-sm hover:scale-125 active:scale-95 transition-transform cursor-pointer"
-              title="Duplicate dish right next to original"
-              aria-label="Duplicate dish"
-            >
-              <Copy className="w-3 h-3 stroke-[2.5]" />
-            </motion.button>
-
-            {/* 4. DELETE (West / Left) */}
-            <motion.button
-              type="button"
-              initial={{ x: 0, y: 0, scale: 0, opacity: 0 }}
-              animate={{ x: -R, y: 0, scale: 1, opacity: 1 }}
-              exit={{ x: 0, y: 0, scale: 0, opacity: 0 }}
-              transition={{ type: 'spring', damping: 20, stiffness: 400, delay: 0.06 }}
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsOpen(false);
-                onDeleteClick(meal.id);
-              }}
-              className="absolute pointer-events-auto w-6 h-6 rounded-full bg-[#FF4B4B] hover:bg-red-600 text-white border-2 border-black flex items-center justify-center shadow-neo-sm hover:scale-125 active:scale-95 transition-transform cursor-pointer"
-              title="Delete dish"
-              aria-label="Delete dish"
-            >
-              <Trash2 className="w-3 h-3 stroke-[2.5]" />
-            </motion.button>
-          </div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
 
 function KanbanBentoBoard({
   days,
@@ -563,20 +415,19 @@ function KanbanBentoBoard({
                             ) : null}
                           </div>
 
-                          <div className="flex items-center gap-1.5 flex-shrink-0">
-                            <MealActionNavMenu
-                              meal={meal}
-                              dayDateString={activeDayObj.dateString}
-                              slotType={slot.type}
-                              onMoveClick={(m) => {
-                                setMovingMealId(m.id);
-                                setMoveTargetDate(m.dateScheduled || activeDayObj.dateString);
-                                setShowMoveDayPicker(false);
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDuplicateInternal(meal);
                               }}
-                              onDeleteClick={onDeleteMeal}
-                              onAddClick={onQuickAddMeal}
-                              onDuplicateClick={handleDuplicateInternal}
-                            />
+                              className="w-6 h-6 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-[#D4FF00] hover:text-black dark:hover:bg-[#D4FF00] dark:hover:text-black border border-black flex items-center justify-center transition-colors cursor-pointer text-gray-700 dark:text-gray-300"
+                              title="Duplicate meal"
+                              aria-label="Duplicate meal"
+                            >
+                              <Copy className="w-3 h-3 stroke-[2.5]" />
+                            </button>
                             <button
                               type="button"
                               onClick={(e) => {
@@ -620,90 +471,75 @@ function KanbanBentoBoard({
                                 onClick={() => onSelectMeal(meal)}
                                 className="cursor-pointer"
                               >
-                                  <div className="flex items-start justify-between gap-2">
-                                    <div className="flex items-start gap-2.5 min-w-0 flex-1">
-                                      {/* Initials Badge */}
-                                      <div
-                                        className="w-9 h-9 rounded-xl flex items-center justify-center font-black text-xs text-white flex-shrink-0 border-2 border-black shadow-neo-sm"
-                                        style={{ backgroundColor: accent }}
-                                      >
-                                        {initials}
-                                      </div>
-
-                                      <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-1.5 flex-wrap">
-                                          <h4 className="font-funky font-black text-xs text-gray-950 dark:text-white truncate group-hover:underline">
-                                            {cleanMealTitle(meal.title)}
-                                          </h4>
-                                          {meal.isLeftover && (
-                                            <span className="px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider bg-purple-200 dark:bg-purple-900/60 text-purple-950 dark:text-purple-200 border border-purple-600/50 shadow-neo-sm">
-                                              LEFTOVER
-                                            </span>
-                                          )}
-                                          {meal.portions && meal.portions > 1 && (
-                                            <span className="px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider bg-amber-200 dark:bg-amber-900/60 text-amber-950 dark:text-amber-200 border border-amber-600/50 shadow-neo-sm">
-                                              {meal.portions}x PORTIONS
-                                            </span>
-                                          )}
-                                        </div>
-
-                                        <div className="flex items-center gap-2 mt-1 text-[10px] text-gray-700 dark:text-gray-300 font-bold flex-wrap">
-                                          {meal.calories && meal.calories > 0 ? (
-                                            <span className="text-gray-950 dark:text-[#D4FF00] font-black">
-                                              {meal.calories} kcal
-                                            </span>
-                                          ) : (
-                                            <span className="px-1.5 py-0.5 rounded-md bg-gray-200 dark:bg-gray-800 text-gray-800 dark:text-gray-200 text-[9px] font-black border border-black/20">
-                                              Calories Not Given
-                                            </span>
-                                          )}
-                                          {meal.protein ? (
-                                            <>
-                                              <span>•</span>
-                                              <span>{meal.protein}g P</span>
-                                            </>
-                                          ) : null}
-                                          {meal.prepTimeMinutes ? (
-                                            <>
-                                              <span>•</span>
-                                              <span className="flex items-center gap-0.5">
-                                                <Clock className="w-2.5 h-2.5" />
-                                                {meal.prepTimeMinutes}m
-                                              </span>
-                                            </>
-                                          ) : null}
-                                        </div>
-                                      </div>
+                                  <div className="flex items-start gap-2.5 min-w-0">
+                                    {/* Initials Badge */}
+                                    <div
+                                      className="w-9 h-9 rounded-xl flex items-center justify-center font-black text-xs text-white flex-shrink-0 border-2 border-black shadow-neo-sm"
+                                      style={{ backgroundColor: accent }}
+                                    >
+                                      {initials}
                                     </div>
 
-                                    {/* Circular Action Menu on other side (Top-Right) */}
-                                    <MealActionNavMenu
-                                      meal={meal}
-                                      dayDateString={activeDayObj.dateString}
-                                      slotType={slot.type}
-                                      onMoveClick={(m) => {
-                                        setMovingMealId(m.id);
-                                        setMoveTargetDate(m.dateScheduled || activeDayObj.dateString);
-                                        setShowMoveDayPicker(false);
-                                      }}
-                                      onDeleteClick={onDeleteMeal}
-                                      onAddClick={onQuickAddMeal}
-                                      onDuplicateClick={handleDuplicateInternal}
-                                    />
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-1.5 flex-wrap">
+                                        <h4 className="font-funky font-black text-xs text-gray-950 dark:text-white truncate group-hover:underline">
+                                          {cleanMealTitle(meal.title)}
+                                        </h4>
+                                        {meal.isLeftover && (
+                                          <span className="px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider bg-purple-200 dark:bg-purple-900/60 text-purple-950 dark:text-purple-200 border border-purple-600/50 shadow-neo-sm">
+                                            LEFTOVER
+                                          </span>
+                                        )}
+                                        {meal.portions && meal.portions > 1 && (
+                                          <span className="px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider bg-amber-200 dark:bg-amber-900/60 text-amber-950 dark:text-amber-200 border border-amber-600/50 shadow-neo-sm">
+                                            {meal.portions}x PORTIONS
+                                          </span>
+                                        )}
+                                      </div>
+
+                                      <div className="flex items-center gap-2 mt-1 text-[10px] text-gray-700 dark:text-gray-300 font-bold flex-wrap">
+                                        {meal.calories && meal.calories > 0 ? (
+                                          <span className="text-gray-950 dark:text-[#D4FF00] font-black">
+                                            {meal.calories} kcal
+                                          </span>
+                                        ) : (
+                                          <span className="px-1.5 py-0.5 rounded-md bg-gray-200 dark:bg-gray-800 text-gray-800 dark:text-gray-200 text-[9px] font-black border border-black/20">
+                                            Calories Not Given
+                                          </span>
+                                        )}
+                                        {meal.protein ? (
+                                          <>
+                                            <span>•</span>
+                                            <span>{meal.protein}g P</span>
+                                          </>
+                                        ) : null}
+                                        {meal.prepTimeMinutes ? (
+                                          <>
+                                            <span>•</span>
+                                            <span className="flex items-center gap-0.5">
+                                              <Clock className="w-2.5 h-2.5" />
+                                              {meal.prepTimeMinutes}m
+                                            </span>
+                                          </>
+                                        ) : null}
+                                      </div>
+                                    </div>
                                   </div>
                               </div>
 
                               {/* Card Actions (Tactile Neo-Brutalist Buttons) */}
                               <div className="mt-2.5 pt-2 border-t-2 border-black/10 dark:border-gray-800 flex items-center justify-between text-[10px]">
-                                <div className="flex items-center gap-1.5 flex-wrap">
+                                <div className="flex items-center gap-1.5 flex-nowrap">
                                   <button
+                                    type="button"
                                     onClick={() => onMarkGoneEarly(meal.id, meal.title)}
-                                    className="px-2 py-1 rounded-lg bg-[#FFE600] text-black font-black border border-black shadow-neo-sm hover:bg-yellow-400 active:scale-95 transition-colors"
+                                    className="px-2 py-1 rounded-lg bg-[#FFE600] text-black font-black text-[10px] border border-black shadow-neo-sm hover:bg-yellow-400 active:scale-95 transition-colors whitespace-nowrap"
                                     title="Finished earlier than expected? Clear and replan."
                                   >
                                     Gone?
                                   </button>
                                   <button
+                                    type="button"
                                     onClick={() => {
                                       if (movingMealId === meal.id) {
                                         setMovingMealId(null);
@@ -714,20 +550,20 @@ function KanbanBentoBoard({
                                         setShowMoveDayPicker(false);
                                       }
                                     }}
-                                    className="px-2 py-1 rounded-lg bg-white dark:bg-[#20222E] hover:bg-[#00E5FF] hover:text-black dark:hover:bg-[#00E5FF] dark:hover:text-black text-gray-700 dark:text-gray-300 font-black border border-black shadow-neo-sm active:scale-95 transition-colors flex items-center gap-1"
+                                    className="w-6 h-6 rounded-lg bg-white dark:bg-[#20222E] hover:bg-[#FFE600] hover:text-black dark:hover:bg-[#FFE600] dark:hover:text-black text-gray-700 dark:text-gray-300 border border-black shadow-neo-sm active:scale-95 transition-colors flex items-center justify-center cursor-pointer flex-shrink-0"
                                     title="Move to another meal slot or day"
+                                    aria-label="Move meal"
                                   >
-                                    <ArrowLeftRight className="w-2.5 h-2.5 stroke-[2.5]" />
-                                    <span>Move</span>
+                                    <ArrowLeftRight className="w-3 h-3 stroke-[2.5]" />
                                   </button>
                                   <button
                                     type="button"
                                     onClick={() => handleDuplicateInternal(meal)}
-                                    className="px-2 py-1 rounded-lg bg-[#D4FF00] hover:bg-[#c3ed00] text-black font-black border border-black shadow-neo-sm active:scale-95 transition-colors flex items-center gap-1 cursor-pointer"
+                                    className="w-6 h-6 rounded-lg bg-white dark:bg-[#20222E] hover:bg-[#D4FF00] hover:text-black dark:hover:bg-[#D4FF00] dark:hover:text-black text-gray-700 dark:text-gray-300 border border-black shadow-neo-sm active:scale-95 transition-colors flex items-center justify-center cursor-pointer flex-shrink-0"
                                     title="Duplicate meal right next to original"
+                                    aria-label="Duplicate meal"
                                   >
-                                    <Copy className="w-2.5 h-2.5" />
-                                    <span>Copy</span>
+                                    <Copy className="w-3 h-3 stroke-[2.5]" />
                                   </button>
                                 </div>
 
@@ -1121,21 +957,6 @@ function KanbanBentoBoard({
                                             No Cals
                                           </span>
                                         )}
-
-                                        {/* Circular Satellite Action Menu on the other side of the card */}
-                                        <MealActionNavMenu
-                                          meal={meal}
-                                          dayDateString={day.dateString}
-                                          slotType={slot.type}
-                                          onMoveClick={(m) => {
-                                            setMovingMealId(m.id);
-                                            setMoveTargetDate(m.dateScheduled || day.dateString);
-                                            setShowMoveDayPicker(false);
-                                          }}
-                                          onDeleteClick={onDeleteMeal}
-                                          onAddClick={onQuickAddMeal}
-                                          onDuplicateClick={handleDuplicateInternal}
-                                        />
                                       </div>
                                     </div>
 
