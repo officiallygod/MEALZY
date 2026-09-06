@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { CalendarDays, LayoutGrid, Smartphone } from 'lucide-react';
+import { CalendarDays, LayoutGrid } from 'lucide-react';
 
 interface RollingWeekSelectorProps {
   days: {
@@ -16,7 +16,6 @@ interface RollingWeekSelectorProps {
   isAllDaysView: boolean;
   onToggleAllDaysView: (all: boolean) => void;
   dayMealCounts: Record<string, { count: number; calories: number }>;
-  onExportWeekImage?: () => void;
 }
 
 export default function RollingWeekSelector({
@@ -26,7 +25,6 @@ export default function RollingWeekSelector({
   isAllDaysView,
   onToggleAllDaysView,
   dayMealCounts,
-  onExportWeekImage,
 }: RollingWeekSelectorProps) {
   return (
     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
@@ -85,20 +83,8 @@ export default function RollingWeekSelector({
         })}
       </div>
 
-      {/* Right: View Mode Toggle + Save Week Image */}
+      {/* Right: View Mode Toggle (Day Bento vs 7-Day Board) */}
       <div className="flex items-center gap-2 self-end sm:self-auto flex-wrap">
-        {onExportWeekImage && (
-          <button
-            onClick={onExportWeekImage}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-[#FFE600] hover:bg-yellow-400 text-black font-black text-xs border-2 border-black shadow-neo-sm active:scale-[0.98] transition-colors"
-            title="Generate & Save 7-Day Plan Image for Phone"
-          >
-            <Smartphone className="w-3.5 h-3.5 stroke-[2.5]" />
-            <span>Save Week Image</span>
-          </button>
-        )}
-
-        {/* View Mode Toggle: Day Bento vs 7-Day Board */}
         <div className="flex items-center bg-white dark:bg-[#16171E] p-1.5 rounded-2xl border-2 border-black dark:border-gray-700 shadow-neo-sm">
           <button
             onClick={() => onToggleAllDaysView(false)}

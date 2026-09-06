@@ -85,7 +85,8 @@ export default function MealDetailModal({
 
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-xl bg-[#FAF8F5] dark:bg-[#20222E] border-2 border-black dark:border-gray-700 flex items-center justify-center text-gray-700 dark:text-gray-300 hover:text-black dark:hover:text-white shadow-neo-sm active:translate-x-0.5 active:translate-y-0.5 transition-all"
+            aria-label="Close"
+            className="w-8 h-8 rounded-xl bg-[#FAF8F5] dark:bg-[#20222E] border-2 border-black dark:border-gray-700 flex items-center justify-center text-gray-700 dark:text-gray-300 hover:text-black dark:hover:text-white shadow-neo-sm active:scale-95 transition-colors"
           >
             <X className="w-4 h-4 stroke-[2.5]" />
           </button>
@@ -181,7 +182,7 @@ export default function MealDetailModal({
               <button
                 type="button"
                 onClick={handleApplyTwist}
-                className="mt-3 px-3 py-1.5 bg-[#D4FF00] hover:bg-[#c3ed00] text-black font-black text-xs rounded-xl border-2 border-black shadow-neo-sm active:translate-x-0.5 active:translate-y-0.5 transition-all flex items-center gap-1.5"
+                className="mt-3 px-3 py-1.5 bg-[#D4FF00] hover:bg-[#c3ed00] text-black font-black text-xs rounded-xl border-2 border-black shadow-neo-sm active:scale-95 transition-colors flex items-center gap-1.5"
               >
                 <Sparkles className="w-3.5 h-3.5" />
                 <span>Switch to This Twist</span>
@@ -198,7 +199,7 @@ export default function MealDetailModal({
                 onClose();
                 onCookClick(meal);
               }}
-              className="flex-1 py-2.5 px-3 bg-[#FF5500] hover:bg-[#ff681a] text-white font-black text-xs uppercase rounded-xl border-2 border-black shadow-neo hover:translate-x-[-1px] hover:translate-y-[-1px] active:translate-x-0.5 active:translate-y-0.5 transition-all flex items-center justify-center gap-1.5 whitespace-nowrap"
+              className="flex-1 py-2.5 px-3 bg-[#FF5500] hover:bg-[#ff681a] text-white font-black text-xs uppercase rounded-xl border-2 border-black shadow-neo active:scale-95 transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap"
             >
               <ChefHat className="w-4 h-4 flex-shrink-0" />
               <span>COOK</span>
@@ -211,7 +212,7 @@ export default function MealDetailModal({
                 onClose();
                 onAteOutClick(meal);
               }}
-              className="flex-1 py-2.5 px-3 bg-[#00E5FF] hover:bg-[#00cbe2] text-black font-black text-xs uppercase rounded-xl border-2 border-black shadow-neo hover:translate-x-[-1px] hover:translate-y-[-1px] active:translate-x-0.5 active:translate-y-0.5 transition-all flex items-center justify-center gap-1.5 whitespace-nowrap"
+              className="flex-1 py-2.5 px-3 bg-[#00E5FF] hover:bg-[#00cbe2] text-black font-black text-xs uppercase rounded-xl border-2 border-black shadow-neo active:scale-95 transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap"
               title="Ate out or had something else? Log meal and save leftovers."
             >
               <Utensils className="w-4 h-4 flex-shrink-0" />
@@ -224,7 +225,7 @@ export default function MealDetailModal({
               onMarkGoneEarly(meal.id, meal.title);
               onClose();
             }}
-            className="flex-1 py-2.5 px-3 bg-[#FFE600] hover:bg-yellow-400 text-black font-black text-xs uppercase rounded-xl border-2 border-black shadow-neo hover:translate-x-[-1px] hover:translate-y-[-1px] active:translate-x-0.5 active:translate-y-0.5 transition-all flex items-center justify-center gap-1 whitespace-nowrap"
+            className="flex-1 py-2.5 px-3 bg-[#FFE600] hover:bg-yellow-400 text-black font-black text-xs uppercase rounded-xl border-2 border-black shadow-neo active:scale-95 transition-colors flex items-center justify-center gap-1 whitespace-nowrap"
           >
             <RotateCcw className="w-3.5 h-3.5 flex-shrink-0" />
             <span>GONE?</span>
@@ -235,7 +236,7 @@ export default function MealDetailModal({
               onDeleteMeal(meal.id);
               onClose();
             }}
-            className="p-2.5 bg-white dark:bg-[#20222E] hover:bg-rose-100 text-gray-500 hover:text-rose-600 rounded-xl border-2 border-black shadow-neo-sm active:translate-x-0.5 active:translate-y-0.5 transition-all flex-shrink-0"
+            className="p-2.5 bg-white dark:bg-[#20222E] hover:bg-rose-100 text-gray-500 hover:text-rose-600 rounded-xl border-2 border-black shadow-neo-sm active:scale-95 transition-colors flex-shrink-0"
             title="Delete meal"
           >
             <Trash2 className="w-4 h-4" />

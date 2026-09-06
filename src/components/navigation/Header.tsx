@@ -7,6 +7,7 @@ interface HeaderProps {
   onOpenAuth: () => void;
   onOpenAddMeal: () => void;
   onExportWeekImage?: () => void;
+  onLogoClick?: () => void;
   userEmail?: string;
   todayCalories: number;
   calorieTarget: number;
@@ -18,6 +19,7 @@ export default function Header({
   onOpenAuth,
   onOpenAddMeal,
   onExportWeekImage,
+  onLogoClick,
   userEmail,
   todayCalories,
   calorieTarget,
@@ -30,9 +32,18 @@ export default function Header({
     <header className="sticky top-0 z-40 bg-[#FAF8F5]/95 dark:bg-[#0D0E12]/95 backdrop-blur-xl border-b-2 border-black dark:border-gray-800 px-4 sm:px-8 py-3 transition-colors">
       <div className="max-w-7xl mx-auto flex items-center justify-between gap-2 sm:gap-4">
         {/* Logo & Brand Emblem */}
-        <div
-          className="flex items-center gap-2.5 sm:gap-3 flex-shrink-0 group cursor-pointer"
-          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+        <a
+          href="/"
+          onClick={(e) => {
+            if (onLogoClick) {
+              e.preventDefault();
+              onLogoClick();
+            } else {
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+          }}
+          className="flex items-center gap-2.5 sm:gap-3 flex-shrink-0 group cursor-pointer select-none no-underline text-inherit"
+          title="MEALZY - Go to Homepage"
         >
           {/* Neo-Brutalist Brand Emblem (Matching Favicon) */}
           <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#FF5500] border-2 border-black flex items-center justify-center shadow-neo-sm group-hover:shadow-neo transition-all flex-shrink-0">
@@ -64,7 +75,7 @@ export default function Header({
               Zero Waste
             </div>
           </div>
-        </div>
+        </a>
 
         {/* Center: Habit Streak & Daily Energy */}
         <div className="hidden xl:flex items-center gap-3 flex-shrink-0">

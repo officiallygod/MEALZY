@@ -17,6 +17,9 @@ import CookMealModal from '@/components/modals/CookMealModal';
 import AuthModal from '@/components/common/AuthModal';
 import ExportWeekModal from '@/components/modals/ExportWeekModal';
 import AteOutModal, { AteOutConfirmData } from '@/components/modals/AteOutModal';
+import AutoFillSuggestionModal from '@/components/modals/AutoFillSuggestionModal';
+import UndoToast, { UndoAction } from '@/components/common/UndoToast';
+import SplashScreen from '@/components/common/SplashScreen';
 import { generateSmartSuggestions } from '@/lib/ai-engine';
 import { CURATED_FOODS, cleanMealTitle } from '@/lib/curated-foods';
 import confetti from 'canvas-confetti';
@@ -45,9 +48,19 @@ export default function Home() {
   const [mealToCook, setMealToCook] = useState<MealItem | null>(null);
   const [ateOutTarget, setAteOutTarget] = useState<{
     meal?: MealItem | null;
+    meals?: MealItem[];
     dateString: string;
     mealType: MealType;
   } | null>(null);
+
+  // Smart Auto-Fill preview state
+  const [autoFillTarget, setAutoFillTarget] = useState<{
+    targetDate: string;
+    missingSlots: MealType[];
+  } | null>(null);
+
+  // Global 5-second Undo Toast
+  const [undoAction, setUndoAction] = useState<UndoAction | null>(null);
 
   // Quick Gone-Already celebration banner
   const [quickGoneBadge, setQuickGoneBadge] = useState<{ title: string; show: boolean }>({
@@ -126,6 +139,11 @@ export default function Home() {
       document.documentElement.classList.remove('light');
       document.documentElement.classList.add('dark');
     }
+
+    const savedEmail = localStorage.getItem('mealzy_user_email');
+    if (savedEmail) {
+      setUserEmail(savedEmail);
+    }
   }, []);
 
   const handleToggleTheme = () => {
@@ -139,6 +157,23 @@ export default function Home() {
       document.documentElement.classList.remove('light');
       document.documentElement.classList.add('dark');
     }
+  };
+
+  const handleLoginSuccess = (email: string) => {
+    setUserEmail(email);
+    localStorage.setItem('mealzy_user_email', email);
+  };
+
+  const handleLogout = () => {
+    setUserEmail(undefined);
+    localStorage.removeItem('mealzy_user_email');
+  };
+
+  const handleLogoClick = () => {
+    setActiveTab('planner');
+    setIsAllDaysView(false);
+    setSelectedDate(rollingDays[0].dateString);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   // Compute daily totals for all rolling days
@@ -179,7 +214,7 @@ export default function Home() {
     setIsAddMealOpen(true);
   };
 
-  const handleAutoFillDay = async (targetDate: string) => {
+  const handleAutoFillClick = (targetDate: string) => {
     const dayMeals = meals.filter((m) => m.dateScheduled === targetDate);
     const existingSlots = new Set(dayMeals.map((m) => m.mealType));
     const slots: MealType[] = ['breakfast', 'lunch', 'dinner', 'snack'];
@@ -187,25 +222,14 @@ export default function Home() {
 
     if (missingSlots.length === 0) return;
 
-    const newMeals: MealItem[] = [];
-    for (const slot of missingSlots) {
-      const candidates = CURATED_FOODS.filter((f) => f.category === slot);
-      const chosen = candidates[Math.floor(Math.random() * candidates.length)] || CURATED_FOODS[0];
-      newMeals.push({
-        id: `meal-autofill-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-        title: chosen.title,
-        mealType: slot,
-        calories: chosen.calories,
-        protein: chosen.protein,
-        carbs: chosen.carbs,
-        fat: chosen.fat,
-        prepTimeMinutes: chosen.prepTimeMinutes,
-        ingredients: chosen.defaultIngredients,
-        tags: chosen.tags,
-        dateScheduled: targetDate,
-        accentColor: chosen.accentColor,
-      });
-    }
+    setAutoFillTarget({ targetDate, missingSlots });
+  };
+
+  const handleApplyAutoFillSuggestions = async (suggestedMeals: Omit<MealItem, 'id'>[]) => {
+    const newMeals: MealItem[] = suggestedMeals.map((m) => ({
+      ...m,
+      id: `meal-autofill-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+    }));
 
     await db.meals.bulkAdd(newMeals);
 
@@ -214,6 +238,16 @@ export default function Home() {
       spread: 60,
       origin: { y: 0.6 },
       colors: ['#D4FF00', '#10B981', '#06B6D4', '#A855F7'],
+    });
+
+    setUndoAction({
+      id: `autofill-${Date.now()}`,
+      message: `Added ${newMeals.length} suggested meals`,
+      onUndo: async () => {
+        for (const m of newMeals) {
+          await db.meals.delete(m.id);
+        }
+      },
     });
   };
 
@@ -226,9 +260,25 @@ export default function Home() {
   };
 
   const handleMoveMealSlot = async (mealId: string, targetDate: string, targetType: MealType) => {
+    const m = await db.meals.get(mealId);
+    if (!m) return;
+    const prevDate = m.dateScheduled;
+    const prevType = m.mealType;
+
     await db.meals.update(mealId, {
       dateScheduled: targetDate,
       mealType: targetType,
+    });
+
+    setUndoAction({
+      id: `move-${Date.now()}`,
+      message: `Moved "${m.title}" to ${targetType}`,
+      onUndo: async () => {
+        await db.meals.update(mealId, {
+          dateScheduled: prevDate,
+          mealType: prevType,
+        });
+      },
     });
   };
 
@@ -244,6 +294,13 @@ export default function Home() {
       for (const d of dupes) {
         await db.meals.delete(d.id);
       }
+      setUndoAction({
+        id: `delete-${Date.now()}`,
+        message: `Deleted "${m.title}"`,
+        onUndo: async () => {
+          await db.meals.bulkAdd(dupes);
+        },
+      });
     } else {
       await db.meals.delete(mealId);
     }
@@ -298,10 +355,12 @@ export default function Home() {
     });
   };
 
-  // Early item clearance handler
+  // Early item clearance handler with 5s undo
   const handleMarkGoneEarly = async (mealIdOrFridgeId: string, mealTitle: string) => {
     const item = await db.meals.get(mealIdOrFridgeId);
+    let originalCopy: MealItem | undefined;
     if (item) {
+      originalCopy = { ...item };
       if (item.portions && item.portions > 1) {
         await db.meals.update(item.id, {
           portions: item.portions - 1,
@@ -323,14 +382,15 @@ export default function Home() {
       colors: ['#84CC16', '#06B6D4'],
     });
 
-    setQuickGoneBadge({
-      title: mealTitle,
-      show: true,
+    setUndoAction({
+      id: `gone-${Date.now()}`,
+      message: `Cleared "${mealTitle}"`,
+      onUndo: async () => {
+        if (originalCopy) {
+          await db.meals.put(originalCopy);
+        }
+      },
     });
-
-    setTimeout(() => {
-      setQuickGoneBadge({ title: '', show: false });
-    }, 5000);
   };
 
   // Consume Fridge Item Today
@@ -382,33 +442,41 @@ export default function Home() {
     setActiveTab('planner');
   };
 
-  // Handle Ate Out / Ate Something Else with Leftover Support
+  // Handle Ate Out / Ate Something Else with Slot-Level Food Movement & Undo
   const handleConfirmAteOut = async (data: AteOutConfirmData) => {
     const tomorrow = rollingDays[1]?.dateString || rollingDays[0]?.dateString;
 
-    // 1. Handle original meal (if one was scheduled for this slot)
-    if (data.originalMeal) {
-      if (data.originalMealAction === 'push_tomorrow') {
-        await db.meals.update(data.originalMeal.id, {
-          dateScheduled: tomorrow,
-          notes: `${data.originalMeal.notes ? data.originalMeal.notes + ' • ' : ''}Pushed from ${data.dateScheduled} (ate out).`,
-        });
-      } else if (data.originalMealAction === 'save_fridge') {
-        const origClean = cleanMealTitle(data.originalMeal.title);
-        await db.fridge.put({
-          id: `fridge-pushed-${data.originalMeal.id}`,
-          name: origClean,
-          originalMealTitle: origClean,
-          cookedAt: new Date().toISOString(),
-          daysInFridge: 0,
-          status: 'fresh',
-          portionsLeft: 1,
-          category: 'saved-dish',
-          accentColor: data.originalMeal.accentColor || '#10B981',
-        });
-        await db.meals.delete(data.originalMeal.id);
-      } else if (data.originalMealAction === 'replace') {
-        await db.meals.delete(data.originalMeal.id);
+    // 1. Handle original meal(s) scheduled for this slot
+    const targetMealsToProcess = (data.originalMeals && data.originalMeals.length > 0)
+      ? data.originalMeals
+      : (data.originalMeal ? [data.originalMeal] : []);
+
+    const originalMealBackups: MealItem[] = targetMealsToProcess.map((m) => ({ ...m }));
+
+    if (targetMealsToProcess.length > 0) {
+      for (const origMeal of targetMealsToProcess) {
+        if (data.originalMealAction === 'push_tomorrow') {
+          await db.meals.update(origMeal.id, {
+            dateScheduled: tomorrow,
+            notes: `${origMeal.notes ? origMeal.notes + ' • ' : ''}Pushed from ${data.dateScheduled} (ate out).`,
+          });
+        } else if (data.originalMealAction === 'save_fridge') {
+          const origClean = cleanMealTitle(origMeal.title);
+          await db.fridge.put({
+            id: `fridge-pushed-${origMeal.id}`,
+            name: origClean,
+            originalMealTitle: origClean,
+            cookedAt: new Date().toISOString(),
+            daysInFridge: 0,
+            status: 'fresh',
+            portionsLeft: origMeal.portions || 1,
+            category: 'saved-dish',
+            accentColor: origMeal.accentColor || '#10B981',
+          });
+          await db.meals.delete(origMeal.id);
+        } else if (data.originalMealAction === 'replace') {
+          await db.meals.delete(origMeal.id);
+        }
       }
     }
 
@@ -467,6 +535,23 @@ export default function Home() {
         });
       }
     }
+
+    // 5s Undo Toast for Ate Out Action
+    setUndoAction({
+      id: `ateout-${Date.now()}`,
+      message: `Marked ${data.mealType} as Ate Out`,
+      onUndo: async () => {
+        await db.meals.delete(ateOutId);
+        if (data.hasLeftover) {
+          await db.meals.delete(`leftover-${ateOutId}`);
+          await db.fridge.delete(`fridge-leftover-${ateOutId}`);
+        }
+        for (const orig of originalMealBackups) {
+          await db.meals.put(orig);
+          await db.fridge.delete(`fridge-pushed-${orig.id}`);
+        }
+      },
+    });
 
     // Celebration Confetti
     confetti({
@@ -533,6 +618,7 @@ export default function Home() {
         onOpenAuth={() => setIsAuthOpen(true)}
         onOpenAddMeal={() => handleQuickAdd(selectedDate, 'lunch')}
         onExportWeekImage={() => setIsExportWeekOpen(true)}
+        onLogoClick={handleLogoClick}
         userEmail={userEmail}
         todayCalories={todayCalories}
         calorieTarget={calorieTarget}
@@ -588,7 +674,7 @@ export default function Home() {
                   handleQuickAdd(rollingDays[0].dateString, 'dinner');
                   setQuickGoneBadge({ title: '', show: false });
                 }}
-                className="px-3.5 py-2 bg-[#D4FF00] hover:bg-[#c3ed00] text-black font-black text-xs rounded-xl border-2 border-black shadow-neo-sm active:translate-x-0.5 active:translate-y-0.5 transition-all flex items-center gap-1.5 flex-shrink-0"
+                className="px-3.5 py-2 bg-[#D4FF00] hover:bg-[#c3ed00] text-black font-black text-xs rounded-xl border-2 border-black shadow-neo-sm active:scale-95 transition-colors flex items-center gap-1.5 flex-shrink-0"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
                 <span>Re-Plan Meal</span>
@@ -608,7 +694,6 @@ export default function Home() {
               isAllDaysView={isAllDaysView}
               onToggleAllDaysView={(val) => setIsAllDaysView(val)}
               dayMealCounts={dayMealCounts}
-              onExportWeekImage={() => setIsExportWeekOpen(true)}
             />
 
             {/* Daily Nutrition & Engagement Monitor */}
@@ -621,7 +706,7 @@ export default function Home() {
               proteinTarget={userPreferences?.proteinTarget || 140}
               carbsTarget={userPreferences?.carbsTarget || 240}
               fatTarget={userPreferences?.fatTarget || 65}
-              onAutoFillDay={() => handleAutoFillDay(selectedDate)}
+              onAutoFillDay={() => handleAutoFillClick(selectedDate)}
               onQuickAddMeal={(slot) => handleQuickAdd(selectedDate, slot)}
             />
 
@@ -647,6 +732,13 @@ export default function Home() {
               onCookMeal={(meal) => setMealToCook(meal)}
               onMarkGoneEarly={handleMarkGoneEarly}
               onDeleteMeal={handleDeleteMeal}
+              onAteOutSlot={(dateString, mealType, slotMeals) =>
+                setAteOutTarget({
+                  meals: slotMeals,
+                  dateString,
+                  mealType,
+                })
+              }
               onAteOut={(meal, dateString, mealType) =>
                 setAteOutTarget({
                   meal: meal || null,
@@ -736,11 +828,22 @@ export default function Home() {
         isOpen={Boolean(ateOutTarget)}
         onClose={() => setAteOutTarget(null)}
         targetMeal={ateOutTarget?.meal}
+        targetMeals={ateOutTarget?.meals}
         targetDate={ateOutTarget?.dateString || rollingDays[0].dateString}
         targetSlot={ateOutTarget?.mealType || 'dinner'}
         rollingDays={rollingDays}
         onConfirmAteOut={handleConfirmAteOut}
       />
+
+      {autoFillTarget && (
+        <AutoFillSuggestionModal
+          isOpen={Boolean(autoFillTarget)}
+          onClose={() => setAutoFillTarget(null)}
+          targetDate={autoFillTarget.targetDate}
+          missingSlots={autoFillTarget.missingSlots}
+          onApplySuggestions={handleApplyAutoFillSuggestions}
+        />
+      )}
 
       <CookMealModal
         isOpen={Boolean(mealToCook)}
@@ -754,7 +857,8 @@ export default function Home() {
         isOpen={isAuthOpen}
         onClose={() => setIsAuthOpen(false)}
         userEmail={userEmail}
-        onLoginSuccess={(email) => setUserEmail(email)}
+        onLoginSuccess={handleLoginSuccess}
+        onLogout={handleLogout}
       />
 
       <ExportWeekModal
@@ -764,6 +868,15 @@ export default function Home() {
         meals={meals}
         calorieTarget={calorieTarget}
       />
+
+      {/* Global 5-second Undo Action Toast */}
+      <UndoToast
+        action={undoAction}
+        onDismiss={() => setUndoAction(null)}
+      />
+
+      {/* Funky Initial Loading Screen */}
+      <SplashScreen isReady={isClient} />
     </div>
   );
 }

@@ -34,11 +34,11 @@ interface BatchPortionConfig {
   slot: MealType;
 }
 
-const SLOT_PRESETS: { type: MealType; label: string; activeColor: string; textColor: string }[] = [
-  { type: 'breakfast', label: 'Breakfast', activeColor: 'bg-[#FFE600]', textColor: 'text-black' },
-  { type: 'lunch', label: 'Lunch', activeColor: 'bg-[#00E5FF]', textColor: 'text-black' },
-  { type: 'dinner', label: 'Dinner', activeColor: 'bg-[#FF5500]', textColor: 'text-white' },
-  { type: 'snack', label: 'Snack', activeColor: 'bg-[#D4FF00]', textColor: 'text-black' },
+const SLOT_PRESETS: { type: MealType; label: string; code: string; activeColor: string; textColor: string }[] = [
+  { type: 'breakfast', label: 'Breakfast', code: 'B', activeColor: 'bg-[#FFE600]', textColor: 'text-black' },
+  { type: 'lunch', label: 'Lunch', code: 'L', activeColor: 'bg-[#00E5FF]', textColor: 'text-black' },
+  { type: 'dinner', label: 'Dinner', code: 'D', activeColor: 'bg-[#FF5500]', textColor: 'text-white' },
+  { type: 'snack', label: 'Snack', code: 'S', activeColor: 'bg-[#D4FF00]', textColor: 'text-black' },
 ];
 
 export default function AddMealModal({
@@ -51,6 +51,7 @@ export default function AddMealModal({
   onAddMeal,
 }: AddMealModalProps) {
   const [selectedSlot, setSelectedSlot] = useState<MealType>(targetSlot || 'lunch');
+  const [startDate, setStartDate] = useState(targetDate);
   const [dishTitle, setDishTitle] = useState('');
   const [recipeUrl, setRecipeUrl] = useState('');
 
@@ -88,6 +89,7 @@ export default function AddMealModal({
   useEffect(() => {
     if (isOpen) {
       setSelectedSlot(targetSlot || 'lunch');
+      setStartDate(targetDate);
       setDishTitle('');
       setRecipeUrl('');
       setDivideDays(1);
@@ -111,29 +113,29 @@ export default function AddMealModal({
       const past = getRediscoverMeals(allMeals, targetSlot || 'lunch', targetDate);
       setRediscoverMeals(past);
     }
-  }, [isOpen, targetSlot, targetDate, allMeals]);
+  }, [isOpen, targetDate, targetSlot, allMeals]);
 
   // Update rediscover meals when slot changes
   useEffect(() => {
-    const past = getRediscoverMeals(allMeals, selectedSlot, targetDate);
+    const past = getRediscoverMeals(allMeals, selectedSlot, startDate);
     setRediscoverMeals(past);
-  }, [selectedSlot, allMeals, targetDate]);
+  }, [selectedSlot, allMeals, startDate]);
 
-  // Synchronize batch allocations when divideDays, selectedSlot, or targetDate changes
+  // Recalculate default batch portion assignments when divideDays, startDate or slot changes
   useEffect(() => {
     if (divideDays <= 1) {
       setBatchAllocations([]);
       return;
     }
 
-    const targetIndex = rollingDays.findIndex((d) => d.dateString === targetDate);
+    const targetIndex = rollingDays.findIndex((d) => d.dateString === startDate);
     const startIndex = targetIndex >= 0 ? targetIndex + 1 : 1;
     const defaultLeftoverSlot: MealType = selectedSlot === 'dinner' ? 'lunch' : 'dinner';
 
     setBatchAllocations((prev) => {
       const updated: BatchPortionConfig[] = [];
       for (let i = 1; i < divideDays; i++) {
-        const nextDay = rollingDays[startIndex + i - 1] || rollingDays[rollingDays.length - 1] || { dateString: targetDate };
+        const nextDay = rollingDays[startIndex + i - 1] || rollingDays[rollingDays.length - 1] || { dateString: startDate };
         const existing = prev[i - 1];
         updated.push({
           portionNumber: i + 1,
@@ -143,7 +145,7 @@ export default function AddMealModal({
       }
       return updated;
     });
-  }, [divideDays, selectedSlot, targetDate, rollingDays]);
+  }, [divideDays, selectedSlot, startDate, rollingDays]);
 
   const handleUpdateBatchSlot = (idx: number, slot: MealType) => {
     setBatchAllocations((prev) =>
@@ -265,10 +267,10 @@ export default function AddMealModal({
     if (!dishTitle.trim()) return;
 
     const sourceMealId = `meal-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
-    const calNum = Number(calories) || 480;
-    const pNum = Number(protein) || 28;
-    const cNum = Number(carbs) || 50;
-    const fNum = Number(fat) || 16;
+    const calNum = calories.trim() === '' ? 0 : (Number(calories) || 0);
+    const pNum = Number(protein) || 0;
+    const cNum = Number(carbs) || 0;
+    const fNum = Number(fat) || 0;
     const prepNum = Number(prepTime) || 15;
     const accent = getMealAccent(dishTitle);
 
@@ -286,14 +288,14 @@ export default function AddMealModal({
       accentColor: accent,
       ingredients: [{ name: dishTitle.trim(), amount: '1 portion' }],
       tags: isTwistApplied ? ['planned', 'twist-applied'] : ['planned'],
-      dateScheduled: targetDate,
+      dateScheduled: startDate,
       totalPortionsCooked: divideDays,
       portionsRemaining: divideDays - 1,
     });
 
     // 2. If divided across multiple days: create leftover meals for subsequent rolling days
     if (divideDays > 1 && rollingDays.length > 1) {
-      const targetIndex = rollingDays.findIndex((d) => d.dateString === targetDate);
+      const targetIndex = rollingDays.findIndex((d) => d.dateString === startDate);
       const startIndex = targetIndex >= 0 ? targetIndex + 1 : 1;
 
       const leftoverMeals: MealItem[] = [];
@@ -320,7 +322,7 @@ export default function AddMealModal({
           isLeftover: true,
           portions: 1,
           sourceMealId: sourceMealId,
-          notes: `Portion #${i + 1} of ${divideDays} batch prepared on ${targetDate}`,
+          notes: `Portion #${i + 1} of ${divideDays} batch prepared on ${startDate}`,
         });
       }
 
@@ -364,13 +366,14 @@ export default function AddMealModal({
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-5 right-5 w-8 h-8 rounded-xl bg-[#FAF8F5] dark:bg-[#20222E] border-2 border-black dark:border-gray-700 flex items-center justify-center text-gray-700 dark:text-gray-300 hover:text-black dark:hover:text-white shadow-neo-sm active:translate-x-0.5 active:translate-y-0.5 transition-all"
+          aria-label="Close"
+          className="absolute top-5 right-5 w-8 h-8 rounded-xl bg-[#FAF8F5] dark:bg-[#20222E] border-2 border-black dark:border-gray-700 flex items-center justify-center text-gray-700 dark:text-gray-300 hover:text-black dark:hover:text-white shadow-neo-sm active:scale-95 transition-colors z-10"
         >
           <X className="w-4 h-4 stroke-[2.5]" />
         </button>
 
-        {/* Modal Header */}
-        <div className="mb-4">
+        {/* Modal Header (flex-shrink-0) */}
+        <div className="flex-shrink-0 mb-3">
           <div className="flex items-center gap-2">
             <span className="rotate-[-2deg] bg-[#FFE600] text-black font-black text-[10px] uppercase px-2.5 py-0.5 rounded-lg border-2 border-black shadow-neo-sm">
               ✦ DISH PLANNER
@@ -379,43 +382,84 @@ export default function AddMealModal({
           <h2 className="font-funky font-black text-2xl text-gray-900 dark:text-white mt-1.5">
             ADD TO PLAN
           </h2>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 font-bold">
-            Planning for <span className="font-black text-gray-900 dark:text-white">{targetDate}</span>
-          </p>
         </div>
 
-        {/* Meal Slot Selector */}
-        <div className="grid grid-cols-4 gap-2 mb-4">
-          {SLOT_PRESETS.map((slot) => {
-            const isSelected = selectedSlot === slot.type;
-            return (
-              <button
-                key={slot.type}
-                type="button"
-                onClick={() => {
-                  setSelectedSlot(slot.type);
-                  if (!dishTitle.trim()) {
-                    const est = estimateDishNutrition('', slot.type);
-                    setCalories(String(est.calories));
-                    setProtein(String(est.protein));
-                    setCarbs(String(est.carbs));
-                    setFat(String(est.fat));
-                    setPrepTime(String(est.prepTimeMinutes));
-                  }
-                }}
-                className={`py-2 px-1 text-center font-black text-xs uppercase rounded-xl border-2 transition-all flex items-center justify-center ${
-                  isSelected
-                    ? `${slot.activeColor} ${slot.textColor} border-2 border-black shadow-neo-sm font-black`
-                    : 'bg-[#FAF8F5] dark:bg-[#20222E] text-gray-700 dark:text-gray-300 border-black/30 dark:border-gray-700 hover:border-black'
-                }`}
-              >
-                {slot.label}
-              </button>
-            );
-          })}
-        </div>
+        {/* Form Wrapping Scrollable Body & Pinned Footer */}
+        <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+          {/* Scrollable Form Body */}
+          <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 pb-2 space-y-4">
+            {/* Compact B L D S Meal Slot Selector */}
+            <div className="space-y-1.5">
+              <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                Meal Slot
+              </label>
+              <div className="grid grid-cols-4 gap-1.5">
+                {SLOT_PRESETS.map((slot) => {
+                  const isSelected = selectedSlot === slot.type;
+                  return (
+                    <button
+                      key={slot.type}
+                      type="button"
+                      onClick={() => {
+                        setSelectedSlot(slot.type);
+                        if (!dishTitle.trim()) {
+                          const est = estimateDishNutrition('', slot.type);
+                          setCalories(String(est.calories));
+                          setProtein(String(est.protein));
+                          setCarbs(String(est.carbs));
+                          setFat(String(est.fat));
+                          setPrepTime(String(est.prepTimeMinutes));
+                        }
+                      }}
+                      className={`py-2 px-1 text-center font-black text-xs uppercase rounded-xl border-2 transition-colors flex items-center justify-center gap-1.5 active:scale-95 ${
+                        isSelected
+                          ? `${slot.activeColor} ${slot.textColor} border-black shadow-neo-sm`
+                          : 'bg-[#FAF8F5] dark:bg-[#20222E] text-gray-700 dark:text-gray-300 border-black/20 dark:border-gray-700 hover:border-black'
+                      }`}
+                    >
+                      <span className="w-5 h-5 rounded-md bg-black/15 flex items-center justify-center text-[10px] font-black">
+                        {slot.code}
+                      </span>
+                      <span className="truncate">{slot.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4 flex-1 overflow-y-auto scrollbar-none pr-1">
+            {/* Start Eating From (Next 7 Dates) */}
+            {rollingDays.length > 0 && (
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                    Start Eating On
+                  </label>
+                  <span className="text-[10px] font-bold text-gray-400">
+                    {startDate}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 custom-scrollbar">
+                  {rollingDays.map((d, dIdx) => {
+                    const isStart = startDate === d.dateString;
+                    return (
+                      <button
+                        key={d.dateString}
+                        type="button"
+                        onClick={() => setStartDate(d.dateString)}
+                        className={`px-2.5 py-1 rounded-xl text-xs font-black border-2 transition-colors flex-shrink-0 flex items-center gap-1 active:scale-95 ${
+                          isStart
+                            ? 'bg-[#FFE600] text-black border-black shadow-neo-sm'
+                            : 'bg-[#FAF8F5] dark:bg-[#20222E] text-gray-700 dark:text-gray-300 border-black/20 dark:border-gray-700 hover:border-black'
+                        }`}
+                      >
+                        <span>{dIdx === 0 ? 'Today' : dIdx === 1 ? 'Tomorrow' : d.dayName}</span>
+                        <span className="text-[10px] opacity-70">({d.dayNumber})</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           {/* Rediscover Past Meals for this slot */}
           {rediscoverMeals.length > 0 && (
             <div className="p-3 bg-[#FAF8F5] dark:bg-[#1E202A] rounded-2xl border-2 border-black dark:border-gray-700 shadow-neo-sm">
@@ -482,8 +526,43 @@ export default function AddMealModal({
                 >
                   <div className="px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-gray-400 flex items-center justify-between">
                     <span>Suggestions for {selectedSlot}</span>
-                    {isSearchingOnline && <span>Searching database...</span>}
+                    {isSearchingOnline && (
+                      <span className="flex items-center gap-1 text-black dark:text-[#D4FF00]">
+                        <span className="w-2 h-2 rounded-full bg-[#FF5500] animate-pulse" />
+                        Searching database...
+                      </span>
+                    )}
                   </div>
+
+                  {/* Option to use written text directly as a custom meal */}
+                  {dishTitle.trim().length > 0 && (
+                    <div
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        setShowSuggestions(false);
+                        setIsCustomNutrition(true);
+                        setMatchedFoodName('Custom written meal');
+                      }}
+                      className="p-2 rounded-xl bg-[#D4FF00]/25 hover:bg-[#D4FF00] hover:text-black border-2 border-black cursor-pointer flex items-center justify-between gap-2 transition-colors mb-1 shadow-neo-sm group"
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="w-6 h-6 rounded-lg bg-[#D4FF00] border border-black flex items-center justify-center text-black font-black text-xs flex-shrink-0">
+                          ✍️
+                        </span>
+                        <div className="min-w-0">
+                          <span className="text-xs font-black truncate block text-gray-900 dark:text-white group-hover:text-black">
+                            Use written text: &quot;{dishTitle.trim()}&quot;
+                          </span>
+                          <span className="text-[9px] font-bold text-gray-500 group-hover:text-black/80 block">
+                            Add as custom recipe without database lookup
+                          </span>
+                        </div>
+                      </div>
+                      <span className="px-1.5 py-0.5 rounded-md bg-black text-white text-[9px] font-black flex-shrink-0">
+                        Custom Meal
+                      </span>
+                    </div>
+                  )}
 
                   {localSuggestions.map((dish) => {
                     const initials = getMealInitials(dish.title);
@@ -639,24 +718,29 @@ export default function AddMealModal({
                       />
                     </div>
 
-                    <div className="grid grid-cols-4 gap-1">
-                      {SLOT_PRESETS.map((slot) => {
-                        const isChosen = alloc.slot === slot.type;
-                        return (
-                          <button
-                            key={slot.type}
-                            type="button"
-                            onClick={() => handleUpdateBatchSlot(idx, slot.type)}
-                            className={`py-1 text-center font-black text-[10px] uppercase rounded-lg border transition-all ${
-                              isChosen
-                                ? `${slot.activeColor} ${slot.textColor} border-black font-black shadow-neo-sm`
-                                : 'bg-[#FAF8F5] dark:bg-[#1E202A] text-gray-600 dark:text-gray-400 border-black/20 dark:border-gray-700 hover:border-black'
-                            }`}
-                          >
-                            {slot.label}
-                          </button>
-                        );
-                      })}
+                    <div className="flex items-center justify-between gap-2 pt-1 border-t border-gray-200 dark:border-gray-800">
+                      <span className="text-[10px] font-black uppercase text-gray-500">Slot:</span>
+                      <div className="grid grid-cols-4 gap-1">
+                        {SLOT_PRESETS.map((slot) => {
+                          const isChosen = alloc.slot === slot.type;
+                          return (
+                            <button
+                              key={slot.type}
+                              type="button"
+                              onClick={() => handleUpdateBatchSlot(idx, slot.type)}
+                              className={`py-1 px-2 text-center font-black text-[10px] uppercase rounded-lg border transition-colors flex items-center justify-center gap-1 active:scale-95 ${
+                                isChosen
+                                  ? `${slot.activeColor} ${slot.textColor} border-black font-black shadow-neo-sm`
+                                  : 'bg-[#FAF8F5] dark:bg-[#1E202A] text-gray-600 dark:text-gray-400 border-black/20 dark:border-gray-700 hover:border-black'
+                              }`}
+                              title={slot.label}
+                            >
+                              <span className="font-black">{slot.code}</span>
+                              <span className="hidden sm:inline">{slot.label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -679,21 +763,18 @@ export default function AddMealModal({
                     <span>Flavor Twist Idea</span>
                   </div>
                   <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400">
-                    +{activeTwist.caloriesDelta} kcal • +{activeTwist.proteinDelta}g P
+                    +{activeTwist.caloriesDelta > 0 ? `${activeTwist.caloriesDelta} kcal` : '0 kcal'} • +{activeTwist.proteinDelta}g Protein
                   </span>
                 </div>
 
-                <h5 className="font-bold text-xs text-gray-900 dark:text-white">
-                  {activeTwist.title}
-                </h5>
-                <p className="text-[11px] text-gray-600 dark:text-gray-300 mt-0.5 leading-relaxed font-medium">
+                <p className="text-xs text-gray-700 dark:text-gray-300 font-bold">
                   {activeTwist.description}
                 </p>
 
                 <button
                   type="button"
                   onClick={handleToggleApplyTwist}
-                  className={`mt-2.5 px-3 py-1.5 rounded-xl font-black text-[11px] transition-all border-2 border-black shadow-neo-sm flex items-center gap-1.5 ${
+                  className={`mt-2.5 px-3 py-1.5 rounded-xl font-black text-[11px] transition-colors border-2 border-black shadow-neo-sm flex items-center gap-1.5 active:scale-95 ${
                     isTwistApplied
                       ? 'bg-emerald-500 text-white'
                       : 'bg-[#D4FF00] hover:bg-[#c3ed00] text-black'
@@ -715,16 +796,28 @@ export default function AddMealModal({
             )}
           </AnimatePresence>
 
-          {/* Collapsible Macro Adjustment (Rough Estimation Active by Default) */}
+          {/* Collapsible Macro Adjustment */}
           <div className="pt-1">
             <button
               type="button"
               onClick={() => setShowMacroSettings(!showMacroSettings)}
               className="w-full flex items-center justify-between text-xs font-black uppercase text-gray-600 dark:text-gray-400 hover:text-black dark:hover:text-white py-1"
             >
-              <span>
-                Calories &amp; Macros ({calories} kcal • {protein}g P) • {isCustomNutrition ? 'Custom' : 'Auto-Estimated'}
-              </span>
+              <div className="flex items-center gap-1.5 flex-wrap text-left">
+                <span>Calories &amp; Macros</span>
+                {calories && Number(calories) > 0 ? (
+                  <span className="text-gray-900 dark:text-[#D4FF00]">
+                    ({calories} kcal • {protein}g P)
+                  </span>
+                ) : (
+                  <span className="px-1.5 py-0.2 rounded bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-[10px] font-black border border-black/20">
+                    Calories Not Given
+                  </span>
+                )}
+                <span className="text-[10px] text-gray-400">
+                  • {isCustomNutrition ? 'Custom' : 'Auto-Estimated'}
+                </span>
+              </div>
               {showMacroSettings ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
             </button>
 
@@ -744,6 +837,7 @@ export default function AddMealModal({
                       setCalories(e.target.value);
                       setIsCustomNutrition(true);
                     }}
+                    placeholder="None"
                     className="w-full bg-transparent text-xs font-black text-gray-900 dark:text-[#D4FF00] focus:outline-none"
                   />
                 </div>
@@ -808,14 +902,17 @@ export default function AddMealModal({
               </div>
             </div>
           </div>
+          </div>
 
-          {/* Action Button: Neon Orange like Get In Touch from Portfolio */}
-          <button
-            type="submit"
-            className="w-full py-3.5 bg-[#FF5500] hover:bg-[#ff681a] text-white font-black text-xs uppercase tracking-wider rounded-2xl border-2 border-black shadow-neo active:scale-[0.98] transition-colors flex items-center justify-center gap-2 mt-3"
-          >
-            <span>SAVE TO {selectedSlot.toUpperCase()} {divideDays > 1 ? `(${divideDays} DAYS)` : ''}</span>
-          </button>
+          {/* Pinned Non-Cropping Footer */}
+          <div className="flex-shrink-0 pt-3 border-t-2 border-black/10 dark:border-white/10 bg-white dark:bg-[#16171E]">
+            <button
+              type="submit"
+              className="w-full py-3.5 bg-[#FF5500] hover:bg-[#ff681a] text-white font-black text-xs uppercase tracking-wider rounded-2xl border-2 border-black shadow-neo active:scale-[0.98] transition-colors flex items-center justify-center gap-2"
+            >
+              <span>SAVE TO {selectedSlot.toUpperCase()} {divideDays > 1 ? `(${divideDays} DAYS)` : ''}</span>
+            </button>
+          </div>
         </form>
       </motion.div>
     </div>

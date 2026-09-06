@@ -28,12 +28,14 @@ export interface AteOutConfirmData {
   leftoverScheduleSlot: MealType;
   originalMealAction?: 'push_tomorrow' | 'save_fridge' | 'replace';
   originalMeal?: MealItem;
+  originalMeals?: MealItem[];
 }
 
 interface AteOutModalProps {
   isOpen: boolean;
   onClose: () => void;
   targetMeal?: MealItem | null;
+  targetMeals?: MealItem[];
   targetDate: string;
   targetSlot: MealType;
   rollingDays: {
@@ -64,6 +66,7 @@ export default function AteOutModal({
   isOpen,
   onClose,
   targetMeal,
+  targetMeals,
   targetDate,
   targetSlot,
   rollingDays,
@@ -89,6 +92,8 @@ export default function AteOutModal({
   // Original planned meal disposition
   const [originalMealAction, setOriginalMealAction] = useState<'push_tomorrow' | 'save_fridge' | 'replace'>('push_tomorrow');
 
+  const effectiveMeals = (targetMeals && targetMeals.length > 0) ? targetMeals : (targetMeal ? [targetMeal] : []);
+
   useEffect(() => {
     if (isOpen) {
       const typeObj = EAT_OUT_TYPES.find((t) => t.id === eatType) || EAT_OUT_TYPES[0];
@@ -103,7 +108,7 @@ export default function AteOutModal({
       setLeftoverSlot(defaultLeftoverSlot);
       setOriginalMealAction('push_tomorrow');
     }
-  }, [isOpen, targetMeal, targetDate, targetSlot]);
+  }, [isOpen, targetMeal, targetMeals, targetDate, targetSlot]);
 
   if (!isOpen) return null;
 
@@ -137,8 +142,9 @@ export default function AteOutModal({
       leftoverDestination,
       leftoverScheduleDate: leftoverDate,
       leftoverScheduleSlot: leftoverSlot,
-      originalMealAction: targetMeal ? originalMealAction : undefined,
-      originalMeal: targetMeal || undefined,
+      originalMealAction: effectiveMeals.length > 0 ? originalMealAction : undefined,
+      originalMeal: effectiveMeals[0],
+      originalMeals: effectiveMeals,
     });
 
     onClose();
@@ -157,7 +163,7 @@ export default function AteOutModal({
         <button
           onClick={onClose}
           aria-label="Close"
-          className="absolute top-5 right-5 w-8 h-8 rounded-xl bg-[#FAF8F5] dark:bg-[#20222E] border-2 border-black dark:border-gray-700 flex items-center justify-center text-gray-700 dark:text-gray-300 hover:text-black dark:hover:text-white shadow-neo-sm active:translate-x-0.5 active:translate-y-0.5 transition-all"
+          className="absolute top-5 right-5 w-8 h-8 rounded-xl bg-[#FAF8F5] dark:bg-[#20222E] border-2 border-black dark:border-gray-700 flex items-center justify-center text-gray-700 dark:text-gray-300 hover:text-black dark:hover:text-white shadow-neo-sm active:scale-95 transition-colors"
         >
           <X className="w-4 h-4 stroke-[2.5]" />
         </button>
@@ -176,27 +182,29 @@ export default function AteOutModal({
           </p>
         </div>
 
-        {/* If an original planned meal was replaced, show disposition choices */}
-        {targetMeal && (
+        {/* If original planned meal(s) exist in this slot, show disposition choices */}
+        {effectiveMeals.length > 0 && (
           <div className="mb-5 p-4 rounded-2xl bg-[#FAF8F5] dark:bg-[#1E202A] border-2 border-black dark:border-gray-700 shadow-neo-sm space-y-2.5">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-black uppercase text-gray-500 dark:text-gray-400 tracking-wider">
                 Originally Scheduled:
               </span>
-              <span className="font-funky font-black text-xs text-gray-900 dark:text-[#D4FF00] truncate max-w-[200px]">
-                {targetMeal.title}
+              <span className="font-funky font-black text-xs text-gray-900 dark:text-[#D4FF00] truncate max-w-[200px]" title={effectiveMeals.map((m) => m.title).join(', ')}>
+                {effectiveMeals.map((m) => m.title).join(', ')}
               </span>
             </div>
 
             <p className="text-[11px] font-bold text-gray-700 dark:text-gray-300">
-              What should happen to &quot;{targetMeal.title}&quot;?
+              {effectiveMeals.length > 1
+                ? `What should happen to these ${effectiveMeals.length} planned dishes?`
+                : `What should happen to "${effectiveMeals[0].title}"?`}
             </p>
 
             <div className="grid grid-cols-3 gap-2 text-center text-xs">
               <button
                 type="button"
                 onClick={() => setOriginalMealAction('push_tomorrow')}
-                className={`p-2 rounded-xl border-2 font-black transition-all flex flex-col items-center justify-center gap-1 ${
+                className={`p-2 rounded-xl border-2 font-black transition-colors flex flex-col items-center justify-center gap-1 active:scale-95 ${
                   originalMealAction === 'push_tomorrow'
                     ? 'bg-[#FFE600] text-black border-black shadow-neo-sm'
                     : 'bg-white dark:bg-[#16171E] border-black/20 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-black'
@@ -209,7 +217,7 @@ export default function AteOutModal({
               <button
                 type="button"
                 onClick={() => setOriginalMealAction('save_fridge')}
-                className={`p-2 rounded-xl border-2 font-black transition-all flex flex-col items-center justify-center gap-1 ${
+                className={`p-2 rounded-xl border-2 font-black transition-colors flex flex-col items-center justify-center gap-1 active:scale-95 ${
                   originalMealAction === 'save_fridge'
                     ? 'bg-[#00E5FF] text-black border-black shadow-neo-sm'
                     : 'bg-white dark:bg-[#16171E] border-black/20 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-black'
@@ -222,7 +230,7 @@ export default function AteOutModal({
               <button
                 type="button"
                 onClick={() => setOriginalMealAction('replace')}
-                className={`p-2 rounded-xl border-2 font-black transition-all flex flex-col items-center justify-center gap-1 ${
+                className={`p-2 rounded-xl border-2 font-black transition-colors flex flex-col items-center justify-center gap-1 active:scale-95 ${
                   originalMealAction === 'replace'
                     ? 'bg-rose-100 text-rose-900 border-black shadow-neo-sm'
                     : 'bg-white dark:bg-[#16171E] border-black/20 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-black'
@@ -470,7 +478,7 @@ export default function AteOutModal({
           {/* Submit Action */}
           <button
             type="submit"
-            className="w-full py-3 bg-[#00E5FF] hover:bg-[#00cbe2] text-black font-black text-xs uppercase tracking-wider rounded-2xl border-2 border-black shadow-neo active:translate-x-0.5 active:translate-y-0.5 transition-all flex items-center justify-center gap-2 mt-2"
+            className="w-full py-3 bg-[#00E5FF] hover:bg-[#00cbe2] text-black font-black text-xs uppercase tracking-wider rounded-2xl border-2 border-black shadow-neo active:scale-[0.98] transition-colors flex items-center justify-center gap-2 mt-2"
           >
             <span>Log Meal</span>
             {hasLeftover && <span>&amp; Save Leftover</span>}

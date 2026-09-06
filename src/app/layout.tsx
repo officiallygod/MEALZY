@@ -30,7 +30,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" className="dark" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('mealzy_theme')||'dark';document.documentElement.className=t;}catch(e){}})();`,
+          }}
+        />
+      </head>
       <body className="bg-[#0A0B0E] text-white min-h-screen antialiased selection:bg-[#D4FF00] selection:text-black">
         {children}
         <CookieConsent />

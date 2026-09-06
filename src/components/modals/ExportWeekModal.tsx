@@ -285,7 +285,7 @@ export default function ExportWeekModal({
           <button
             onClick={handleSaveToPhone}
             disabled={isGenerating || !imageUrl}
-            className="flex-1 py-3.5 bg-[#FF5500] hover:bg-[#ff681a] text-white font-black text-xs uppercase tracking-wider rounded-2xl border-2 border-black shadow-neo hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-neo-lg active:translate-x-0.5 active:translate-y-0.5 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+            className="flex-1 py-3.5 bg-[#FF5500] hover:bg-[#ff681a] text-white font-black text-xs uppercase tracking-wider rounded-2xl border-2 border-black shadow-neo active:scale-[0.98] transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
           >
             {canNativeShare ? <Share2 className="w-4 h-4" /> : <Download className="w-4 h-4" />}
             <span>{canNativeShare ? 'SAVE TO PHONE / SHARE' : 'DOWNLOAD IMAGE (PNG)'}</span>
@@ -295,7 +295,7 @@ export default function ExportWeekModal({
           <button
             onClick={handleCopy}
             disabled={isGenerating || !imageBlob}
-            className="py-3.5 px-4 bg-white dark:bg-[#1E202A] hover:bg-black hover:text-white dark:hover:bg-[#FFE600] dark:hover:text-black text-gray-900 dark:text-white font-black text-xs uppercase rounded-2xl border-2 border-black dark:border-gray-700 shadow-neo hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-neo active:translate-x-0.5 active:translate-y-0.5 transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
+            className="py-3.5 px-4 bg-white dark:bg-[#1E202A] hover:bg-black hover:text-white dark:hover:bg-[#FFE600] dark:hover:text-black text-gray-900 dark:text-white font-black text-xs uppercase rounded-2xl border-2 border-black dark:border-gray-700 shadow-neo active:scale-[0.98] transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
             title="Copy image to clipboard"
           >
             {copied ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}

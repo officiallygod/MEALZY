@@ -35,6 +35,7 @@ interface KanbanBentoBoardProps {
   onMarkGoneEarly: (mealId: string, mealTitle: string) => void;
   onDeleteMeal: (mealId: string) => void;
   onAteOut?: (meal?: MealItem, dateString?: string, mealType?: MealType) => void;
+  onAteOutSlot?: (dateString: string, mealType: MealType, meals: MealItem[]) => void;
   onFocusDay?: (dateString: string) => void;
 }
 
@@ -112,11 +113,42 @@ export default function KanbanBentoBoard({
   onMarkGoneEarly,
   onDeleteMeal,
   onAteOut,
+  onAteOutSlot,
   onFocusDay,
 }: KanbanBentoBoardProps) {
   const [draggedMealId, setDraggedMealId] = useState<string | null>(null);
   const [activeDropZone, setActiveDropZone] = useState<string | null>(null);
   const [movingMealId, setMovingMealId] = useState<string | null>(null);
+
+  const [isSnacksMinimized, setIsSnacksMinimized] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('mealzy_snacks_minimized') === 'true';
+    }
+    return false;
+  });
+
+  const [showSnacksPrompt, setShowSnacksPrompt] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('mealzy_snacks_prompted') === null;
+    }
+    return false;
+  });
+
+  const handleSetSnacksPreference = (minimized: boolean) => {
+    setIsSnacksMinimized(minimized);
+    setShowSnacksPrompt(false);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('mealzy_snacks_minimized', String(minimized));
+      localStorage.setItem('mealzy_snacks_prompted', 'true');
+    }
+  };
+
+  const toggleSnacksMinimized = (val: boolean) => {
+    setIsSnacksMinimized(val);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('mealzy_snacks_minimized', String(val));
+    }
+  };
 
   const handleDragStart = (e: React.DragEvent, mealId: string) => {
     e.dataTransfer.setData('text/plain', mealId);
@@ -156,78 +188,98 @@ export default function KanbanBentoBoard({
 
   const activeDayObj = days.find((d) => d.dateString === selectedDate) || days[0];
 
-  return (
-    <div className="w-full">
-      {/* ========================================================================= */}
-      {/* MODE 1: DAY BENTO GRID (4 FULL-WIDTH NEO-BRUTALIST COLUMNS) */}
-      {/* ========================================================================= */}
-      {!isAllDaysView && (
-        <div className="space-y-4">
-          {/* 4 BENTO COLUMNS WITH DISTINCT SHADES & ACCENTS */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 w-full">
-            {MEAL_SLOTS.map((slot) => {
-              const SlotIcon = slot.icon;
-              const rawSlotMeals = meals.filter(
-                (m) => m.dateScheduled === activeDayObj.dateString && m.mealType === slot.type
-              );
+  const rawSnacksMeals = meals.filter(
+    (m) => m.dateScheduled === activeDayObj.dateString && m.mealType === 'snack'
+  );
 
-              // Consolidate duplicate dishes in the same slot into a single card with portion count
-              // to prevent taking up vertical space with identical repetitive cards
-              const slotMeals: MealItem[] = [];
-              const seenTitles = new Map<string, MealItem>();
+  const renderSlotColumn = (slot: (typeof MEAL_SLOTS)[number]) => {
+    const SlotIcon = slot.icon;
+    const rawSlotMeals = meals.filter(
+      (m) => m.dateScheduled === activeDayObj.dateString && m.mealType === slot.type
+    );
 
-              for (const m of rawSlotMeals) {
-                const clean = cleanMealTitle(m.title).toLowerCase();
-                if (seenTitles.has(clean)) {
-                  const existing = seenTitles.get(clean)!;
-                  existing.portions = (existing.portions || 1) + (m.portions || 1);
-                  existing.isLeftover = existing.isLeftover || m.isLeftover;
-                } else {
-                  const copy: MealItem = {
-                    ...m,
-                    title: cleanMealTitle(m.title),
-                    portions: m.portions || 1,
-                  };
-                  seenTitles.set(clean, copy);
-                  slotMeals.push(copy);
-                }
-              }
+    // Consolidate duplicate dishes in the same slot into a single card with portion count
+    const slotMeals: MealItem[] = [];
+    const seenTitles = new Map<string, MealItem>();
 
-              const zoneKey = `${activeDayObj.dateString}_${slot.type}`;
-              const isHovered = activeDropZone === zoneKey;
+    for (const m of rawSlotMeals) {
+      const clean = cleanMealTitle(m.title).toLowerCase();
+      if (seenTitles.has(clean)) {
+        const existing = seenTitles.get(clean)!;
+        existing.portions = (existing.portions || 1) + (m.portions || 1);
+        existing.isLeftover = existing.isLeftover || m.isLeftover;
+      } else {
+        const copy: MealItem = {
+          ...m,
+          title: cleanMealTitle(m.title),
+          portions: m.portions || 1,
+        };
+        seenTitles.set(clean, copy);
+        slotMeals.push(copy);
+      }
+    }
 
-              return (
-                <div
-                  key={slot.type}
-                  onDragOver={(e) => handleDragOver(e, zoneKey)}
-                  onDragLeave={handleDragLeave}
-                  onDrop={(e) => handleDrop(e, activeDayObj.dateString, slot.type)}
-                  className={`min-h-[300px] rounded-3xl p-4 transition-colors flex flex-col justify-between border-2 relative shadow-neo-lg ${slot.bgLight} ${slot.bgDark} ${slot.borderColor} ${
-                    isHovered
-                      ? 'ring-4 ring-[#D4FF00]/40 scale-[1.01]'
-                      : ''
-                  }`}
+    const zoneKey = `${activeDayObj.dateString}_${slot.type}`;
+    const isHovered = activeDropZone === zoneKey;
+
+    return (
+      <div
+        key={slot.type}
+        onDragOver={(e) => handleDragOver(e, zoneKey)}
+        onDragLeave={handleDragLeave}
+        onDrop={(e) => handleDrop(e, activeDayObj.dateString, slot.type)}
+        className={`min-h-[300px] rounded-3xl p-4 transition-colors flex flex-col justify-between border-2 relative shadow-neo-lg ${slot.bgLight} ${slot.bgDark} ${slot.borderColor} ${
+          isHovered ? 'ring-4 ring-[#D4FF00]/40 scale-[1.01]' : ''
+        }`}
+      >
+        <div>
+          {/* Slot Header with Distinct Pill & Actions */}
+          <div className="flex items-center justify-between pb-3 mb-3 border-b-2 border-black/10 dark:border-white/10">
+            <div className="flex items-center gap-2">
+              <div className={`w-8 h-8 rounded-xl ${slot.headerPillBg} border-2 border-black flex items-center justify-center shadow-neo-sm flex-shrink-0`}>
+                <SlotIcon className={`w-4 h-4 ${slot.headerPillText}`} />
+              </div>
+              <span className="text-xs font-black uppercase tracking-wider text-gray-900 dark:text-white">
+                {slot.title}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              {/* If slot is snacks, show minimize button */}
+              {slot.type === 'snack' && (
+                <button
+                  type="button"
+                  onClick={() => toggleSnacksMinimized(true)}
+                  className="px-2 py-1 rounded-xl bg-white dark:bg-[#20222E] hover:bg-[#FFE600] hover:text-black dark:hover:bg-[#D4FF00] dark:hover:text-black border border-black dark:border-gray-700 shadow-neo-sm text-[10px] font-black transition-colors"
+                  title="Minimize Snacks to side tab"
                 >
-                  <div>
-                    {/* Slot Header with Distinct Pill */}
-                    <div className="flex items-center justify-between pb-3 mb-3 border-b-2 border-black/10 dark:border-white/10">
-                      <div className="flex items-center gap-2">
-                        <div className={`w-8 h-8 rounded-xl ${slot.headerPillBg} border-2 border-black flex items-center justify-center shadow-neo-sm`}>
-                          <SlotIcon className={`w-4 h-4 ${slot.headerPillText}`} />
-                        </div>
-                        <span className="text-xs font-black uppercase tracking-wider text-gray-900 dark:text-white">
-                          {slot.title}
-                        </span>
-                      </div>
+                  Minimize
+                </button>
+              )}
 
-                      <button
-                        onClick={() => onQuickAddMeal(activeDayObj.dateString, slot.type)}
-                        className="w-7 h-7 rounded-xl bg-[#FAF8F5] dark:bg-[#20222E] hover:bg-[#FFE600] hover:text-black dark:hover:bg-[#D4FF00] dark:hover:text-black text-gray-700 dark:text-gray-300 border-2 border-black dark:border-gray-700 flex items-center justify-center shadow-neo-sm active:translate-x-0.5 active:translate-y-0.5 transition-all text-xs"
-                        title={`Add to ${slot.title}`}
-                      >
-                        <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
-                      </button>
-                    </div>
+              {/* Slot-level Ate Out action when meals are scheduled */}
+              {slotMeals.length > 0 && onAteOutSlot && (
+                <button
+                  type="button"
+                  onClick={() => onAteOutSlot(activeDayObj.dateString, slot.type, slotMeals)}
+                  className="px-2 py-1 rounded-xl bg-[#00E5FF] hover:bg-[#00cbe2] text-black font-black text-[10px] uppercase border border-black shadow-neo-sm active:scale-95 transition-colors flex items-center gap-1"
+                  title={`Ate out instead of ${slot.title}? Move or save planned meals.`}
+                >
+                  <Utensils className="w-3 h-3 stroke-[2.5]" />
+                  <span className="hidden sm:inline">Ate Out?</span>
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={() => onQuickAddMeal(activeDayObj.dateString, slot.type)}
+                className="w-7 h-7 rounded-xl bg-[#FAF8F5] dark:bg-[#20222E] hover:bg-[#FFE600] hover:text-black dark:hover:bg-[#D4FF00] dark:hover:text-black text-gray-700 dark:text-gray-300 border-2 border-black dark:border-gray-700 flex items-center justify-center shadow-neo-sm active:scale-95 transition-colors text-xs"
+                title={`Add to ${slot.title}`}
+              >
+                <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+              </button>
+            </div>
+          </div>
 
                     {/* Non-shifting Drop Target Indicator */}
                     {isHovered && draggedMealId && (
@@ -286,13 +338,23 @@ export default function KanbanBentoBoard({
                                       )}
                                     </div>
 
-                                    <div className="flex items-center gap-2 mt-1 text-[10px] text-gray-600 dark:text-gray-400 font-bold">
-                                      <span className="text-gray-900 dark:text-[#D4FF00] font-black">
-                                        {meal.calories} kcal
-                                      </span>
-                                      <span>•</span>
-                                      <span>{meal.protein}g P</span>
-                                      {meal.prepTimeMinutes && (
+                                    <div className="flex items-center gap-2 mt-1 text-[10px] text-gray-600 dark:text-gray-400 font-bold flex-wrap">
+                                      {meal.calories && meal.calories > 0 ? (
+                                        <span className="text-gray-900 dark:text-[#D4FF00] font-black">
+                                          {meal.calories} kcal
+                                        </span>
+                                      ) : (
+                                        <span className="px-1.5 py-0.5 rounded-md bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-[9px] font-black border border-black/20">
+                                          Calories Not Given
+                                        </span>
+                                      )}
+                                      {meal.protein ? (
+                                        <>
+                                          <span>•</span>
+                                          <span>{meal.protein}g P</span>
+                                        </>
+                                      ) : null}
+                                      {meal.prepTimeMinutes ? (
                                         <>
                                           <span>•</span>
                                           <span className="flex items-center gap-0.5">
@@ -300,7 +362,7 @@ export default function KanbanBentoBoard({
                                             {meal.prepTimeMinutes}m
                                           </span>
                                         </>
-                                      )}
+                                      ) : null}
                                     </div>
                                   </div>
                                 </div>
@@ -312,35 +374,26 @@ export default function KanbanBentoBoard({
                                   {!meal.isLeftover && (
                                     <button
                                       onClick={() => onCookMeal(meal)}
-                                      className="px-2 py-1 rounded-lg bg-[#D4FF00] hover:bg-[#c3ed00] text-black font-black border border-black shadow-neo-sm active:translate-x-0.5 active:translate-y-0.5 transition-all"
+                                      className="px-2 py-1 rounded-lg bg-[#D4FF00] hover:bg-[#c3ed00] text-black font-black border border-black shadow-neo-sm active:scale-95 transition-colors"
                                     >
                                       Cook
                                     </button>
                                   )}
                                   <button
                                     onClick={() => onMarkGoneEarly(meal.id, meal.title)}
-                                    className="px-2 py-1 rounded-lg bg-[#FFE600] text-black font-black border border-black shadow-neo-sm hover:bg-yellow-400 active:translate-x-0.5 active:translate-y-0.5 transition-all"
+                                    className="px-2 py-1 rounded-lg bg-[#FFE600] text-black font-black border border-black shadow-neo-sm hover:bg-yellow-400 active:scale-95 transition-colors"
                                     title="Finished earlier than expected? Clear and replan."
                                   >
                                     Gone?
                                   </button>
                                   <button
                                     onClick={() => setMovingMealId(movingMealId === meal.id ? null : meal.id)}
-                                    className="px-2 py-1 rounded-lg bg-white dark:bg-[#20222E] hover:bg-[#00E5FF] hover:text-black dark:hover:bg-[#00E5FF] dark:hover:text-black text-gray-700 dark:text-gray-300 font-black border border-black shadow-neo-sm active:translate-x-0.5 active:translate-y-0.5 transition-all flex items-center gap-1"
+                                    className="px-2 py-1 rounded-lg bg-white dark:bg-[#20222E] hover:bg-[#00E5FF] hover:text-black dark:hover:bg-[#00E5FF] dark:hover:text-black text-gray-700 dark:text-gray-300 font-black border border-black shadow-neo-sm active:scale-95 transition-colors flex items-center gap-1"
                                     title="Move to another meal slot"
                                   >
                                     <ArrowLeftRight className="w-2.5 h-2.5 stroke-[2.5]" />
                                     <span>Move</span>
                                   </button>
-                                  {onAteOut && (
-                                    <button
-                                      onClick={() => onAteOut(meal, activeDayObj.dateString, slot.type)}
-                                      className="px-2 py-1 rounded-lg bg-[#00E5FF] hover:bg-[#00cbe2] text-black font-black border border-black shadow-neo-sm active:translate-x-0.5 active:translate-y-0.5 transition-all"
-                                      title="Ate out or had something else? Log meal and save leftovers."
-                                    >
-                                      Ate Out?
-                                    </button>
-                                  )}
                                 </div>
 
                                 <div className="flex items-center gap-1">
@@ -381,7 +434,7 @@ export default function KanbanBentoBoard({
                                           onMoveMealSlot(meal.id, activeDayObj.dateString, targetSlot.type);
                                           setMovingMealId(null);
                                         }}
-                                        className="py-1 text-center font-black text-[10px] uppercase rounded-lg border border-black bg-[#FAF8F5] dark:bg-[#20222E] hover:bg-[#FFE600] hover:text-black transition-all shadow-neo-sm"
+                                        className="py-1 text-center font-black text-[10px] uppercase rounded-lg border border-black bg-[#FAF8F5] dark:bg-[#20222E] hover:bg-[#FFE600] hover:text-black transition-colors shadow-neo-sm active:scale-95"
                                       >
                                         {targetSlot.title}
                                       </button>
@@ -400,7 +453,7 @@ export default function KanbanBentoBoard({
                           <button
                             type="button"
                             onClick={() => onQuickAddMeal(activeDayObj.dateString, slot.type)}
-                            className="w-full py-5 text-center text-xs font-black text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white rounded-2xl border-2 border-dashed border-black/20 dark:border-white/20 hover:border-black dark:hover:border-white transition-all flex flex-col items-center justify-center gap-1.5 bg-white/60 dark:bg-black/20 hover:bg-white dark:hover:bg-black/40"
+                            className="w-full py-5 text-center text-xs font-black text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white rounded-2xl border-2 border-dashed border-black/20 dark:border-white/20 hover:border-black dark:hover:border-white transition-colors flex flex-col items-center justify-center gap-1.5 bg-white/60 dark:bg-black/20 hover:bg-white dark:hover:bg-black/40"
                           >
                             <Plus className="w-4 h-4 stroke-[2.5]" />
                             <span>Plan {slot.title}</span>
@@ -410,7 +463,7 @@ export default function KanbanBentoBoard({
                             <button
                               type="button"
                               onClick={() => onAteOut(undefined, activeDayObj.dateString, slot.type)}
-                              className="w-full py-2 px-3 text-center text-[10px] font-black text-gray-700 dark:text-gray-300 hover:text-black dark:hover:text-black rounded-xl border border-black/30 dark:border-gray-700 hover:border-black bg-white dark:bg-[#1E202B] hover:bg-[#00E5FF] dark:hover:bg-[#00E5FF] transition-all flex items-center justify-center gap-1.5 shadow-neo-sm"
+                              className="w-full py-2 px-3 text-center text-[10px] font-black text-gray-700 dark:text-gray-300 hover:text-black dark:hover:text-black rounded-xl border border-black/30 dark:border-gray-700 hover:border-black bg-white dark:bg-[#1E202B] hover:bg-[#00E5FF] dark:hover:bg-[#00E5FF] transition-colors flex items-center justify-center gap-1.5 shadow-neo-sm active:scale-95"
                               title="Ate out or had something else for this slot?"
                             >
                               <Utensils className="w-3 h-3" />
@@ -422,9 +475,96 @@ export default function KanbanBentoBoard({
                     </div>
                   </div>
                 </div>
-              );
-            })}
-          </div>
+    );
+  };
+
+  return (
+    <div className="w-full">
+      {/* ========================================================================= */}
+      {/* MODE 1: DAY BENTO GRID (WITH COLLAPSIBLE SNACKS) */}
+      {/* ========================================================================= */}
+      {!isAllDaysView && (
+        <div className="space-y-4">
+          {/* First-time Onboarding Prompt for Snacks Column Layout */}
+          {showSnacksPrompt && (
+            <div className="p-3.5 rounded-2xl bg-[#F6FCF0] dark:bg-[#131911] border-2 border-lime-500 shadow-neo-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-[#D4FF00] border-2 border-black flex items-center justify-center text-black font-black text-xs shadow-neo-sm flex-shrink-0">
+                  <Coffee className="w-4 h-4 stroke-[2.5]" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-black text-gray-900 dark:text-white uppercase tracking-wider">
+                    Snacks Layout Preference
+                  </h4>
+                  <p className="text-[11px] text-gray-600 dark:text-gray-300 font-bold">
+                    Want Snacks minimized into a vertical tab next to Dinner to give meals more room? (You can toggle this anytime!)
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 self-end sm:self-auto flex-shrink-0">
+                <button
+                  type="button"
+                  onClick={() => handleSetSnacksPreference(true)}
+                  className="px-3 py-1.5 bg-[#D4FF00] hover:bg-[#c3ed00] text-black font-black text-xs rounded-xl border-2 border-black shadow-neo-sm active:scale-95 transition-colors"
+                >
+                  ✦ Minimize Snacks (Recommended)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSetSnacksPreference(false)}
+                  className="px-3 py-1.5 bg-white dark:bg-[#20222E] hover:bg-gray-100 text-gray-800 dark:text-white font-black text-xs rounded-xl border-2 border-black dark:border-gray-700 shadow-neo-sm active:scale-95 transition-colors"
+                >
+                  Keep 4 Columns
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Render layout based on isSnacksMinimized */}
+          {isSnacksMinimized ? (
+            <div className="flex flex-col lg:flex-row gap-4 w-full items-stretch">
+              {/* 3 Main Bento Columns: Breakfast, Lunch, Dinner */}
+              <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4 min-w-0">
+                {MEAL_SLOTS.filter((s) => s.type !== 'snack').map(renderSlotColumn)}
+              </div>
+
+              {/* Minimized Snacks Tab next to Dinner */}
+              <div
+                onClick={() => toggleSnacksMinimized(false)}
+                className="w-full lg:w-16 min-h-[64px] lg:min-h-[320px] rounded-3xl p-3 bg-[#F6FCF0] dark:bg-[#131911] border-2 border-lime-400/80 dark:border-lime-500/30 shadow-neo cursor-pointer hover:border-black flex lg:flex-col items-center justify-between transition-colors group select-none relative"
+                title="Click to expand Snacks column"
+              >
+                <div className="w-8 h-8 rounded-xl bg-[#D4FF00] border-2 border-black flex items-center justify-center shadow-neo-sm flex-shrink-0">
+                  <Coffee className="w-4 h-4 text-black stroke-[2.5]" />
+                </div>
+
+                <div className="hidden lg:flex flex-1 items-center justify-center py-6">
+                  <span className="[writing-mode:vertical-rl] rotate-180 text-xs font-black uppercase tracking-widest text-lime-900 dark:text-lime-300 group-hover:text-black dark:group-hover:text-[#D4FF00] transition-colors">
+                    SNACKS
+                  </span>
+                </div>
+
+                <div className="lg:hidden flex items-center gap-2">
+                  <span className="text-xs font-black uppercase tracking-wider text-lime-900 dark:text-lime-300">
+                    Snacks (Tap to expand)
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  {rawSnacksMeals.length > 0 && (
+                    <span className="px-2 py-0.5 rounded-full bg-[#D4FF00] text-black font-black text-[10px] border border-black shadow-neo-sm">
+                      {rawSnacksMeals.length}
+                    </span>
+                  )}
+                  <ChevronRight className="w-4 h-4 text-lime-700 dark:text-lime-400 group-hover:translate-x-0.5 transition-transform" />
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 w-full">
+              {MEAL_SLOTS.map(renderSlotColumn)}
+            </div>
+          )}
         </div>
       )}
 
@@ -569,9 +709,15 @@ export default function KanbanBentoBoard({
                                         </span>
                                       )}
                                     </div>
-                                    <span className="text-[10px] font-black text-gray-600 dark:text-gray-400 flex-shrink-0">
-                                      {meal.calories} kcal
-                                    </span>
+                                    {meal.calories && meal.calories > 0 ? (
+                                      <span className="text-[10px] font-black text-gray-600 dark:text-gray-400 flex-shrink-0">
+                                        {meal.calories} kcal
+                                      </span>
+                                    ) : (
+                                      <span className="px-1 py-0.2 rounded text-[8px] font-black bg-gray-100 dark:bg-gray-800 text-gray-500 border border-black/20 flex-shrink-0">
+                                        No Cals
+                                      </span>
+                                    )}
                                   </div>
                                 ))}
                               </div>
@@ -610,7 +756,7 @@ export default function KanbanBentoBoard({
                       <div className="mt-4 pt-3 border-t-2 border-black/10 dark:border-gray-800 flex items-center gap-2">
                         <button
                           onClick={() => onFocusDay && onFocusDay(day.dateString)}
-                          className="flex-1 py-1.5 px-3 bg-[#FAF8F5] dark:bg-[#20222E] hover:bg-black hover:text-white dark:hover:bg-[#D4FF00] dark:hover:text-black text-gray-900 dark:text-white font-black text-xs rounded-xl border-2 border-black dark:border-gray-700 shadow-neo-sm active:translate-x-0.5 active:translate-y-0.5 flex items-center justify-center gap-1 transition-all"
+                          className="flex-1 py-1.5 px-3 bg-[#FAF8F5] dark:bg-[#20222E] hover:bg-black hover:text-white dark:hover:bg-[#D4FF00] dark:hover:text-black text-gray-900 dark:text-white font-black text-xs rounded-xl border-2 border-black dark:border-gray-700 shadow-neo-sm active:scale-95 flex items-center justify-center gap-1 transition-colors"
                         >
                           <CalendarDays className="w-3.5 h-3.5" />
                           <span>Open Day</span>

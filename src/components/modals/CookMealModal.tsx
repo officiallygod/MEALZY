@@ -295,8 +295,9 @@ export default function CookMealModal({
         {/* Action Button */}
         <div className="mt-4 pt-3 border-t-2 border-black/10 dark:border-gray-800 flex-shrink-0">
           <button
+            type="submit"
             onClick={handleCook}
-            className="w-full py-3.5 bg-[#FF5500] hover:bg-[#ff681a] text-white font-black text-xs uppercase tracking-wider rounded-2xl border-2 border-black shadow-neo hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-neo-lg active:translate-x-0.5 active:translate-y-0.5 transition-all flex items-center justify-center gap-2"
+            className="w-full py-3.5 bg-[#FF5500] hover:bg-[#ff681a] text-white font-black text-xs uppercase tracking-wider rounded-2xl border-2 border-black shadow-neo active:scale-[0.98] transition-colors flex items-center justify-center gap-2"
           >
             <ChefHat className="w-4 h-4" />
             <span>CONFIRM &amp; ALLOCATE {portions}X PORTIONS</span>
