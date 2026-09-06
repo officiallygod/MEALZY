@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Flame, Plus, User, Sun, Moon, Smartphone, Heart, RefreshCw, Check } from 'lucide-react';
+import { Plus, User, Sun, Moon, Smartphone, Heart, RefreshCw, Check } from 'lucide-react';
 
 interface HeaderProps {
   onOpenAuth: () => void;
@@ -11,8 +11,8 @@ interface HeaderProps {
   userEmail?: string;
   userName?: string;
   userAvatar?: string;
-  todayCalories: number;
-  calorieTarget: number;
+  todayCalories?: number;
+  calorieTarget?: number;
   theme: 'dark' | 'light';
   onToggleTheme: () => void;
 }
@@ -30,7 +30,6 @@ export default function Header({
   theme,
   onToggleTheme,
 }: HeaderProps) {
-  const percent = Math.min(100, Math.round((todayCalories / (calorieTarget || 2200)) * 100));
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved_locally' | 'synced'>('idle');
 
   useEffect(() => {
@@ -115,66 +114,28 @@ export default function Header({
           </div>
         </div>
 
-        {/* Center: Habit Streak & Daily Energy */}
-        <div className="hidden xl:flex items-center gap-3 flex-shrink-0">
-          {/* Consistency Streak */}
-          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white dark:bg-[#16171E] border-2 border-black dark:border-gray-700 text-xs font-black text-orange-600 dark:text-orange-400 shadow-neo-sm">
-            <Flame className="w-3.5 h-3.5 fill-orange-500 text-orange-500" />
-            <span>4-Day Consistency</span>
-          </div>
-
-          {/* Calorie Attainment */}
-          <button
-            type="button"
-            onClick={onOpenAuth}
-            className="flex items-center gap-2 px-3 py-1 rounded-full bg-white dark:bg-[#16171E] hover:bg-gray-100 dark:hover:bg-[#20222D] border-2 border-black dark:border-gray-700 text-xs shadow-neo-sm active:scale-95 transition-all cursor-pointer group"
-            title="Click to view and adjust maintenance calorie target"
-          >
-            <div className="w-2.5 h-2.5 rounded-full bg-[#D4FF00] border border-black group-hover:scale-110 transition-transform" />
-            <span className="font-black text-gray-900 dark:text-white">{todayCalories}</span>
-            <span className="text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">
-              / {calorieTarget} kcal
-            </span>
-            <span className="text-[10px] font-black bg-[#D4FF00] text-black px-1.5 py-0.2 rounded border border-black">
-              {percent}%
-            </span>
-          </button>
-        </div>
-
         {/* Right Actions */}
         <div className="flex items-center gap-2 sm:gap-2.5 flex-shrink-0">
-          {/* Real-time Save & Sync Status Pill */}
+          {/* Gen Z Save & Sync Tick Indicator (Next to Dark toggle) */}
           <div
-            className={`hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[10px] font-black tracking-wide transition-all select-none ${
-              saveStatus === 'saving'
-                ? 'bg-amber-100 dark:bg-amber-950/60 border-amber-400 text-amber-900 dark:text-amber-200'
-                : saveStatus === 'synced'
-                ? 'bg-[#E8F8D0] dark:bg-[#1C2C10] border-lime-500 text-lime-900 dark:text-[#D4FF00]'
-                : 'bg-white dark:bg-[#16171E] border-black/20 dark:border-gray-700 text-gray-600 dark:text-gray-400'
-            }`}
+            className="flex items-center justify-center select-none flex-shrink-0"
             title={
-              saveStatus === 'synced'
-                ? 'All changes automatically saved locally and synced to Google Drive'
-                : saveStatus === 'saving'
-                ? 'Saving changes locally and syncing...'
-                : 'All changes saved locally to device storage'
+              saveStatus === 'saving'
+                ? 'Saving changes...'
+                : saveStatus === 'synced'
+                ? 'All changes saved locally & synced to Google Drive'
+                : 'All changes saved locally'
             }
+            aria-label={saveStatus === 'saving' ? 'Saving changes' : 'All changes saved'}
           >
             {saveStatus === 'saving' ? (
-              <>
-                <RefreshCw className="w-2.5 h-2.5 animate-spin" />
-                <span>SAVING...</span>
-              </>
-            ) : saveStatus === 'synced' ? (
-              <>
-                <span className="w-2 h-2 rounded-full bg-[#D4FF00] border border-black animate-pulse" />
-                <span>SYNCED</span>
-              </>
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-[#FFE600] text-black border-2 border-black shadow-neo-sm flex items-center justify-center">
+                <RefreshCw className="w-3.5 h-3.5 stroke-[3] animate-spin text-black" />
+              </div>
             ) : (
-              <>
-                <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                <span>SAVED</span>
-              </>
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-[#D4FF00] text-black border-2 border-black shadow-neo-sm flex items-center justify-center transition-transform hover:scale-105 active:scale-95">
+                <Check className="w-4 h-4 stroke-[3.5] text-black" />
+              </div>
             )}
           </div>
 

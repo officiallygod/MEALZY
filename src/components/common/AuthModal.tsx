@@ -118,8 +118,6 @@ export default function AuthModal({
     }
   };
 
-  if (!isOpen) return null;
-
   // Real Google OAuth2 Popup Dialog
   const handleGoogleSignInPopup = (requestDriveScope: boolean = true) => {
     setStatusMsg(null);
@@ -319,6 +317,8 @@ export default function AuthModal({
       }
     }
   };
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md overflow-y-auto scrollbar-none">
