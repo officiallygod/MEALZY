@@ -34,6 +34,7 @@ interface KanbanBentoBoardProps {
   onCookMeal: (meal: MealItem) => void;
   onMarkGoneEarly: (mealId: string, mealTitle: string) => void;
   onDeleteMeal: (mealId: string) => void;
+  onAteOut?: (meal?: MealItem, dateString?: string, mealType?: MealType) => void;
   onFocusDay?: (dateString: string) => void;
 }
 
@@ -61,6 +62,7 @@ export default function KanbanBentoBoard({
   onCookMeal,
   onMarkGoneEarly,
   onDeleteMeal,
+  onAteOut,
   onFocusDay,
 }: KanbanBentoBoardProps) {
   const [draggedMealId, setDraggedMealId] = useState<string | null>(null);
@@ -292,6 +294,15 @@ export default function KanbanBentoBoard({
                                     <ArrowLeftRight className="w-2.5 h-2.5 stroke-[2.5]" />
                                     <span>Move</span>
                                   </button>
+                                  {onAteOut && (
+                                    <button
+                                      onClick={() => onAteOut(meal, activeDayObj.dateString, slot.type)}
+                                      className="px-2 py-1 rounded-lg bg-[#00E5FF] hover:bg-[#00cbe2] text-black font-black border border-black shadow-neo-sm active:translate-x-0.5 active:translate-y-0.5 transition-all"
+                                      title="Ate out or had something else? Log meal and save leftovers."
+                                    >
+                                      Ate Out?
+                                    </button>
+                                  )}
                                 </div>
 
                                 <div className="flex items-center gap-1">
@@ -347,14 +358,28 @@ export default function KanbanBentoBoard({
 
                       {/* Empty Slot Call-To-Action (Dashed Neo-Brutalist Box) */}
                       {slotMeals.length === 0 && !isHovered && (
-                        <button
-                          type="button"
-                          onClick={() => onQuickAddMeal(activeDayObj.dateString, slot.type)}
-                          className="w-full py-8 text-center text-xs font-black text-gray-400 dark:text-gray-500 hover:text-black dark:hover:text-white rounded-2xl border-2 border-dashed border-black/20 dark:border-gray-800 hover:border-black dark:hover:border-white transition-all flex flex-col items-center justify-center gap-1.5 bg-[#FAF8F5]/50 dark:bg-[#1E202A]/40"
-                        >
-                          <Plus className="w-4 h-4 stroke-[2.5]" />
-                          <span>Plan {slot.title}</span>
-                        </button>
+                        <div className="space-y-2">
+                          <button
+                            type="button"
+                            onClick={() => onQuickAddMeal(activeDayObj.dateString, slot.type)}
+                            className="w-full py-6 text-center text-xs font-black text-gray-400 dark:text-gray-500 hover:text-black dark:hover:text-white rounded-2xl border-2 border-dashed border-black/20 dark:border-gray-800 hover:border-black dark:hover:border-white transition-all flex flex-col items-center justify-center gap-1.5 bg-[#FAF8F5]/50 dark:bg-[#1E202A]/40"
+                          >
+                            <Plus className="w-4 h-4 stroke-[2.5]" />
+                            <span>Plan {slot.title}</span>
+                          </button>
+
+                          {onAteOut && (
+                            <button
+                              type="button"
+                              onClick={() => onAteOut(undefined, activeDayObj.dateString, slot.type)}
+                              className="w-full py-2 px-3 text-center text-[10px] font-black text-gray-700 dark:text-gray-300 hover:text-black dark:hover:text-white rounded-xl border border-black/20 dark:border-gray-700 hover:border-black bg-[#FAF8F5] dark:bg-[#20222E] hover:bg-[#00E5FF] hover:text-black dark:hover:bg-[#00E5FF] dark:hover:text-black transition-all flex items-center justify-center gap-1.5 shadow-neo-sm"
+                              title="Ate out or had something else for this slot?"
+                            >
+                              <Utensils className="w-3 h-3" />
+                              <span>Ate Out / Other?</span>
+                            </button>
+                          )}
+                        </div>
                       )}
                     </div>
                   </div>

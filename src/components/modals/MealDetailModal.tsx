@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { X, Clock, ChefHat, Trash2, RotateCcw, Sparkles } from 'lucide-react';
+import { X, Clock, ChefHat, Trash2, RotateCcw, Sparkles, Utensils } from 'lucide-react';
 import { MealItem } from '@/types/meal';
 import { getMealAccent, getMealInitials } from '@/lib/curated-foods';
 import { getTwistForDishTitle } from '@/lib/dish-database';
@@ -14,6 +14,7 @@ interface MealDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   onCookClick: (meal: MealItem) => void;
+  onAteOutClick?: (meal: MealItem) => void;
   onMarkGoneEarly: (mealId: string, mealTitle: string) => void;
   onDeleteMeal: (mealId: string) => void;
 }
@@ -23,6 +24,7 @@ export default function MealDetailModal({
   isOpen,
   onClose,
   onCookClick,
+  onAteOutClick,
   onMarkGoneEarly,
   onDeleteMeal,
 }: MealDetailModalProps) {
@@ -183,17 +185,31 @@ export default function MealDetailModal({
         </div>
 
         {/* Footer Actions */}
-        <div className="p-4 bg-[#FAF8F5] dark:bg-[#16171E] border-t-2 border-black/10 dark:border-gray-800 flex items-center gap-2.5">
+        <div className="p-4 bg-[#FAF8F5] dark:bg-[#16171E] border-t-2 border-black/10 dark:border-gray-800 flex items-center gap-2 flex-wrap sm:flex-nowrap">
           {!meal.isLeftover && (
             <button
               onClick={() => {
                 onClose();
                 onCookClick(meal);
               }}
-              className="flex-1 py-2.5 bg-[#FF5500] hover:bg-[#ff681a] text-white font-black text-xs uppercase rounded-xl border-2 border-black shadow-neo hover:translate-x-[-1px] hover:translate-y-[-1px] active:translate-x-0.5 active:translate-y-0.5 transition-all flex items-center justify-center gap-1.5"
+              className="flex-1 py-2.5 px-3 bg-[#FF5500] hover:bg-[#ff681a] text-white font-black text-xs uppercase rounded-xl border-2 border-black shadow-neo hover:translate-x-[-1px] hover:translate-y-[-1px] active:translate-x-0.5 active:translate-y-0.5 transition-all flex items-center justify-center gap-1.5 whitespace-nowrap"
             >
-              <ChefHat className="w-4 h-4" />
-              <span>COOK &amp; MULTIPLY</span>
+              <ChefHat className="w-4 h-4 flex-shrink-0" />
+              <span>COOK</span>
+            </button>
+          )}
+
+          {onAteOutClick && (
+            <button
+              onClick={() => {
+                onClose();
+                onAteOutClick(meal);
+              }}
+              className="flex-1 py-2.5 px-3 bg-[#00E5FF] hover:bg-[#00cbe2] text-black font-black text-xs uppercase rounded-xl border-2 border-black shadow-neo hover:translate-x-[-1px] hover:translate-y-[-1px] active:translate-x-0.5 active:translate-y-0.5 transition-all flex items-center justify-center gap-1.5 whitespace-nowrap"
+              title="Ate out or had something else? Log meal and save leftovers."
+            >
+              <Utensils className="w-4 h-4 flex-shrink-0" />
+              <span>ATE OUT?</span>
             </button>
           )}
 
@@ -202,10 +218,10 @@ export default function MealDetailModal({
               onMarkGoneEarly(meal.id, meal.title);
               onClose();
             }}
-            className="flex-1 py-2.5 bg-[#FFE600] hover:bg-yellow-400 text-black font-black text-xs uppercase rounded-xl border-2 border-black shadow-neo hover:translate-x-[-1px] hover:translate-y-[-1px] active:translate-x-0.5 active:translate-y-0.5 transition-all flex items-center justify-center gap-1"
+            className="flex-1 py-2.5 px-3 bg-[#FFE600] hover:bg-yellow-400 text-black font-black text-xs uppercase rounded-xl border-2 border-black shadow-neo hover:translate-x-[-1px] hover:translate-y-[-1px] active:translate-x-0.5 active:translate-y-0.5 transition-all flex items-center justify-center gap-1 whitespace-nowrap"
           >
-            <RotateCcw className="w-3.5 h-3.5" />
-            <span>GONE ALREADY?</span>
+            <RotateCcw className="w-3.5 h-3.5 flex-shrink-0" />
+            <span>GONE?</span>
           </button>
 
           <button
@@ -213,7 +229,7 @@ export default function MealDetailModal({
               onDeleteMeal(meal.id);
               onClose();
             }}
-            className="p-2.5 bg-white dark:bg-[#20222E] hover:bg-rose-100 text-gray-500 hover:text-rose-600 rounded-xl border-2 border-black shadow-neo-sm active:translate-x-0.5 active:translate-y-0.5 transition-all"
+            className="p-2.5 bg-white dark:bg-[#20222E] hover:bg-rose-100 text-gray-500 hover:text-rose-600 rounded-xl border-2 border-black shadow-neo-sm active:translate-x-0.5 active:translate-y-0.5 transition-all flex-shrink-0"
             title="Delete meal"
           >
             <Trash2 className="w-4 h-4" />

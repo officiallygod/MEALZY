@@ -15,6 +15,7 @@ import MealDetailModal from '@/components/modals/MealDetailModal';
 import CookMealModal from '@/components/modals/CookMealModal';
 import AuthModal from '@/components/common/AuthModal';
 import ExportWeekModal from '@/components/modals/ExportWeekModal';
+import AteOutModal, { AteOutConfirmData } from '@/components/modals/AteOutModal';
 import { generateSmartSuggestions } from '@/lib/ai-engine';
 import { CURATED_FOODS } from '@/lib/curated-foods';
 import confetti from 'canvas-confetti';
@@ -41,6 +42,11 @@ export default function Home() {
 
   const [selectedMealForDetail, setSelectedMealForDetail] = useState<MealItem | null>(null);
   const [mealToCook, setMealToCook] = useState<MealItem | null>(null);
+  const [ateOutTarget, setAteOutTarget] = useState<{
+    meal?: MealItem | null;
+    dateString: string;
+    mealType: MealType;
+  } | null>(null);
 
   // Quick Gone-Already celebration banner
   const [quickGoneBadge, setQuickGoneBadge] = useState<{ title: string; show: boolean }>({
@@ -284,6 +290,109 @@ export default function Home() {
     setActiveTab('planner');
   };
 
+  // Handle Ate Out / Ate Something Else with Leftover Support
+  const handleConfirmAteOut = async (data: AteOutConfirmData) => {
+    const tomorrow = rollingDays[1]?.dateString || rollingDays[0]?.dateString;
+
+    // 1. Handle original meal (if one was scheduled for this slot)
+    if (data.originalMeal) {
+      if (data.originalMealAction === 'push_tomorrow') {
+        await db.meals.update(data.originalMeal.id, {
+          dateScheduled: tomorrow,
+          notes: `${data.originalMeal.notes ? data.originalMeal.notes + ' • ' : ''}Pushed from ${data.dateScheduled} (ate out).`,
+        });
+      } else if (data.originalMealAction === 'save_fridge') {
+        await db.fridge.put({
+          id: `fridge-pushed-${data.originalMeal.id}`,
+          name: data.originalMeal.title,
+          originalMealTitle: data.originalMeal.title,
+          cookedAt: new Date().toISOString(),
+          daysInFridge: 0,
+          status: 'fresh',
+          portionsLeft: 1,
+          category: 'saved-dish',
+          accentColor: data.originalMeal.accentColor || '#10B981',
+        });
+        await db.meals.delete(data.originalMeal.id);
+      } else if (data.originalMealAction === 'replace') {
+        await db.meals.delete(data.originalMeal.id);
+      }
+    }
+
+    // 2. Log the "Ate Out / Something Else" dish in this slot
+    const ateOutId = `ate-out-${Date.now()}`;
+    await db.meals.add({
+      id: ateOutId,
+      title: data.title || 'Ate Out',
+      mealType: data.mealType,
+      calories: data.calories || 750,
+      protein: Math.round((data.calories || 750) * 0.04),
+      carbs: Math.round((data.calories || 750) * 0.12),
+      fat: Math.round((data.calories || 750) * 0.04),
+      prepTimeMinutes: 0,
+      ingredients: [{ name: data.title || 'Dining Out / Takeout', amount: '1 meal' }],
+      tags: ['ate-out', 'dining-out', 'no-cooking'],
+      dateScheduled: data.dateScheduled,
+      accentColor: '#00E5FF',
+      notes: data.notes || `Ate out on ${data.dateScheduled}.`,
+    });
+
+    // 3. Handle Leftover (if user selected YES)
+    if (data.hasLeftover) {
+      const leftoverTitle = `Leftover: ${data.title || 'Takeout'}`;
+
+      if (data.leftoverDestination === 'schedule') {
+        await db.meals.add({
+          id: `leftover-${ateOutId}`,
+          title: leftoverTitle,
+          mealType: data.leftoverScheduleSlot || 'lunch',
+          dateScheduled: data.leftoverScheduleDate || tomorrow,
+          calories: Math.round((data.calories || 750) * 0.75),
+          protein: Math.round((data.calories || 750) * 0.035),
+          carbs: Math.round((data.calories || 750) * 0.1),
+          fat: Math.round((data.calories || 750) * 0.035),
+          prepTimeMinutes: 2,
+          ingredients: [{ name: leftoverTitle, amount: `${data.leftoverPortions} portion` }],
+          tags: ['leftover', 'takeout-box', 'quick-heat'],
+          isLeftover: true,
+          accentColor: '#A855F7',
+          notes: `Brought home from ${data.title}. Reheat and enjoy!`,
+        });
+      } else {
+        await db.fridge.put({
+          id: `fridge-leftover-${ateOutId}`,
+          name: leftoverTitle,
+          originalMealTitle: data.title || 'Takeout',
+          cookedAt: new Date().toISOString(),
+          daysInFridge: 0,
+          status: 'fresh',
+          portionsLeft: data.leftoverPortions || 1,
+          category: 'takeout-leftover',
+          accentColor: '#A855F7',
+        });
+      }
+    }
+
+    // Celebration Confetti
+    confetti({
+      particleCount: 45,
+      spread: 60,
+      origin: { y: 0.6 },
+      colors: ['#00E5FF', '#D4FF00', '#A855F7'],
+    });
+
+    // Banner feedback
+    setQuickGoneBadge({
+      title: data.hasLeftover
+        ? `${data.title} logged + leftover scheduled!`
+        : `${data.title} logged!`,
+      show: true,
+    });
+    setTimeout(() => {
+      setQuickGoneBadge({ title: '', show: false });
+    }, 4500);
+  };
+
   const handleApplySuggestion = async (
     suggestion: AISuggestion,
     targetDate: string,
@@ -443,6 +552,13 @@ export default function Home() {
               onCookMeal={(meal) => setMealToCook(meal)}
               onMarkGoneEarly={handleMarkGoneEarly}
               onDeleteMeal={handleDeleteMeal}
+              onAteOut={(meal, dateString, mealType) =>
+                setAteOutTarget({
+                  meal: meal || null,
+                  dateString: dateString || selectedDate,
+                  mealType: mealType || 'dinner',
+                })
+              }
               onFocusDay={(d) => {
                 setSelectedDate(d);
                 setIsAllDaysView(false);
@@ -507,8 +623,25 @@ export default function Home() {
         meal={selectedMealForDetail}
         onClose={() => setSelectedMealForDetail(null)}
         onCookClick={(meal) => setMealToCook(meal)}
+        onAteOutClick={(meal) =>
+          setAteOutTarget({
+            meal,
+            dateString: meal.dateScheduled || selectedDate,
+            mealType: meal.mealType,
+          })
+        }
         onMarkGoneEarly={handleMarkGoneEarly}
         onDeleteMeal={handleDeleteMeal}
+      />
+
+      <AteOutModal
+        isOpen={Boolean(ateOutTarget)}
+        onClose={() => setAteOutTarget(null)}
+        targetMeal={ateOutTarget?.meal}
+        targetDate={ateOutTarget?.dateString || rollingDays[0].dateString}
+        targetSlot={ateOutTarget?.mealType || 'dinner'}
+        rollingDays={rollingDays}
+        onConfirmAteOut={handleConfirmAteOut}
       />
 
       <CookMealModal
