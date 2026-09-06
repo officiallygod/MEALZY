@@ -5,8 +5,8 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db, getRollingWeekDates, seedInitialDataIfEmpty } from '@/lib/db';
 import { MealItem, MealType, FridgePantryItem, AISuggestion, UserPreferences } from '@/types/meal';
 import Header from '@/components/navigation/Header';
-import Footer from '@/components/navigation/Footer';
 import BottomNav, { ActiveTab } from '@/components/navigation/BottomNav';
+import { syncAcrossDevicesOnStartup, enableAutomaticDriveSync, scheduleBackgroundDriveSync } from '@/lib/sync/google-drive';
 import RollingWeekSelector from '@/components/planner/RollingWeekSelector';
 import DailyNutritionMonitor from '@/components/planner/DailyNutritionMonitor';
 import KanbanBentoBoard from '@/components/planner/KanbanBentoBoard';
@@ -14,6 +14,7 @@ import FridgeRotBanner from '@/components/pantry/FridgeRotBanner';
 import AddMealModal from '@/components/modals/AddMealModal';
 import MealDetailModal from '@/components/modals/MealDetailModal';
 import CookMealModal from '@/components/modals/CookMealModal';
+import AddFridgeItemModal from '@/components/modals/AddFridgeItemModal';
 import AuthModal from '@/components/common/AuthModal';
 import ExportWeekModal from '@/components/modals/ExportWeekModal';
 import AteOutModal, { AteOutConfirmData } from '@/components/modals/AteOutModal';
@@ -23,8 +24,23 @@ import SplashScreen from '@/components/common/SplashScreen';
 import { generateSmartSuggestions } from '@/lib/ai-engine';
 import { CURATED_FOODS, cleanMealTitle } from '@/lib/curated-foods';
 import confetti from 'canvas-confetti';
-import { RotateCcw, CheckCircle2 } from 'lucide-react';
+import { RotateCcw, CheckCircle2, Plus } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+
+const MARQUEE_ITEMS = [
+  '✦ 7-DAY ROLLING TIMELINE',
+  '✦ ZERO FOOD SPOILAGE',
+  '✦ NEO-BENTO PLANNING',
+  '✦ MACROS TRACKED',
+  '✦ COOK ONCE EAT 3X',
+  '✦ MEALZY',
+  '✦ 7-DAY ROLLING TIMELINE',
+  '✦ ZERO FOOD SPOILAGE',
+  '✦ NEO-BENTO PLANNING',
+  '✦ MACROS TRACKED',
+  '✦ COOK ONCE EAT 3X',
+  '✦ MEALZY',
+];
 
 export default function Home() {
   const [isClient, setIsClient] = useState(false);
@@ -42,6 +58,7 @@ export default function Home() {
   const [userName, setUserName] = useState<string | undefined>(undefined);
   const [userAvatar, setUserAvatar] = useState<string | undefined>(undefined);
   const [isAddMealOpen, setIsAddMealOpen] = useState(false);
+  const [isAddFridgeItemOpen, setIsAddFridgeItemOpen] = useState(false);
   const [isExportWeekOpen, setIsExportWeekOpen] = useState(false);
   const [addMealSlot, setAddMealSlot] = useState<MealType>('lunch');
   const [addMealDate, setAddMealDate] = useState<string>(rollingDays[0].dateString);
@@ -124,11 +141,26 @@ export default function Home() {
     }
   };
 
-  // Initialize theme and database on client mount
+  // Initialize theme, database, and cross-device sync on client mount
   useEffect(() => {
     setIsClient(true);
     seedInitialDataIfEmpty().then(() => {
       sanitizeDatabase();
+      // Activate reactive background auto-sync
+      enableAutomaticDriveSync();
+      // Silently sync latest state across devices from Google Drive if signed in
+      syncAcrossDevicesOnStartup().then((res) => {
+        if (res.status === 'synced_from_cloud') {
+          const syncedTheme = (localStorage.getItem('mealzy_theme') as 'dark' | 'light') || 'dark';
+          setTheme(syncedTheme);
+          const syncedEmail = localStorage.getItem('mealzy_user_email');
+          const syncedName = localStorage.getItem('mealzy_user_name');
+          const syncedAvatar = localStorage.getItem('mealzy_user_avatar');
+          if (syncedEmail) setUserEmail(syncedEmail);
+          if (syncedName) setUserName(syncedName);
+          if (syncedAvatar) setUserAvatar(syncedAvatar);
+        }
+      });
     });
     setRollingDays(getRollingWeekDates());
 
@@ -150,6 +182,21 @@ export default function Home() {
       setUserName(savedName || savedEmail.split('@')[0]);
       if (savedAvatar) setUserAvatar(savedAvatar);
     }
+
+    // Listen for cross-device cloud sync events
+    const handleSyncApplied = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (customEvent.detail) {
+        if (customEvent.detail.theme) setTheme(customEvent.detail.theme);
+        if (customEvent.detail.userName) setUserName(customEvent.detail.userName);
+        if (customEvent.detail.userAvatar) setUserAvatar(customEvent.detail.userAvatar);
+        if (customEvent.detail.userEmail) setUserEmail(customEvent.detail.userEmail);
+      }
+    };
+    window.addEventListener('mealzy_cloud_sync_applied', handleSyncApplied);
+    return () => {
+      window.removeEventListener('mealzy_cloud_sync_applied', handleSyncApplied);
+    };
   }, []);
 
   const handleToggleTheme = () => {
@@ -163,6 +210,8 @@ export default function Home() {
       document.documentElement.classList.remove('light');
       document.documentElement.classList.add('dark');
     }
+
+    scheduleBackgroundDriveSync();
 
     setUndoAction({
       id: `theme-${Date.now()}`,
@@ -183,11 +232,13 @@ export default function Home() {
     localStorage.setItem('mealzy_user_email', email);
     localStorage.setItem('mealzy_user_name', resolvedName);
 
+    scheduleBackgroundDriveSync(500);
+
     setUndoAction({
       id: `auth-${Date.now()}`,
       badge: '👨‍🍳',
       message: `Welcome chef, ${resolvedName}!`,
-      funSubtext: 'Signed in with Google. Meals synced to Google Drive AppData.',
+      funSubtext: 'Signed in with Google. Meals and preferences synced across all devices.',
     });
   };
 
@@ -327,17 +378,29 @@ export default function Home() {
       dateScheduled: targetDate,
       mealType: targetType,
     });
+    scheduleBackgroundDriveSync(1000);
+
+    const isDifferentDay = targetDate !== prevDate;
+    const targetDayName =
+      targetDate === rollingDays[0]?.dateString
+        ? 'Today'
+        : targetDate === rollingDays[1]?.dateString
+        ? 'Tomorrow'
+        : targetDate;
 
     setUndoAction({
       id: `move-${Date.now()}`,
       badge: '🎯',
-      message: `Moved "${m.title}" to ${targetType}`,
+      message: isDifferentDay
+        ? `Moved "${m.title}" to ${targetDayName} ${targetType}`
+        : `Moved "${m.title}" to ${targetType}`,
       funSubtext: 'Tactical dish redeployment complete! Menu reshuffled. 🍱',
       onUndo: async () => {
         await db.meals.update(mealId, {
           dateScheduled: prevDate,
           mealType: prevType,
         });
+        scheduleBackgroundDriveSync(1000);
       },
     });
   };
@@ -540,6 +603,25 @@ export default function Home() {
     setActiveTab('planner');
   };
 
+  const handleAddFridgeItem = async (item: Omit<FridgePantryItem, 'id'>) => {
+    const id = `fridge-manual-${Date.now()}`;
+    await db.fridge.add({
+      ...item,
+      id,
+    });
+    scheduleBackgroundDriveSync(1000);
+    setUndoAction({
+      id: `fridge-add-${Date.now()}`,
+      badge: '🧊',
+      message: `Stashed "${item.name}" in Fridge`,
+      funSubtext: 'Portions tracked in Fridge Radar to prevent spoilage!',
+      onUndo: async () => {
+        await db.fridge.delete(id);
+        scheduleBackgroundDriveSync(1000);
+      },
+    });
+  };
+
   // Handle Ate Out / Ate Something Else with Slot-Level Food Movement & Undo
   const handleConfirmAteOut = async (data: AteOutConfirmData) => {
     const tomorrow = rollingDays[1]?.dateString || rollingDays[0]?.dateString;
@@ -692,6 +774,7 @@ export default function Home() {
       id: 'user-default-settings',
       calorieTarget: newTarget,
     });
+    scheduleBackgroundDriveSync(1000);
   };
 
   const handleApplySuggestion = async (
@@ -747,26 +830,22 @@ export default function Home() {
         onToggleTheme={handleToggleTheme}
       />
 
-      {/* Marquee Ticker Strip (matching Allen Benny Portfolio) */}
-      <div className="w-full bg-[#FF5500] text-white border-b-2 border-black overflow-hidden py-2 shadow-sm select-none">
-        <div className="animate-marquee text-xs font-black uppercase tracking-wider flex items-center gap-6 whitespace-nowrap">
-          <span>✦ 7-DAY ROLLING TIMELINE</span>
-          <span>✦ ZERO FOOD SPOILAGE</span>
-          <span>✦ NEO-BENTO PLANNING</span>
-          <span>✦ MACROS TRACKED</span>
-          <span>✦ COOK ONCE EAT 3X</span>
-          <span>✦ MEALZY</span>
-          <span>✦ 7-DAY ROLLING TIMELINE</span>
-          <span>✦ ZERO FOOD SPOILAGE</span>
-          <span>✦ NEO-BENTO PLANNING</span>
-          <span>✦ MACROS TRACKED</span>
-          <span>✦ COOK ONCE EAT 3X</span>
-          <span>✦ MEALZY</span>
+      {/* Seamless Infinite Marquee Ticker Strip */}
+      <div className="w-full bg-[#FF5500] text-white border-b-2 border-black overflow-hidden py-2 shadow-sm select-none flex">
+        <div className="animate-marquee flex items-center gap-6 pr-6 flex-shrink-0 text-xs font-black uppercase tracking-wider">
+          {MARQUEE_ITEMS.map((item, idx) => (
+            <span key={`ticker-1-${idx}`}>{item}</span>
+          ))}
+        </div>
+        <div className="animate-marquee flex items-center gap-6 pr-6 flex-shrink-0 text-xs font-black uppercase tracking-wider" aria-hidden="true">
+          {MARQUEE_ITEMS.map((item, idx) => (
+            <span key={`ticker-2-${idx}`}>{item}</span>
+          ))}
         </div>
       </div>
 
       {/* Main Container */}
-      <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-8 pt-6 w-full">
+      <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-8 pt-6 pb-28 w-full">
         {/* Early Item Completion Notice */}
         <AnimatePresence>
           {quickGoneBadge.show && (
@@ -880,7 +959,7 @@ export default function Home() {
         {/* TAB 2: FRIDGE RADAR */}
         {activeTab === 'fridge' && (
           <div className="space-y-6">
-            <div className="bg-white dark:bg-[#16171E] border-2 border-black dark:border-gray-800 rounded-3xl p-6 shadow-neo-lg flex items-center justify-between transition-colors">
+            <div className="bg-white dark:bg-[#16171E] border-2 border-black dark:border-gray-800 rounded-3xl p-6 shadow-neo-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition-colors">
               <div>
                 <div className="flex items-center gap-2 mb-1">
                   <span className="rotate-[-2deg] bg-[#FFE600] text-black font-black text-xs uppercase px-3 py-1 rounded-xl border-2 border-black shadow-neo-sm">
@@ -894,8 +973,20 @@ export default function Home() {
                   Tracks batch portions. Spoilage alert triggers strictly for items older than 7 days that remain unassigned.
                 </p>
               </div>
-              <div className="px-3.5 py-1.5 rounded-2xl bg-[#D4FF00] text-black font-black text-xs border-2 border-black shadow-neo-sm">
-                {fridgeItems.length} Batches Active
+
+              <div className="flex items-center gap-2.5 flex-shrink-0 self-stretch sm:self-auto justify-between sm:justify-end">
+                <div className="px-3.5 py-2 rounded-2xl bg-[#D4FF00] text-black font-black text-xs border-2 border-black shadow-neo-sm whitespace-nowrap">
+                  {fridgeItems.length} Batches Active
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsAddFridgeItemOpen(true)}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-[#FF5500] hover:bg-[#ff681a] text-white font-black text-xs uppercase rounded-2xl border-2 border-black shadow-neo active:scale-95 transition-all cursor-pointer flex-shrink-0"
+                  title="Add new batch or leftover to Fridge"
+                >
+                  <Plus className="w-4 h-4 stroke-[3]" />
+                  <span>Add to Fridge</span>
+                </button>
               </div>
             </div>
 
@@ -905,13 +996,12 @@ export default function Home() {
               onConsumeItemToday={handleConsumeFridgeItem}
               onMarkFinishedEarly={handleMarkGoneEarly}
               onDeleteItem={(id) => db.fridge.delete(id)}
+              onOpenAddFridge={() => setIsAddFridgeItemOpen(true)}
             />
           </div>
         )}
       </main>
 
-      {/* Footer Strip */}
-      <Footer />
 
       {/* Floating Bottom Navigation Dock */}
       <BottomNav
@@ -945,6 +1035,8 @@ export default function Home() {
         }
         onMarkGoneEarly={handleMarkGoneEarly}
         onDeleteMeal={handleDeleteMeal}
+        onMoveMealSlot={handleMoveMealSlot}
+        rollingDays={rollingDays}
       />
 
       <AteOutModal
@@ -978,6 +1070,12 @@ export default function Home() {
         rollingDays={rollingDays}
       />
 
+      <AddFridgeItemModal
+        isOpen={isAddFridgeItemOpen}
+        onClose={() => setIsAddFridgeItemOpen(false)}
+        onAddItem={handleAddFridgeItem}
+      />
+
       <AuthModal
         isOpen={isAuthOpen}
         onClose={() => setIsAuthOpen(false)}
@@ -986,6 +1084,8 @@ export default function Home() {
         userAvatar={userAvatar}
         onLoginSuccess={handleLoginSuccess}
         onLogout={handleLogout}
+        calorieTarget={calorieTarget}
+        onUpdateCalorieTarget={handleUpdateCalorieTarget}
       />
 
       <ExportWeekModal

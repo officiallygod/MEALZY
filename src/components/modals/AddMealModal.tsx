@@ -543,22 +543,22 @@ export default function AddMealModal({
                         setIsCustomNutrition(true);
                         setMatchedFoodName('Custom written meal');
                       }}
-                      className="p-2 rounded-xl bg-[#D4FF00]/25 hover:bg-[#D4FF00] hover:text-black border-2 border-black cursor-pointer flex items-center justify-between gap-2 transition-colors mb-1 shadow-neo-sm group"
+                      className="p-2.5 rounded-xl bg-[#FFE600] text-black border-2 border-black cursor-pointer flex items-center justify-between gap-2 transition-all hover:bg-[#ffd900] active:scale-[0.99] mb-1.5 shadow-neo-sm group"
                     >
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className="w-6 h-6 rounded-lg bg-[#D4FF00] border border-black flex items-center justify-center text-black font-black text-xs flex-shrink-0">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <span className="w-7 h-7 rounded-lg bg-white border-2 border-black flex items-center justify-center text-black font-black text-xs flex-shrink-0 shadow-neo-sm">
                           ✍️
                         </span>
                         <div className="min-w-0">
-                          <span className="text-xs font-black truncate block text-gray-900 dark:text-white group-hover:text-black">
+                          <span className="text-xs font-black truncate block text-black">
                             Use written text: &quot;{dishTitle.trim()}&quot;
                           </span>
-                          <span className="text-[9px] font-bold text-gray-500 group-hover:text-black/80 block">
+                          <span className="text-[10px] font-bold text-gray-900 block mt-0.5">
                             Add as custom recipe without database lookup
                           </span>
                         </div>
                       </div>
-                      <span className="px-1.5 py-0.5 rounded-md bg-black text-white text-[9px] font-black flex-shrink-0">
+                      <span className="px-2 py-0.5 rounded-md bg-black text-white text-[9px] font-black uppercase tracking-wider flex-shrink-0 border border-black shadow-neo-sm">
                         Custom Meal
                       </span>
                     </div>

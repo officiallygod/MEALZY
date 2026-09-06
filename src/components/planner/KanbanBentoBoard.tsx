@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus,
@@ -13,9 +13,11 @@ import {
   Coffee,
   CalendarDays,
   ArrowLeftRight,
+  ChevronDown,
 } from 'lucide-react';
 import { MealItem, MealType } from '@/types/meal';
 import { getMealAccent, getMealInitials, cleanMealTitle } from '@/lib/curated-foods';
+import { scheduleBackgroundDriveSync } from '@/lib/sync/google-drive';
 
 interface KanbanBentoBoardProps {
   days: {
@@ -121,6 +123,18 @@ export default function KanbanBentoBoard({
   const [draggedMealId, setDraggedMealId] = useState<string | null>(null);
   const [activeDropZone, setActiveDropZone] = useState<string | null>(null);
   const [movingMealId, setMovingMealId] = useState<string | null>(null);
+  const [moveTargetDate, setMoveTargetDate] = useState<string>('');
+  const [showMoveDayPicker, setShowMoveDayPicker] = useState<boolean>(false);
+
+  const getTargetDayLabel = (dateStr: string) => {
+    if (!dateStr) return 'Today';
+    const foundIndex = days.findIndex((d) => d.dateString === dateStr);
+    if (foundIndex === 0) return 'Today';
+    if (foundIndex === 1) return 'Tomorrow';
+    const found = days[foundIndex];
+    if (found) return `${found.dayName} ${found.dayNumber}`;
+    return dateStr;
+  };
 
   const [isSnacksMinimized, setIsSnacksMinimized] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
@@ -136,6 +150,20 @@ export default function KanbanBentoBoard({
     return false;
   });
 
+  // Keep snacks minimization in sync when cloud sync restores preferences from other devices
+  useEffect(() => {
+    const handleSyncApplied = () => {
+      if (typeof window !== 'undefined') {
+        setIsSnacksMinimized(localStorage.getItem('mealzy_snacks_minimized') === 'true');
+        setShowSnacksPrompt(localStorage.getItem('mealzy_snacks_prompted') === null);
+      }
+    };
+    window.addEventListener('mealzy_cloud_sync_applied', handleSyncApplied);
+    return () => {
+      window.removeEventListener('mealzy_cloud_sync_applied', handleSyncApplied);
+    };
+  }, []);
+
   const handleSetSnacksPreference = (minimized: boolean) => {
     setIsSnacksMinimized(minimized);
     setShowSnacksPrompt(false);
@@ -143,6 +171,7 @@ export default function KanbanBentoBoard({
       localStorage.setItem('mealzy_snacks_minimized', String(minimized));
       localStorage.setItem('mealzy_snacks_prompted', 'true');
     }
+    scheduleBackgroundDriveSync(1000);
     if (onTriggerToast) {
       onTriggerToast({
         id: `snacks-pref-${Date.now()}`,
@@ -160,6 +189,7 @@ export default function KanbanBentoBoard({
     if (typeof window !== 'undefined') {
       localStorage.setItem('mealzy_snacks_minimized', String(val));
     }
+    scheduleBackgroundDriveSync(1000);
     if (onTriggerToast) {
       onTriggerToast({
         id: `snacks-toggle-${Date.now()}`,
@@ -409,9 +439,18 @@ export default function KanbanBentoBoard({
                                     Gone?
                                   </button>
                                   <button
-                                    onClick={() => setMovingMealId(movingMealId === meal.id ? null : meal.id)}
+                                    onClick={() => {
+                                      if (movingMealId === meal.id) {
+                                        setMovingMealId(null);
+                                        setShowMoveDayPicker(false);
+                                      } else {
+                                        setMovingMealId(meal.id);
+                                        setMoveTargetDate(meal.dateScheduled || activeDayObj.dateString);
+                                        setShowMoveDayPicker(false);
+                                      }
+                                    }}
                                     className="px-2 py-1 rounded-lg bg-white dark:bg-[#20222E] hover:bg-[#00E5FF] hover:text-black dark:hover:bg-[#00E5FF] dark:hover:text-black text-gray-700 dark:text-gray-300 font-black border border-black shadow-neo-sm active:scale-95 transition-colors flex items-center gap-1"
-                                    title="Move to another meal slot"
+                                    title="Move to another meal slot or day"
                                   >
                                     <ArrowLeftRight className="w-2.5 h-2.5 stroke-[2.5]" />
                                     <span>Move</span>
@@ -436,32 +475,93 @@ export default function KanbanBentoBoard({
                                 </div>
                               </div>
 
-                              {/* 1-Tap Quick Move Selector (Zero Jitter alternative) */}
+                              {/* 1-Tap Quick Move Selector with Day & Slot Selection */}
                               {movingMealId === meal.id && (
-                                <div className="mt-2 p-2 rounded-xl bg-white dark:bg-[#16171E] border-2 border-black dark:border-gray-700 shadow-neo-sm space-y-1.5">
-                                  <div className="flex items-center justify-between text-[9px] font-black uppercase text-gray-500">
-                                    <span>Move to Slot:</span>
+                                <div className="mt-2 p-2.5 rounded-xl bg-white dark:bg-[#16171E] border-2 border-black dark:border-gray-700 shadow-neo-sm space-y-2">
+                                  <div className="flex items-center justify-between text-[10px] font-black uppercase text-gray-500">
+                                    <div className="flex items-center gap-1.5">
+                                      <span>Day:</span>
+                                      <button
+                                        type="button"
+                                        onClick={() => setShowMoveDayPicker(!showMoveDayPicker)}
+                                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg border border-black bg-[#FFE600] text-black font-black text-[10px] shadow-neo-sm hover:bg-yellow-300 active:scale-95 transition-all"
+                                        title="Click to change destination day"
+                                      >
+                                        <span>{getTargetDayLabel(moveTargetDate || activeDayObj.dateString)}</span>
+                                        <ChevronDown className={`w-2.5 h-2.5 transition-transform ${showMoveDayPicker ? 'rotate-180' : ''}`} />
+                                      </button>
+                                    </div>
                                     <button
-                                      onClick={() => setMovingMealId(null)}
+                                      type="button"
+                                      onClick={() => {
+                                        setMovingMealId(null);
+                                        setShowMoveDayPicker(false);
+                                      }}
                                       className="text-gray-400 hover:text-black dark:hover:text-white font-bold px-1"
                                     >
                                       ✕
                                     </button>
                                   </div>
-                                  <div className="grid grid-cols-3 gap-1">
-                                    {MEAL_SLOTS.filter((s) => s.type !== meal.mealType).map((targetSlot) => (
-                                      <button
-                                        key={targetSlot.type}
-                                        onClick={() => {
-                                          onMoveMealSlot(meal.id, activeDayObj.dateString, targetSlot.type);
-                                          setMovingMealId(null);
-                                        }}
-                                        className="py-1 text-center font-black text-[10px] uppercase rounded-lg border border-black bg-[#FAF8F5] dark:bg-[#20222E] hover:bg-[#FFE600] hover:text-black transition-colors shadow-neo-sm active:scale-95"
-                                      >
-                                        {targetSlot.title}
-                                      </button>
-                                    ))}
-                                  </div>
+
+                                  {/* Day Picker (hidden until user clicks to expand) */}
+                                  {showMoveDayPicker && (
+                                    <div className="p-1.5 rounded-xl bg-[#FAF8F5] dark:bg-[#1E202B] border border-black/30 dark:border-gray-700 space-y-1">
+                                      <div className="text-[9px] font-black uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                                        Choose Day:
+                                      </div>
+                                      <div className="flex items-center gap-1 overflow-x-auto pb-1 scrollbar-none">
+                                        {days.map((d, idx) => {
+                                          const isSelected = d.dateString === (moveTargetDate || activeDayObj.dateString);
+                                          const dayLabel = idx === 0 ? 'Today' : idx === 1 ? 'Tomorrow' : d.dayName;
+                                          return (
+                                            <button
+                                              key={d.dateString}
+                                              type="button"
+                                              onClick={() => {
+                                                setMoveTargetDate(d.dateString);
+                                                setShowMoveDayPicker(false);
+                                              }}
+                                              className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase whitespace-nowrap border transition-all active:scale-95 flex items-center gap-0.5 ${
+                                                isSelected
+                                                  ? 'bg-black text-white border-black dark:bg-[#D4FF00] dark:text-black dark:border-black shadow-neo-sm'
+                                                  : 'bg-white dark:bg-[#16171E] text-gray-700 dark:text-gray-300 border-black/20 dark:border-gray-700 hover:border-black'
+                                              }`}
+                                            >
+                                              <span>{dayLabel}</span>
+                                              <span className="opacity-70 text-[8px]">({d.dayNumber})</span>
+                                            </button>
+                                          );
+                                        })}
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {/* Slot buttons */}
+                                  {(() => {
+                                    const currentTargetDate = moveTargetDate || activeDayObj.dateString;
+                                    const availableSlots = MEAL_SLOTS.filter(
+                                      (s) => !(currentTargetDate === meal.dateScheduled && s.type === meal.mealType)
+                                    );
+
+                                    return (
+                                      <div className={`grid gap-1 ${availableSlots.length === 4 ? 'grid-cols-4' : 'grid-cols-3'}`}>
+                                        {availableSlots.map((targetSlot) => (
+                                          <button
+                                            key={targetSlot.type}
+                                            type="button"
+                                            onClick={() => {
+                                              onMoveMealSlot(meal.id, currentTargetDate, targetSlot.type);
+                                              setMovingMealId(null);
+                                              setShowMoveDayPicker(false);
+                                            }}
+                                            className="py-1 px-1 text-center font-black text-[10px] uppercase rounded-lg border border-black bg-[#FAF8F5] dark:bg-[#20222E] hover:bg-[#FFE600] hover:text-black transition-colors shadow-neo-sm active:scale-95 truncate"
+                                          >
+                                            {targetSlot.title}
+                                          </button>
+                                        ))}
+                                      </div>
+                                    );
+                                  })()}
                                 </div>
                               )}
                             </motion.div>

@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlertCircle, Clock, Trash2, CalendarCheck, Check, X } from 'lucide-react';
+import { AlertCircle, Clock, Trash2, CalendarCheck, Check, X, Plus } from 'lucide-react';
 import { FridgePantryItem, MealItem, MealType } from '@/types/meal';
 import { cleanMealTitle } from '@/lib/curated-foods';
 
@@ -12,6 +12,7 @@ interface FridgeRotBannerProps {
   onConsumeItemToday: (item: FridgePantryItem, mealType: MealType) => void;
   onMarkFinishedEarly: (itemId: string, mealTitle: string) => void;
   onDeleteItem: (itemId: string) => void;
+  onOpenAddFridge?: () => void;
   onlyRotting?: boolean;
 }
 
@@ -21,6 +22,7 @@ export default function FridgeRotBanner({
   onConsumeItemToday,
   onMarkFinishedEarly,
   onDeleteItem,
+  onOpenAddFridge,
   onlyRotting = false,
 }: FridgeRotBannerProps) {
   const [pickerItemId, setPickerItemId] = useState<string | null>(null);
@@ -50,7 +52,33 @@ export default function FridgeRotBanner({
     return !isOverAWeekOld || assigned;
   });
 
-  if (items.length === 0) return null;
+  if (items.length === 0) {
+    if (onlyRotting) return null;
+    return (
+      <div className="bg-white dark:bg-[#16171E] border-2 border-black dark:border-gray-800 rounded-3xl p-8 shadow-neo-lg text-center transition-colors">
+        <div className="w-14 h-14 rounded-2xl bg-[#00E5FF] border-2 border-black flex items-center justify-center mx-auto mb-3 shadow-neo-sm text-2xl">
+          🧊
+        </div>
+        <h3 className="font-funky font-black text-lg text-gray-900 dark:text-white">
+          Fridge Radar is Clear!
+        </h3>
+        <p className="text-xs text-gray-500 dark:text-gray-400 max-w-sm mx-auto mt-1 mb-4 font-medium">
+          Zero food waste risk right now. Stash leftovers, cooked batches, or groceries to track freshness.
+        </p>
+        {onOpenAddFridge && (
+          <button
+            type="button"
+            onClick={onOpenAddFridge}
+            className="px-4 py-2.5 bg-[#FF5500] hover:bg-[#ff681a] text-white font-black text-xs uppercase rounded-xl border-2 border-black shadow-neo active:scale-95 transition-all inline-flex items-center gap-2 cursor-pointer"
+          >
+            <Plus className="w-4 h-4 stroke-[3]" />
+            <span>Add Item to Fridge</span>
+          </button>
+        )}
+      </div>
+    );
+  }
+
   if (onlyRotting && rottingItems.length === 0) return null;
 
   return (
@@ -173,9 +201,21 @@ export default function FridgeRotBanner({
                 Active Batches ({freshItems.length})
               </span>
             </div>
-            <span className="text-xs font-bold text-gray-500 dark:text-gray-400">
-              Safe &amp; available to allocate
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-gray-500 dark:text-gray-400 hidden sm:inline">
+                Safe &amp; available to allocate
+              </span>
+              {onOpenAddFridge && (
+                <button
+                  type="button"
+                  onClick={onOpenAddFridge}
+                  className="px-2.5 py-1 bg-[#FF5500] hover:bg-[#ff681a] text-white font-black text-[11px] uppercase rounded-xl border border-black shadow-neo-sm flex items-center gap-1 active:scale-95 transition-all cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5 stroke-[3]" />
+                  <span>Add Item</span>
+                </button>
+              )}
+            </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">

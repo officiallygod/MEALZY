@@ -1,4 +1,19 @@
 import { db } from '../db';
+import { getActiveGoogleClientId } from '@/config/app-config';
+
+export interface ClientPreferences {
+  theme?: 'dark' | 'light';
+  snacksMinimized?: boolean;
+  snacksPrompted?: boolean;
+  userName?: string;
+  userAvatar?: string;
+  userEmail?: string;
+  calorieTarget?: number;
+  proteinTarget?: number;
+  carbsTarget?: number;
+  fatTarget?: number;
+  dietPreference?: string;
+}
 
 export interface MealzyBackupPayload {
   version: number;
@@ -6,9 +21,8 @@ export interface MealzyBackupPayload {
   meals: any[];
   fridge: any[];
   preferences: any;
+  clientSettings?: ClientPreferences;
 }
-
-import { getActiveGoogleClientId, APP_CONFIG } from '@/config/app-config';
 
 // Client ID Management: reads from app-config, environment variables, or dev override
 export function getSavedGoogleClientId(): string {
@@ -23,28 +37,96 @@ export function saveGoogleClientId(clientId: string): void {
 export async function exportLocalDataToPayload(): Promise<MealzyBackupPayload> {
   const meals = await db.meals.toArray();
   const fridge = await db.fridge.toArray();
-  const preferences = await db.preferences.get('user-default-settings');
+  const dbPrefs = await db.preferences.get('user-default-settings');
+
+  let clientSettings: ClientPreferences | undefined = undefined;
+  if (typeof window !== 'undefined') {
+    clientSettings = {
+      theme: (localStorage.getItem('mealzy_theme') as 'dark' | 'light') || 'dark',
+      snacksMinimized: localStorage.getItem('mealzy_snacks_minimized') === 'true',
+      snacksPrompted: localStorage.getItem('mealzy_snacks_prompted') === 'true',
+      userName: localStorage.getItem('mealzy_user_name') || undefined,
+      userAvatar: localStorage.getItem('mealzy_user_avatar') || undefined,
+      userEmail: localStorage.getItem('mealzy_user_email') || undefined,
+      calorieTarget: dbPrefs?.calorieTarget,
+      proteinTarget: dbPrefs?.proteinTarget,
+      carbsTarget: dbPrefs?.carbsTarget,
+      fatTarget: dbPrefs?.fatTarget,
+      dietPreference: dbPrefs?.dietPreference,
+    };
+  }
 
   return {
-    version: 1,
+    version: 2,
     exportedAt: new Date().toISOString(),
     meals,
     fridge,
-    preferences: preferences || {},
+    preferences: dbPrefs || {},
+    clientSettings,
   };
+}
+
+export let isSyncInProgress = false;
+
+export function setSyncInProgress(value: boolean): void {
+  isSyncInProgress = value;
 }
 
 export async function restoreDataFromPayload(payload: MealzyBackupPayload): Promise<void> {
   if (!payload || !payload.meals) throw new Error('Invalid backup format');
 
-  await db.transaction('rw', db.meals, db.fridge, db.preferences, async () => {
-    await db.meals.clear();
-    await db.fridge.clear();
+  isSyncInProgress = true;
+  try {
+    await db.transaction('rw', db.meals, db.fridge, db.preferences, async () => {
+      await db.meals.clear();
+      await db.fridge.clear();
 
-    if (payload.meals?.length) await db.meals.bulkAdd(payload.meals);
-    if (payload.fridge?.length) await db.fridge.bulkAdd(payload.fridge);
-    if (payload.preferences) await db.preferences.put(payload.preferences);
-  });
+      if (payload.meals?.length) await db.meals.bulkAdd(payload.meals);
+      if (payload.fridge?.length) await db.fridge.bulkAdd(payload.fridge);
+      if (payload.preferences && Object.keys(payload.preferences).length > 0) {
+        await db.preferences.put({
+          id: 'user-default-settings',
+          ...payload.preferences,
+        });
+      }
+    });
+
+    if (typeof window !== 'undefined' && payload.clientSettings) {
+      const cs = payload.clientSettings;
+      if (cs.theme) {
+        localStorage.setItem('mealzy_theme', cs.theme);
+        if (cs.theme === 'light') {
+          document.documentElement.classList.remove('dark');
+          document.documentElement.classList.add('light');
+        } else {
+          document.documentElement.classList.remove('light');
+          document.documentElement.classList.add('dark');
+        }
+      }
+      if (cs.snacksMinimized !== undefined) {
+        localStorage.setItem('mealzy_snacks_minimized', String(cs.snacksMinimized));
+      }
+      if (cs.snacksPrompted !== undefined) {
+        localStorage.setItem('mealzy_snacks_prompted', String(cs.snacksPrompted));
+      }
+      if (cs.userName) {
+        localStorage.setItem('mealzy_user_name', cs.userName);
+      }
+      if (cs.userAvatar) {
+        localStorage.setItem('mealzy_user_avatar', cs.userAvatar);
+      }
+      if (cs.userEmail) {
+        localStorage.setItem('mealzy_user_email', cs.userEmail);
+      }
+
+      // Dispatch notification event so active mounted components update their UI state
+      window.dispatchEvent(new CustomEvent('mealzy_cloud_sync_applied', { detail: cs }));
+    }
+  } finally {
+    setTimeout(() => {
+      isSyncInProgress = false;
+    }, 600);
+  }
 }
 
 // Download manual JSON file backup directly in browser
@@ -78,57 +160,220 @@ export async function uploadAndRestoreBackup(file: File): Promise<boolean> {
   });
 }
 
-// Google Drive AppData Sync Implementation ($0 cost cloud)
-// Scope: 'https://www.googleapis.com/auth/drive.appdata'
+// Google Drive AppData Sync Implementation
+// Uses 'https://www.googleapis.com/auth/drive.appdata'
 export async function syncToGoogleDriveAppData(accessToken: string): Promise<boolean> {
-  const payload = await exportLocalDataToPayload();
-  const fileContent = JSON.stringify(payload);
-
-  const metadata = {
-    name: 'mealzy_sync.json',
-    parents: ['appDataFolder'],
-    mimeType: 'application/json',
-  };
-
-  const form = new FormData();
-  form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-  form.append('file', new Blob([fileContent], { type: 'application/json' }));
-
-  const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-    },
-    body: form,
-  });
-
-  return response.ok;
-}
-
-// Download and restore sync file from Google Drive appDataFolder
-export async function pullFromGoogleDriveAppData(accessToken: string): Promise<boolean> {
   try {
-    const listRes = await fetch(
-      "https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name='mealzy_sync.json'&fields=files(id,name)",
+    const payload = await exportLocalDataToPayload();
+    const fileContent = JSON.stringify(payload, null, 2);
+
+    // 1. Check if mealzy_sync.json already exists in appDataFolder
+    const searchRes = await fetch(
+      "https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name='mealzy_sync.json' and trashed=false&fields=files(id,name,modifiedTime)&orderBy=modifiedTime desc",
       {
         headers: { Authorization: `Bearer ${accessToken}` },
       }
     );
-    if (!listRes.ok) return false;
+
+    if (searchRes.ok) {
+      const searchData = await searchRes.json();
+      const files = searchData.files || [];
+
+      if (files.length > 0) {
+        const existingFileId = files[0].id;
+        // Overwrite existing file via PATCH to keep Google Drive uncluttered
+        const patchRes = await fetch(
+          `https://www.googleapis.com/upload/drive/v3/files/${existingFileId}?uploadType=media`,
+          {
+            method: 'PATCH',
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+              'Content-Type': 'application/json',
+            },
+            body: fileContent,
+          }
+        );
+
+        // Asynchronously clean up any old duplicate sync files if they exist
+        if (files.length > 1) {
+          for (let i = 1; i < files.length; i++) {
+            fetch(`https://www.googleapis.com/drive/v3/files/${files[i].id}`, {
+              method: 'DELETE',
+              headers: { Authorization: `Bearer ${accessToken}` },
+            }).catch(() => {});
+          }
+        }
+
+        return patchRes.ok;
+      }
+    }
+
+    // 2. If no existing file found, create via multipart POST
+    const metadata = {
+      name: 'mealzy_sync.json',
+      parents: ['appDataFolder'],
+      mimeType: 'application/json',
+    };
+
+    const form = new FormData();
+    form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+    form.append('file', new Blob([fileContent], { type: 'application/json' }));
+
+    const postRes = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: form,
+    });
+
+    return postRes.ok;
+  } catch (err) {
+    console.error('[Mealzy] syncToGoogleDriveAppData failed:', err);
+    return false;
+  }
+}
+
+export type PullResult =
+  | { success: true; payload: MealzyBackupPayload }
+  | { success: false; reason: 'unauthorized' | 'not_found' | 'network_error' };
+
+// Download and restore sync file from Google Drive appDataFolder
+export async function pullFromGoogleDriveAppData(accessToken: string): Promise<PullResult> {
+  try {
+    const listRes = await fetch(
+      "https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name='mealzy_sync.json' and trashed=false&fields=files(id,name,modifiedTime)&orderBy=modifiedTime desc",
+      {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      }
+    );
+
+    if (listRes.status === 401) {
+      return { success: false, reason: 'unauthorized' };
+    }
+
+    if (!listRes.ok) {
+      return { success: false, reason: 'network_error' };
+    }
+
     const listData = await listRes.json();
-    if (!listData.files || listData.files.length === 0) return false;
+    if (!listData.files || listData.files.length === 0) {
+      return { success: false, reason: 'not_found' };
+    }
 
     const fileId = listData.files[0].id;
     const downloadRes = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
-    if (!downloadRes.ok) return false;
 
-    const payload = await downloadRes.json();
+    if (!downloadRes.ok) {
+      return { success: false, reason: 'network_error' };
+    }
+
+    const payload = (await downloadRes.json()) as MealzyBackupPayload;
     await restoreDataFromPayload(payload);
-    return true;
+    return { success: true, payload };
   } catch (err) {
-    console.error('Failed to pull from Google Drive:', err);
-    return false;
+    console.error('[Mealzy] Failed to pull from Google Drive:', err);
+    return { success: false, reason: 'network_error' };
+  }
+}
+
+// Cross-device sync executed automatically when opening the app
+export async function syncAcrossDevicesOnStartup(): Promise<{
+  status: 'synced_from_cloud' | 'seeded_to_cloud' | 'no_token' | 'expired_token' | 'idle';
+}> {
+  if (typeof window === 'undefined') return { status: 'idle' };
+  const token = localStorage.getItem('mealzy_google_access_token');
+  if (!token) return { status: 'no_token' };
+
+  try {
+    const pullResult = await pullFromGoogleDriveAppData(token);
+    if (pullResult.success) {
+      console.log('[Mealzy] Successfully pulled fresh cross-device state from Google Drive.');
+      return { status: 'synced_from_cloud' };
+    }
+
+    if (pullResult.reason === 'not_found') {
+      // First connection on this account: upload local state so cloud has it
+      const pushed = await syncToGoogleDriveAppData(token);
+      if (pushed) {
+        console.log('[Mealzy] Initial cloud state seeded to Google Drive.');
+        return { status: 'seeded_to_cloud' };
+      }
+    }
+
+    if (pullResult.reason === 'unauthorized') {
+      console.warn('[Mealzy] Stored Google Drive session has expired.');
+      return { status: 'expired_token' };
+    }
+  } catch (err) {
+    console.warn('[Mealzy] Startup cross-device sync notice:', err);
+  }
+
+  return { status: 'idle' };
+}
+
+// Background auto-sync throttled to save battery and network bandwidth
+let autoSyncTimer: ReturnType<typeof setTimeout> | null = null;
+export function scheduleBackgroundDriveSync(delayMs = 1500): void {
+  if (typeof window === 'undefined') return;
+  const token = localStorage.getItem('mealzy_google_access_token');
+  if (!token) return;
+
+  if (autoSyncTimer) clearTimeout(autoSyncTimer);
+  autoSyncTimer = setTimeout(async () => {
+    try {
+      await syncToGoogleDriveAppData(token);
+      console.log('[Mealzy] Auto-synced changes to Google Drive in background.');
+    } catch (err) {
+      console.warn('[Mealzy] Background cloud sync skipped:', err);
+    }
+  }, delayMs);
+}
+
+// Hook Dexie transactions to seamlessly sync on any database change across any device
+let hasRegisteredDexieHooks = false;
+export function enableAutomaticDriveSync(): void {
+  if (typeof window === 'undefined' || hasRegisteredDexieHooks) return;
+  if (!db || !db.meals) return;
+
+  const triggerChange = () => {
+    if (isSyncInProgress) return;
+    scheduleBackgroundDriveSync(2000);
+  };
+
+  try {
+    db.meals.hook('creating', function () {
+      this.onsuccess = triggerChange;
+    });
+    db.meals.hook('updating', function () {
+      this.onsuccess = triggerChange;
+    });
+    db.meals.hook('deleting', function () {
+      this.onsuccess = triggerChange;
+    });
+
+    db.fridge.hook('creating', function () {
+      this.onsuccess = triggerChange;
+    });
+    db.fridge.hook('updating', function () {
+      this.onsuccess = triggerChange;
+    });
+    db.fridge.hook('deleting', function () {
+      this.onsuccess = triggerChange;
+    });
+
+    db.preferences.hook('creating', function () {
+      this.onsuccess = triggerChange;
+    });
+    db.preferences.hook('updating', function () {
+      this.onsuccess = triggerChange;
+    });
+
+    hasRegisteredDexieHooks = true;
+    console.log('[Mealzy] Reactive background Google Drive sync listeners activated.');
+  } catch (err) {
+    console.warn('[Mealzy] Could not attach reactive auto-sync hooks:', err);
   }
 }

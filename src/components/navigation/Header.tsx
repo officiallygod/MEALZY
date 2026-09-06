@@ -36,17 +36,24 @@ export default function Header({
     <header className="sticky top-0 z-40 bg-[#FAF8F5]/95 dark:bg-[#0D0E12]/95 backdrop-blur-xl border-b-2 border-black dark:border-gray-800 px-4 sm:px-8 py-3 transition-colors">
       <div className="max-w-7xl mx-auto flex items-center justify-between gap-2 sm:gap-4">
         {/* Logo & Brand Emblem */}
-        <a
-          href="/"
+        <div
           onClick={(e) => {
             if (onLogoClick) {
-              e.preventDefault();
               onLogoClick();
             } else {
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }
           }}
-          className="flex items-center gap-2.5 sm:gap-3 flex-shrink-0 group cursor-pointer select-none no-underline text-inherit"
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              if (onLogoClick) onLogoClick();
+              else window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+          }}
+          role="button"
+          tabIndex={0}
+          className="flex items-center gap-2.5 sm:gap-3 flex-shrink-0 group cursor-pointer select-none text-inherit"
           title="MEALZY - Go to Homepage"
         >
           {/* Neo-Brutalist Brand Emblem (Matching Favicon) */}
@@ -72,9 +79,16 @@ export default function Header({
             </div>
             <span className="text-[10px] font-bold text-gray-600 dark:text-gray-300 leading-tight mt-0.5 flex items-center gap-1 whitespace-nowrap">
               Made with <span className="text-rose-500">❤️</span> by{' '}
-              <strong className="font-black text-black dark:text-[#FFE600] underline decoration-[#FF5500] decoration-2 underline-offset-1">
+              <a
+                href="https://allenbenny.me/"
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="font-black text-black dark:text-[#FFE600] underline decoration-[#FF5500] decoration-2 underline-offset-1 hover:text-[#FF5500] dark:hover:text-white transition-colors cursor-pointer"
+                title="Visit Allen Benny's Portfolio"
+              >
                 Allen Benny
-              </strong>
+              </a>
             </span>
           </div>
 
@@ -87,7 +101,7 @@ export default function Header({
               Zero Waste
             </div>
           </div>
-        </a>
+        </div>
 
         {/* Center: Habit Streak & Daily Energy */}
         <div className="hidden xl:flex items-center gap-3 flex-shrink-0">
@@ -98,14 +112,21 @@ export default function Header({
           </div>
 
           {/* Calorie Attainment */}
-          <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-white dark:bg-[#16171E] border-2 border-black dark:border-gray-700 text-xs shadow-neo-sm">
-            <div className="w-2.5 h-2.5 rounded-full bg-[#D4FF00] border border-black" />
+          <button
+            type="button"
+            onClick={onOpenAuth}
+            className="flex items-center gap-2 px-3 py-1 rounded-full bg-white dark:bg-[#16171E] hover:bg-gray-100 dark:hover:bg-[#20222D] border-2 border-black dark:border-gray-700 text-xs shadow-neo-sm active:scale-95 transition-all cursor-pointer group"
+            title="Click to view and adjust maintenance calorie target"
+          >
+            <div className="w-2.5 h-2.5 rounded-full bg-[#D4FF00] border border-black group-hover:scale-110 transition-transform" />
             <span className="font-black text-gray-900 dark:text-white">{todayCalories}</span>
-            <span className="text-gray-400">/ {calorieTarget} kcal</span>
+            <span className="text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">
+              / {calorieTarget} kcal
+            </span>
             <span className="text-[10px] font-black bg-[#D4FF00] text-black px-1.5 py-0.2 rounded border border-black">
               {percent}%
             </span>
-          </div>
+          </button>
         </div>
 
         {/* Right Actions */}

@@ -1,13 +1,33 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { X, Clock, ChefHat, Trash2, RotateCcw, Sparkles, Utensils } from 'lucide-react';
-import { MealItem } from '@/types/meal';
+import {
+  X,
+  Clock,
+  ChefHat,
+  Trash2,
+  RotateCcw,
+  Sparkles,
+  Utensils,
+  ArrowLeftRight,
+  ChevronDown,
+  Sun,
+  Moon,
+  Coffee,
+} from 'lucide-react';
+import { MealItem, MealType } from '@/types/meal';
 import { getMealAccent, getMealInitials, cleanMealTitle } from '@/lib/curated-foods';
 import { getTwistForDishTitle } from '@/lib/dish-database';
 import { db } from '@/lib/db';
 import confetti from 'canvas-confetti';
+
+const DETAIL_SLOTS: { type: MealType; title: string; icon: React.ComponentType<{ className?: string }> }[] = [
+  { type: 'breakfast', title: 'Breakfast', icon: Sun },
+  { type: 'lunch', title: 'Lunch', icon: Utensils },
+  { type: 'dinner', title: 'Dinner', icon: Moon },
+  { type: 'snack', title: 'Snacks', icon: Coffee },
+];
 
 interface MealDetailModalProps {
   meal: MealItem | null;
@@ -17,6 +37,14 @@ interface MealDetailModalProps {
   onAteOutClick?: (meal: MealItem) => void;
   onMarkGoneEarly: (mealId: string, mealTitle: string) => void;
   onDeleteMeal: (mealId: string) => void;
+  onMoveMealSlot?: (mealId: string, targetDate: string, targetType: MealType) => void;
+  rollingDays?: {
+    dateString: string;
+    dayName: string;
+    dayNumber: number;
+    fullDateFormatted?: string;
+    isToday: boolean;
+  }[];
 }
 
 export default function MealDetailModal({
@@ -27,7 +55,31 @@ export default function MealDetailModal({
   onAteOutClick,
   onMarkGoneEarly,
   onDeleteMeal,
+  onMoveMealSlot,
+  rollingDays,
 }: MealDetailModalProps) {
+  const [isMoveOpen, setIsMoveOpen] = useState(false);
+  const [moveTargetDate, setMoveTargetDate] = useState<string>('');
+  const [showMoveDayPicker, setShowMoveDayPicker] = useState(false);
+
+  useEffect(() => {
+    if (meal) {
+      setMoveTargetDate(meal.dateScheduled || rollingDays?.[0]?.dateString || '');
+      setIsMoveOpen(false);
+      setShowMoveDayPicker(false);
+    }
+  }, [meal, rollingDays]);
+
+  const getDayLabel = (dateStr: string) => {
+    if (!dateStr) return 'Today';
+    if (!rollingDays || rollingDays.length === 0) return 'Today';
+    const foundIndex = rollingDays.findIndex((d) => d.dateString === dateStr);
+    if (foundIndex === 0) return 'Today';
+    if (foundIndex === 1) return 'Tomorrow';
+    const found = rollingDays[foundIndex];
+    if (found) return `${found.dayName} ${found.dayNumber}`;
+    return dateStr;
+  };
   if (!isOpen || !meal) return null;
 
   const initials = getMealInitials(meal.title);
@@ -192,55 +244,174 @@ export default function MealDetailModal({
         </div>
 
         {/* Footer Actions */}
-        <div className="p-4 bg-[#FAF8F5] dark:bg-[#16171E] border-t-2 border-black/10 dark:border-gray-800 flex items-center gap-2 flex-wrap sm:flex-nowrap">
-          {!meal.isLeftover && (
-            <button
-              onClick={() => {
-                onClose();
-                onCookClick(meal);
-              }}
-              className="flex-1 py-2.5 px-3 bg-[#FF5500] hover:bg-[#ff681a] text-white font-black text-xs uppercase rounded-xl border-2 border-black shadow-neo active:scale-95 transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap"
-            >
-              <ChefHat className="w-4 h-4 flex-shrink-0" />
-              <span>COOK</span>
-            </button>
+        <div className="p-4 bg-[#FAF8F5] dark:bg-[#16171E] border-t-2 border-black/10 dark:border-gray-800 transition-all">
+          {isMoveOpen ? (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">
+                    Day:
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setShowMoveDayPicker(!showMoveDayPicker)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl border-2 border-black bg-[#FFE600] text-black font-black text-xs shadow-neo-sm hover:bg-yellow-300 active:scale-95 transition-all"
+                    title="Click to choose a different day"
+                  >
+                    <span>{getDayLabel(moveTargetDate)}</span>
+                    <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showMoveDayPicker ? 'rotate-180' : ''}`} />
+                  </button>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsMoveOpen(false);
+                    setShowMoveDayPicker(false);
+                  }}
+                  className="text-xs font-black uppercase text-gray-500 hover:text-black dark:hover:text-white px-2.5 py-1 rounded-xl border border-black/20 dark:border-gray-700 bg-white dark:bg-[#20222E] shadow-neo-sm active:scale-95 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+
+              {/* Day Picker (hidden until clicked) */}
+              {showMoveDayPicker && rollingDays && rollingDays.length > 0 && (
+                <div className="p-2.5 rounded-2xl bg-white dark:bg-[#1C1E29] border-2 border-black dark:border-gray-700 shadow-neo-sm space-y-1.5">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-gray-500 dark:text-gray-400 block">
+                    Choose Destination Day:
+                  </span>
+                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+                    {rollingDays.map((d, idx) => {
+                      const isSelected = d.dateString === moveTargetDate;
+                      const label = idx === 0 ? 'Today' : idx === 1 ? 'Tomorrow' : d.dayName;
+                      return (
+                        <button
+                          key={d.dateString}
+                          type="button"
+                          onClick={() => {
+                            setMoveTargetDate(d.dateString);
+                            setShowMoveDayPicker(false);
+                          }}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase whitespace-nowrap border-2 transition-all active:scale-95 flex items-center gap-1 ${
+                            isSelected
+                              ? 'bg-black text-white border-black dark:bg-[#D4FF00] dark:text-black dark:border-black shadow-neo-sm'
+                              : 'bg-[#FAF8F5] dark:bg-[#20222E] text-gray-700 dark:text-gray-300 border-black/20 dark:border-gray-700 hover:border-black'
+                          }`}
+                        >
+                          <span>{label}</span>
+                          <span className="text-[10px] opacity-70">({d.dayNumber})</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Slot Target Buttons */}
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-wider text-gray-500 dark:text-gray-400 block mb-1.5">
+                  Select Meal Slot:
+                </span>
+                {(() => {
+                  const availableSlots = DETAIL_SLOTS.filter(
+                    (s) => !(moveTargetDate === meal.dateScheduled && s.type === meal.mealType)
+                  );
+
+                  return (
+                    <div className={`grid gap-2 ${availableSlots.length === 4 ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-3'}`}>
+                      {availableSlots.map((slot) => {
+                        const SlotIcon = slot.icon;
+                        return (
+                          <button
+                            key={slot.type}
+                            type="button"
+                            onClick={() => {
+                              if (onMoveMealSlot) {
+                                onMoveMealSlot(meal.id, moveTargetDate, slot.type);
+                              }
+                              setIsMoveOpen(false);
+                              onClose();
+                            }}
+                            className="py-2.5 px-2 text-center font-black text-xs uppercase rounded-xl border-2 border-black bg-white dark:bg-[#20222E] hover:bg-[#00E5FF] hover:text-black dark:hover:bg-[#00E5FF] dark:hover:text-black transition-colors shadow-neo-sm active:scale-95 flex items-center justify-center gap-1.5"
+                          >
+                            <SlotIcon className="w-3.5 h-3.5 flex-shrink-0" />
+                            <span className="truncate">{slot.title}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+              {!meal.isLeftover && (
+                <button
+                  onClick={() => {
+                    onClose();
+                    onCookClick(meal);
+                  }}
+                  className="flex-1 py-2.5 px-3 bg-[#FF5500] hover:bg-[#ff681a] text-white font-black text-xs uppercase rounded-xl border-2 border-black shadow-neo active:scale-95 transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap"
+                >
+                  <ChefHat className="w-4 h-4 flex-shrink-0" />
+                  <span>COOK</span>
+                </button>
+              )}
+
+              {onAteOutClick && (
+                <button
+                  onClick={() => {
+                    onClose();
+                    onAteOutClick(meal);
+                  }}
+                  className="flex-1 py-2.5 px-3 bg-[#00E5FF] hover:bg-[#00cbe2] text-black font-black text-xs uppercase rounded-xl border-2 border-black shadow-neo active:scale-95 transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap"
+                  title="Ate out or had something else? Log meal and save leftovers."
+                >
+                  <Utensils className="w-4 h-4 flex-shrink-0" />
+                  <span>ATE OUT?</span>
+                </button>
+              )}
+
+              {onMoveMealSlot && (
+                <button
+                  onClick={() => {
+                    setIsMoveOpen(true);
+                    setMoveTargetDate(meal.dateScheduled || rollingDays?.[0]?.dateString || '');
+                    setShowMoveDayPicker(false);
+                  }}
+                  className="flex-1 py-2.5 px-3 bg-white dark:bg-[#20222E] hover:bg-[#FFE600] hover:text-black dark:hover:bg-[#FFE600] dark:hover:text-black text-gray-800 dark:text-white font-black text-xs uppercase rounded-xl border-2 border-black shadow-neo active:scale-95 transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap"
+                  title="Move to another meal slot or day"
+                >
+                  <ArrowLeftRight className="w-3.5 h-3.5 flex-shrink-0" />
+                  <span>MOVE</span>
+                </button>
+              )}
+
+              <button
+                onClick={() => {
+                  onMarkGoneEarly(meal.id, meal.title);
+                  onClose();
+                }}
+                className="flex-1 py-2.5 px-3 bg-[#FFE600] hover:bg-yellow-400 text-black font-black text-xs uppercase rounded-xl border-2 border-black shadow-neo active:scale-95 transition-colors flex items-center justify-center gap-1 whitespace-nowrap"
+              >
+                <RotateCcw className="w-3.5 h-3.5 flex-shrink-0" />
+                <span>GONE?</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  onDeleteMeal(meal.id);
+                  onClose();
+                }}
+                className="p-2.5 bg-white dark:bg-[#20222E] hover:bg-rose-100 text-gray-500 hover:text-rose-600 rounded-xl border-2 border-black shadow-neo-sm active:scale-95 transition-colors flex-shrink-0"
+                title="Delete meal"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
           )}
-
-          {onAteOutClick && (
-            <button
-              onClick={() => {
-                onClose();
-                onAteOutClick(meal);
-              }}
-              className="flex-1 py-2.5 px-3 bg-[#00E5FF] hover:bg-[#00cbe2] text-black font-black text-xs uppercase rounded-xl border-2 border-black shadow-neo active:scale-95 transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap"
-              title="Ate out or had something else? Log meal and save leftovers."
-            >
-              <Utensils className="w-4 h-4 flex-shrink-0" />
-              <span>ATE OUT?</span>
-            </button>
-          )}
-
-          <button
-            onClick={() => {
-              onMarkGoneEarly(meal.id, meal.title);
-              onClose();
-            }}
-            className="flex-1 py-2.5 px-3 bg-[#FFE600] hover:bg-yellow-400 text-black font-black text-xs uppercase rounded-xl border-2 border-black shadow-neo active:scale-95 transition-colors flex items-center justify-center gap-1 whitespace-nowrap"
-          >
-            <RotateCcw className="w-3.5 h-3.5 flex-shrink-0" />
-            <span>GONE?</span>
-          </button>
-
-          <button
-            onClick={() => {
-              onDeleteMeal(meal.id);
-              onClose();
-            }}
-            className="p-2.5 bg-white dark:bg-[#20222E] hover:bg-rose-100 text-gray-500 hover:text-rose-600 rounded-xl border-2 border-black shadow-neo-sm active:scale-95 transition-colors flex-shrink-0"
-            title="Delete meal"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
         </div>
       </motion.div>
     </div>

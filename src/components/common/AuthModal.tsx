@@ -2,9 +2,10 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, CheckCircle2, RefreshCw, LogOut, ShieldCheck, Key, AlertCircle } from 'lucide-react';
-import { syncToGoogleDriveAppData } from '@/lib/sync/google-drive';
+import { X, CheckCircle2, RefreshCw, LogOut, ShieldCheck, Key, AlertCircle, Flame, Minus, Plus } from 'lucide-react';
+import { syncToGoogleDriveAppData, pullFromGoogleDriveAppData, scheduleBackgroundDriveSync } from '@/lib/sync/google-drive';
 import { getActiveGoogleClientId } from '@/config/app-config';
+import { db } from '@/lib/db';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -14,6 +15,8 @@ interface AuthModalProps {
   userAvatar?: string;
   onLoginSuccess: (email: string, name?: string, avatar?: string) => void;
   onLogout?: () => void;
+  calorieTarget?: number;
+  onUpdateCalorieTarget?: (newTarget: number) => void;
 }
 
 // Decode standard Google Identity Services JWT credential in browser with zero backend
@@ -43,11 +46,15 @@ export default function AuthModal({
   userAvatar,
   onLoginSuccess,
   onLogout,
+  calorieTarget = 2200,
+  onUpdateCalorieTarget,
 }: AuthModalProps) {
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [statusMsg, setStatusMsg] = useState<{ text: string; type: 'success' | 'info' | 'error' } | null>(null);
   const [showConfig, setShowConfig] = useState(false);
+  const [currentTarget, setCurrentTarget] = useState<number>(calorieTarget);
+  const [currentDiet, setCurrentDiet] = useState<string>('balanced');
   const [customClientId, setCustomClientId] = useState('');
   const googleBtnRef = useRef<HTMLDivElement>(null);
 
@@ -173,7 +180,10 @@ export default function AuthModal({
                 // 2. Perform silent initial Google Drive sync if scope was granted
                 if (requestDriveScope) {
                   try {
-                    await syncToGoogleDriveAppData(tokenResponse.access_token);
+                    const pullRes = await pullFromGoogleDriveAppData(tokenResponse.access_token);
+                    if (!pullRes.success) {
+                      await syncToGoogleDriveAppData(tokenResponse.access_token);
+                    }
                   } catch (syncErr) {
                     console.warn('Initial drive sync skipped:', syncErr);
                   }
@@ -232,6 +242,65 @@ export default function AuthModal({
       setStatusMsg({ text: 'Custom Google Client ID saved!', type: 'success' });
       initGoogleIdentity();
     }
+  };
+
+  useEffect(() => {
+    if (calorieTarget) {
+      setCurrentTarget(calorieTarget);
+    }
+  }, [calorieTarget]);
+
+  useEffect(() => {
+    if (isOpen) {
+      db.preferences?.get('user-default-settings').then((prefs) => {
+        if (prefs) {
+          if (prefs.calorieTarget) setCurrentTarget(prefs.calorieTarget);
+          if (prefs.dietPreference) setCurrentDiet(prefs.dietPreference);
+        }
+      });
+    }
+  }, [isOpen]);
+
+  const handleUpdateTarget = async (val: number) => {
+    const clamped = Math.max(1000, Math.min(6000, val));
+    setCurrentTarget(clamped);
+    if (onUpdateCalorieTarget) {
+      onUpdateCalorieTarget(clamped);
+    } else {
+      const existing = (await db.preferences?.get('user-default-settings')) || {
+        id: 'user-default-settings',
+        proteinTarget: 140,
+        carbsTarget: 240,
+        fatTarget: 65,
+        dietPreference: 'balanced',
+        theme: 'dark',
+      };
+      await db.preferences?.put({
+        ...existing,
+        id: 'user-default-settings',
+        calorieTarget: clamped,
+      });
+      scheduleBackgroundDriveSync(1000);
+    }
+  };
+
+  const handleUpdateDiet = async (diet: string) => {
+    setCurrentDiet(diet);
+    const existing = (await db.preferences?.get('user-default-settings')) || {
+      id: 'user-default-settings',
+      calorieTarget: currentTarget,
+      proteinTarget: 140,
+      carbsTarget: 240,
+      fatTarget: 65,
+      dietPreference: 'balanced',
+      theme: 'dark',
+    };
+    await db.preferences?.put({
+      ...existing,
+      id: 'user-default-settings',
+      dietPreference: diet as any,
+    });
+    scheduleBackgroundDriveSync(1000);
   };
 
   return (
@@ -315,6 +384,107 @@ export default function AuthModal({
               <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-300 text-[10px] font-black border border-emerald-500 shadow-neo-sm">
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                 <span>Google Account Remembered on This Device</span>
+              </div>
+            </div>
+
+            {/* Daily Maintenance Calories Setting Card */}
+            <div className="p-4 rounded-2xl bg-[#FAF8F5] dark:bg-[#20222E] border-2 border-black dark:border-gray-700 shadow-neo-sm space-y-3">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-[#FF5500] text-white flex items-center justify-center border border-black shadow-neo-sm flex-shrink-0">
+                  <Flame className="w-4 h-4 fill-white" />
+                </div>
+                <div>
+                  <h4 className="font-funky font-black text-xs uppercase tracking-wider text-gray-900 dark:text-white">
+                    Daily Maintenance Calories
+                  </h4>
+                  <p className="text-[10px] text-gray-500 dark:text-gray-400 font-bold">
+                    Target used across your 7-day bento board and header meter
+                  </p>
+                </div>
+              </div>
+
+              {/* Stepper & Direct Input */}
+              <div className="flex items-center justify-between gap-2 p-2 rounded-xl bg-white dark:bg-[#16171E] border-2 border-black dark:border-gray-700">
+                <button
+                  type="button"
+                  onClick={() => handleUpdateTarget(currentTarget - 100)}
+                  className="w-8 h-8 rounded-lg bg-[#FAF8F5] dark:bg-[#20222E] hover:bg-gray-100 dark:hover:bg-[#2a2d3d] border border-black flex items-center justify-center font-black text-sm active:scale-95 transition-all shadow-neo-sm cursor-pointer"
+                  title="Decrease 100 kcal"
+                >
+                  <Minus className="w-4 h-4 stroke-[2.5]" />
+                </button>
+
+                <div className="flex items-center gap-1.5 font-funky font-black text-base text-gray-900 dark:text-[#FFE600]">
+                  <input
+                    type="number"
+                    value={currentTarget}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value, 10);
+                      if (!isNaN(val)) handleUpdateTarget(val);
+                    }}
+                    className="w-20 text-center font-funky font-black bg-transparent border-b-2 border-black/30 dark:border-gray-600 focus:outline-none focus:border-[#FF5500]"
+                  />
+                  <span className="text-xs text-gray-500 font-bold">kcal / day</span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => handleUpdateTarget(currentTarget + 100)}
+                  className="w-8 h-8 rounded-lg bg-[#FAF8F5] dark:bg-[#20222E] hover:bg-gray-100 dark:hover:bg-[#2a2d3d] border border-black flex items-center justify-center font-black text-sm active:scale-95 transition-all shadow-neo-sm cursor-pointer"
+                  title="Increase 100 kcal"
+                >
+                  <Plus className="w-4 h-4 stroke-[2.5]" />
+                </button>
+              </div>
+
+              {/* Quick Preset Buttons */}
+              <div className="grid grid-cols-4 gap-1.5 pt-0.5">
+                {[1800, 2000, 2200, 2500].map((preset) => (
+                  <button
+                    key={preset}
+                    type="button"
+                    onClick={() => handleUpdateTarget(preset)}
+                    className={`py-1.5 rounded-lg border-2 text-[10px] font-black transition-all cursor-pointer ${
+                      currentTarget === preset
+                        ? 'bg-[#D4FF00] text-black border-black shadow-neo-sm'
+                        : 'bg-white dark:bg-[#16171E] border-black/20 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-black'
+                    }`}
+                  >
+                    {preset}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Diet Style Focus Card */}
+            <div className="p-4 rounded-2xl bg-[#FAF8F5] dark:bg-[#20222E] border-2 border-black dark:border-gray-700 shadow-neo-sm space-y-2.5">
+              <div className="flex items-center justify-between">
+                <h4 className="font-funky font-black text-xs uppercase tracking-wider text-gray-900 dark:text-white">
+                  Diet Focus
+                </h4>
+                <span className="text-[10px] font-bold text-gray-400">Synced to Google Drive</span>
+              </div>
+              <div className="grid grid-cols-2 gap-1.5">
+                {[
+                  { id: 'balanced', label: 'Balanced', sub: 'Standard daily ratios' },
+                  { id: 'high-protein', label: 'High Protein', sub: 'Muscle & recovery' },
+                  { id: 'vegetarian', label: 'Vegetarian', sub: 'Plant-forward meals' },
+                  { id: 'keto', label: 'Low Carb / Keto', sub: 'Healthy fats & greens' },
+                ].map((diet) => (
+                  <button
+                    key={diet.id}
+                    type="button"
+                    onClick={() => handleUpdateDiet(diet.id)}
+                    className={`p-2 rounded-xl border-2 text-left transition-all cursor-pointer ${
+                      currentDiet === diet.id
+                        ? 'bg-[#FFE600] text-black border-black shadow-neo-sm'
+                        : 'bg-white dark:bg-[#16171E] border-black/20 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-black'
+                    }`}
+                  >
+                    <div className="font-black text-xs">{diet.label}</div>
+                    <div className="text-[9px] text-gray-500 dark:text-gray-400 font-medium">{diet.sub}</div>
+                  </button>
+                ))}
               </div>
             </div>
 
@@ -418,6 +588,75 @@ export default function AuthModal({
             {/* Official Rendered Google Button Container (Fallback / One Tap) */}
             <div className="flex justify-center pt-1">
               <div ref={googleBtnRef} className="min-h-[40px] flex items-center justify-center" />
+            </div>
+
+            {/* Daily Maintenance Calories Setting Card */}
+            <div className="p-4 rounded-2xl bg-[#FAF8F5] dark:bg-[#20222E] border-2 border-black dark:border-gray-700 shadow-neo-sm space-y-3">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-[#FF5500] text-white flex items-center justify-center border border-black shadow-neo-sm flex-shrink-0">
+                  <Flame className="w-4 h-4 fill-white" />
+                </div>
+                <div>
+                  <h4 className="font-funky font-black text-xs uppercase tracking-wider text-gray-900 dark:text-white">
+                    Daily Maintenance Calories
+                  </h4>
+                  <p className="text-[10px] text-gray-500 dark:text-gray-400 font-bold">
+                    Target used across your 7-day bento board and header meter
+                  </p>
+                </div>
+              </div>
+
+              {/* Stepper & Direct Input */}
+              <div className="flex items-center justify-between gap-2 p-2 rounded-xl bg-white dark:bg-[#16171E] border-2 border-black dark:border-gray-700">
+                <button
+                  type="button"
+                  onClick={() => handleUpdateTarget(currentTarget - 100)}
+                  className="w-8 h-8 rounded-lg bg-[#FAF8F5] dark:bg-[#20222E] hover:bg-gray-100 dark:hover:bg-[#2a2d3d] border border-black flex items-center justify-center font-black text-sm active:scale-95 transition-all shadow-neo-sm cursor-pointer"
+                  title="Decrease 100 kcal"
+                >
+                  <Minus className="w-4 h-4 stroke-[2.5]" />
+                </button>
+
+                <div className="flex items-center gap-1.5 font-funky font-black text-base text-gray-900 dark:text-[#FFE600]">
+                  <input
+                    type="number"
+                    value={currentTarget}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value, 10);
+                      if (!isNaN(val)) handleUpdateTarget(val);
+                    }}
+                    className="w-20 text-center font-funky font-black bg-transparent border-b-2 border-black/30 dark:border-gray-600 focus:outline-none focus:border-[#FF5500]"
+                  />
+                  <span className="text-xs text-gray-500 font-bold">kcal / day</span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => handleUpdateTarget(currentTarget + 100)}
+                  className="w-8 h-8 rounded-lg bg-[#FAF8F5] dark:bg-[#20222E] hover:bg-gray-100 dark:hover:bg-[#2a2d3d] border border-black flex items-center justify-center font-black text-sm active:scale-95 transition-all shadow-neo-sm cursor-pointer"
+                  title="Increase 100 kcal"
+                >
+                  <Plus className="w-4 h-4 stroke-[2.5]" />
+                </button>
+              </div>
+
+              {/* Quick Preset Buttons */}
+              <div className="grid grid-cols-4 gap-1.5 pt-0.5">
+                {[1800, 2000, 2200, 2500].map((preset) => (
+                  <button
+                    key={preset}
+                    type="button"
+                    onClick={() => handleUpdateTarget(preset)}
+                    className={`py-1.5 rounded-lg border-2 text-[10px] font-black transition-all cursor-pointer ${
+                      currentTarget === preset
+                        ? 'bg-[#D4FF00] text-black border-black shadow-neo-sm'
+                        : 'bg-white dark:bg-[#16171E] border-black/20 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-black'
+                    }`}
+                  >
+                    {preset}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* Developer / Advanced Options Toggle */}

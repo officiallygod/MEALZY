@@ -8,7 +8,6 @@ import {
   CalendarDays,
   ArrowRight,
   Flame,
-  Minus,
   Plus,
   RotateCcw,
   ChevronDown,
@@ -89,9 +88,6 @@ export default function AteOutModal({
   const [caloriePreset, setCaloriePreset] = useState<number>(750);
   const [customCalories, setCustomCalories] = useState<string>('750');
 
-  // Maintenance calorie target adjustment
-  const [currentTarget, setCurrentTarget] = useState<number>(calorieTarget);
-
   const effectiveMeals = (targetMeals && targetMeals.length > 0) ? targetMeals : (targetMeal ? [targetMeal] : []);
 
   useEffect(() => {
@@ -113,19 +109,10 @@ export default function AteOutModal({
       setDishTitle(`Ate Out (${slotCap})`);
       setCaloriePreset(750);
       setCustomCalories('750');
-      setCurrentTarget(calorieTarget);
     }
-  }, [isOpen, targetMeal, targetMeals, targetDate, targetSlot, tomorrow, defaultLeftoverSlot, calorieTarget]);
+  }, [isOpen, targetMeal, targetMeals, targetDate, targetSlot, tomorrow, defaultLeftoverSlot]);
 
   if (!isOpen) return null;
-
-  const handleAdjustTarget = (delta: number) => {
-    const next = Math.max(1200, Math.min(5000, currentTarget + delta));
-    setCurrentTarget(next);
-    if (onUpdateCalorieTarget) {
-      onUpdateCalorieTarget(next);
-    }
-  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -570,43 +557,6 @@ export default function AteOutModal({
                 </motion.div>
               )}
             </AnimatePresence>
-
-            {/* =================================================================== */}
-            {/* 4. CHANCE TO CHANGE DAILY MAINTENANCE CALORIE TARGET                */}
-            {/* =================================================================== */}
-            <div className="pt-2.5 border-t border-black/10 dark:border-gray-800 flex items-center justify-between">
-              <div>
-                <span className="text-[11px] font-black uppercase text-gray-600 dark:text-gray-400 flex items-center gap-1">
-                  <Flame className="w-3.5 h-3.5 text-[#FF5500]" />
-                  <span>Daily Calorie Target:</span>
-                </span>
-                <p className="text-[10px] text-gray-400 font-medium">Quickly adjust maintenance target</p>
-              </div>
-
-              <div className="flex items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => handleAdjustTarget(-100)}
-                  className="w-7 h-7 rounded-lg bg-[#FAF8F5] dark:bg-[#20222E] border-2 border-black dark:border-gray-700 flex items-center justify-center text-xs font-black hover:bg-gray-100 dark:hover:bg-[#2c3040] active:scale-95 cursor-pointer shadow-neo-sm"
-                  title="Decrease 100 kcal"
-                >
-                  <Minus className="w-3.5 h-3.5 stroke-[2.5]" />
-                </button>
-
-                <div className="px-2.5 py-1 rounded-xl bg-[#FAF8F5] dark:bg-[#20222E] border-2 border-black dark:border-gray-700 font-funky font-black text-xs text-gray-900 dark:text-[#FFE600] min-w-[75px] text-center shadow-neo-sm">
-                  {currentTarget} kcal
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => handleAdjustTarget(100)}
-                  className="w-7 h-7 rounded-lg bg-[#FAF8F5] dark:bg-[#20222E] border-2 border-black dark:border-gray-700 flex items-center justify-center text-xs font-black hover:bg-gray-100 dark:hover:bg-[#2c3040] active:scale-95 cursor-pointer shadow-neo-sm"
-                  title="Increase 100 kcal"
-                >
-                  <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
-                </button>
-              </div>
-            </div>
           </div>
 
           {/* ========================================================================= */}

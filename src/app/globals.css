@@ -70,24 +70,21 @@ body {
   box-shadow: 6px 6px 0px #000000;
 }
 
-/* Continuous Marquee Animation */
+/* Continuous Seamless Marquee Animation */
 @keyframes marquee {
   0% {
     transform: translateX(0%);
   }
   100% {
-    transform: translateX(-50%);
+    transform: translateX(-100%);
   }
 }
 
 .animate-marquee {
   display: flex;
-  width: max-content;
-  animation: marquee 30s linear infinite;
-}
-
-.animate-marquee:hover {
-  animation-play-state: paused;
+  flex-shrink: 0;
+  will-change: transform;
+  animation: marquee 35s linear infinite;
 }
 
 /* Robust scrollbar-none utility */
