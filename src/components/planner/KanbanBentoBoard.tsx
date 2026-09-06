@@ -478,36 +478,115 @@ export default function KanbanBentoBoard({
                       </span>
                     </div>
 
-                    {/* Scheduled Meals List */}
-                    <div className="space-y-2">
-                      {dayMeals.length > 0 ? (
-                        dayMeals.map((meal) => {
-                          const slotDef = MEAL_SLOTS.find((s) => s.type === meal.mealType) || MEAL_SLOTS[0];
-                          const SlotIcon = slotDef.icon;
+                    {/* Strictly Segregated Meal Slots (Breakfast -> Lunch -> Dinner -> Snacks) */}
+                    <div className="space-y-2.5">
+                      {MEAL_SLOTS.map((slot) => {
+                        const SlotIcon = slot.icon;
+                        const rawSlotMeals = dayMeals.filter((m) => m.mealType === slot.type);
 
+                        // Deduplicate / consolidate duplicate dishes in this slot
+                        const slotMeals: MealItem[] = [];
+                        const seenTitles = new Map<string, MealItem>();
+                        for (const m of rawSlotMeals) {
+                          const clean = cleanMealTitle(m.title).toLowerCase();
+                          if (seenTitles.has(clean)) {
+                            const existing = seenTitles.get(clean)!;
+                            existing.portions = (existing.portions || 1) + (m.portions || 1);
+                            existing.isLeftover = existing.isLeftover || m.isLeftover;
+                          } else {
+                            const copy: MealItem = {
+                              ...m,
+                              title: cleanMealTitle(m.title),
+                              portions: m.portions || 1,
+                            };
+                            seenTitles.set(clean, copy);
+                            slotMeals.push(copy);
+                          }
+                        }
+
+                        const slotCalories = slotMeals.reduce((acc, m) => acc + (m.calories || 0), 0);
+                        const hasMeals = slotMeals.length > 0;
+
+                        if (hasMeals) {
                           return (
                             <div
-                              key={meal.id}
-                              onClick={() => onSelectMeal(meal)}
-                              className={`p-2.5 rounded-xl bg-[#FAF8F5] dark:bg-[#1E202A] hover:bg-white dark:hover:bg-[#252834] border-2 border-black/50 dark:border-gray-700 cursor-pointer flex items-center justify-between gap-2 transition-colors group shadow-neo-sm border-l-[5px] ${slotDef.stripeColor}`}
+                              key={slot.type}
+                              className={`rounded-2xl p-2.5 border border-black/20 dark:border-gray-800 ${slot.bgLight} ${slot.bgDark} space-y-1.5 transition-colors`}
                             >
-                              <div className="flex items-center gap-2 min-w-0">
-                                <SlotIcon className={`w-3.5 h-3.5 flex-shrink-0 ${slotDef.accentColor}`} />
-                                <span className="font-bold text-xs text-gray-900 dark:text-white truncate group-hover:underline">
-                                  {meal.title}
-                                </span>
+                              {/* Slot Sub-header */}
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-1.5">
+                                  <span
+                                    className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider border border-black shadow-neo-sm flex items-center gap-1 ${slot.headerPillBg} ${slot.headerPillText}`}
+                                  >
+                                    <SlotIcon className="w-2.5 h-2.5" />
+                                    {slot.title}
+                                  </span>
+                                  {slotCalories > 0 && (
+                                    <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400">
+                                      {slotCalories} kcal
+                                    </span>
+                                  )}
+                                </div>
+
+                                <button
+                                  onClick={() => onQuickAddMeal(day.dateString, slot.type)}
+                                  className="w-5 h-5 rounded-md bg-black/5 hover:bg-black hover:text-white dark:bg-white/5 dark:hover:bg-white dark:hover:text-black flex items-center justify-center text-gray-600 dark:text-gray-300 transition-colors"
+                                  title={`Add another item to ${slot.title}`}
+                                >
+                                  <Plus className="w-3 h-3 stroke-[2.5]" />
+                                </button>
                               </div>
-                              <span className="text-[10px] font-black text-gray-600 dark:text-gray-400 flex-shrink-0">
-                                {meal.calories} kcal
-                              </span>
+
+                              {/* Slot Meals */}
+                              <div className="space-y-1">
+                                {slotMeals.map((meal) => (
+                                  <div
+                                    key={meal.id}
+                                    onClick={() => onSelectMeal(meal)}
+                                    className={`p-2 rounded-xl bg-white dark:bg-[#1E202B] hover:bg-white dark:hover:bg-[#252836] border-2 border-black/60 dark:border-gray-700 cursor-pointer flex items-center justify-between gap-2 transition-colors group shadow-neo-sm border-l-[4px] ${slot.stripeColor}`}
+                                  >
+                                    <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                                      <span className="font-bold text-xs text-gray-900 dark:text-white truncate group-hover:underline">
+                                        {cleanMealTitle(meal.title)}
+                                      </span>
+                                      {meal.isLeftover && (
+                                        <span className="px-1 py-0.2 rounded text-[8px] font-black bg-purple-100 text-purple-800 border border-purple-400 flex-shrink-0">
+                                          LEFT
+                                        </span>
+                                      )}
+                                      {meal.portions && meal.portions > 1 && (
+                                        <span className="px-1 py-0.2 rounded text-[8px] font-black bg-amber-100 text-amber-900 border border-amber-400 flex-shrink-0">
+                                          {meal.portions}x
+                                        </span>
+                                      )}
+                                    </div>
+                                    <span className="text-[10px] font-black text-gray-600 dark:text-gray-400 flex-shrink-0">
+                                      {meal.calories} kcal
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
                             </div>
                           );
-                        })
-                      ) : (
-                        <div className="py-6 text-center text-xs text-gray-400 dark:text-gray-600 font-bold">
-                          No meals scheduled
-                        </div>
-                      )}
+                        }
+
+                        // Compact empty slot row
+                        return (
+                          <button
+                            key={slot.type}
+                            onClick={() => onQuickAddMeal(day.dateString, slot.type)}
+                            className="w-full py-1.5 px-2.5 rounded-xl border border-dashed border-black/20 dark:border-gray-800 hover:border-black dark:hover:border-gray-500 bg-transparent hover:bg-black/5 dark:hover:bg-white/5 text-[10px] font-bold text-gray-400 hover:text-black dark:hover:text-white flex items-center justify-between transition-colors group"
+                            title={`Plan ${slot.title}`}
+                          >
+                            <span className="flex items-center gap-1.5">
+                              <SlotIcon className={`w-3 h-3 opacity-60 group-hover:opacity-100 ${slot.accentColor}`} />
+                              <span>+ Plan {slot.title}</span>
+                            </span>
+                            <Plus className="w-2.5 h-2.5 opacity-40 group-hover:opacity-100 stroke-[2.5]" />
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
 
