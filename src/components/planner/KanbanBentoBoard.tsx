@@ -44,11 +44,60 @@ const MEAL_SLOTS: {
   icon: React.ComponentType<{ className?: string }>;
   accentColor: string;
   stripeColor: string;
+  bgLight: string;
+  bgDark: string;
+  borderColor: string;
+  headerPillBg: string;
+  headerPillText: string;
 }[] = [
-  { type: 'breakfast', title: 'Breakfast', icon: Sun, accentColor: 'text-amber-600', stripeColor: 'border-l-[#FFE600]' },
-  { type: 'lunch', title: 'Lunch', icon: Utensils, accentColor: 'text-emerald-600', stripeColor: 'border-l-[#00E5FF]' },
-  { type: 'dinner', title: 'Dinner', icon: Moon, accentColor: 'text-indigo-600', stripeColor: 'border-l-rose-500' },
-  { type: 'snack', title: 'Snacks', icon: Coffee, accentColor: 'text-rose-600', stripeColor: 'border-l-[#D4FF00]' },
+  {
+    type: 'breakfast',
+    title: 'Breakfast',
+    icon: Sun,
+    accentColor: 'text-amber-700 dark:text-amber-300',
+    stripeColor: 'border-l-[#FFE600]',
+    bgLight: 'bg-[#FFFDF0]',
+    bgDark: 'dark:bg-[#1A1813]',
+    borderColor: 'border-amber-400/80 dark:border-amber-500/30',
+    headerPillBg: 'bg-[#FFE600]',
+    headerPillText: 'text-black',
+  },
+  {
+    type: 'lunch',
+    title: 'Lunch',
+    icon: Utensils,
+    accentColor: 'text-cyan-800 dark:text-cyan-300',
+    stripeColor: 'border-l-[#00E5FF]',
+    bgLight: 'bg-[#F0FAFD]',
+    bgDark: 'dark:bg-[#10181E]',
+    borderColor: 'border-cyan-400/80 dark:border-cyan-500/30',
+    headerPillBg: 'bg-[#00E5FF]',
+    headerPillText: 'text-black',
+  },
+  {
+    type: 'dinner',
+    title: 'Dinner',
+    icon: Moon,
+    accentColor: 'text-orange-800 dark:text-orange-300',
+    stripeColor: 'border-l-[#FF5500]',
+    bgLight: 'bg-[#FFF6F2]',
+    bgDark: 'dark:bg-[#1C1311]',
+    borderColor: 'border-orange-400/80 dark:border-orange-500/30',
+    headerPillBg: 'bg-[#FF5500]',
+    headerPillText: 'text-white',
+  },
+  {
+    type: 'snack',
+    title: 'Snacks',
+    icon: Coffee,
+    accentColor: 'text-lime-800 dark:text-lime-300',
+    stripeColor: 'border-l-[#D4FF00]',
+    bgLight: 'bg-[#F6FCF0]',
+    bgDark: 'dark:bg-[#131911]',
+    borderColor: 'border-lime-400/80 dark:border-lime-500/30',
+    headerPillBg: 'bg-[#D4FF00]',
+    headerPillText: 'text-black',
+  },
 ];
 
 export default function KanbanBentoBoard({
@@ -114,46 +163,7 @@ export default function KanbanBentoBoard({
       {/* ========================================================================= */}
       {!isAllDaysView && (
         <div className="space-y-4">
-          {/* Active Day Header Bar */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-[#16171E] p-4 rounded-3xl border-2 border-black dark:border-gray-800 shadow-neo transition-colors">
-            <div className="flex items-center gap-3">
-              <span className="text-xl font-black font-funky text-gray-900 dark:text-white uppercase tracking-tight">
-                {activeDayObj.dayName}
-              </span>
-              <span className="text-xs font-bold text-gray-500 dark:text-gray-400">
-                {activeDayObj.fullDateFormatted}
-              </span>
-              {activeDayObj.isToday && (
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-[#D4FF00] text-black border-2 border-black shadow-neo-sm">
-                  TODAY
-                </span>
-              )}
-            </div>
-
-            {/* Quick Daily Macro Summary */}
-            <div className="flex items-center gap-4 text-xs font-black">
-              <div>
-                <span className="text-gray-400 font-bold">Scheduled: </span>
-                <span className="text-gray-900 dark:text-[#D4FF00]">
-                  {meals
-                    .filter((m) => m.dateScheduled === activeDayObj.dateString)
-                    .reduce((sum, m) => sum + (m.calories || 0), 0)}{' '}
-                  kcal
-                </span>
-              </div>
-              <div className="hidden sm:block text-gray-300 dark:text-gray-700">•</div>
-              <div className="hidden sm:block">
-                <span className="text-gray-400 font-bold">Protein: </span>
-                <span className="text-rose-600 dark:text-rose-400">
-                  {meals
-                    .filter((m) => m.dateScheduled === activeDayObj.dateString)
-                    .reduce((sum, m) => sum + (m.protein || 0), 0)}g
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* 4 BENTO COLUMNS */}
+          {/* 4 BENTO COLUMNS WITH DISTINCT SHADES & ACCENTS */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 w-full">
             {MEAL_SLOTS.map((slot) => {
               const SlotIcon = slot.icon;
@@ -192,18 +202,18 @@ export default function KanbanBentoBoard({
                   onDragOver={(e) => handleDragOver(e, zoneKey)}
                   onDragLeave={handleDragLeave}
                   onDrop={(e) => handleDrop(e, activeDayObj.dateString, slot.type)}
-                  className={`min-h-[300px] rounded-3xl p-4 transition-colors flex flex-col justify-between border-2 bg-white dark:bg-[#16171E] relative ${
+                  className={`min-h-[300px] rounded-3xl p-4 transition-colors flex flex-col justify-between border-2 relative shadow-neo-lg ${slot.bgLight} ${slot.bgDark} ${slot.borderColor} ${
                     isHovered
-                      ? 'border-2 border-[#D4FF00] bg-[#D4FF00]/5 ring-4 ring-[#D4FF00]/30 shadow-neo-lg'
-                      : 'border-black dark:border-gray-800 shadow-neo-lg'
+                      ? 'ring-4 ring-[#D4FF00]/40 scale-[1.01]'
+                      : ''
                   }`}
                 >
                   <div>
-                    {/* Slot Header */}
-                    <div className="flex items-center justify-between pb-3 mb-3 border-b-2 border-black/10 dark:border-gray-800">
+                    {/* Slot Header with Distinct Pill */}
+                    <div className="flex items-center justify-between pb-3 mb-3 border-b-2 border-black/10 dark:border-white/10">
                       <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-xl bg-[#FAF8F5] dark:bg-[#20222E] border-2 border-black dark:border-gray-700 flex items-center justify-center shadow-neo-sm">
-                          <SlotIcon className={`w-4 h-4 ${slot.accentColor}`} />
+                        <div className={`w-8 h-8 rounded-xl ${slot.headerPillBg} border-2 border-black flex items-center justify-center shadow-neo-sm`}>
+                          <SlotIcon className={`w-4 h-4 ${slot.headerPillText}`} />
                         </div>
                         <span className="text-xs font-black uppercase tracking-wider text-gray-900 dark:text-white">
                           {slot.title}
@@ -242,7 +252,7 @@ export default function KanbanBentoBoard({
                               draggable
                               onDragStart={(e: any) => handleDragStart(e, meal.id)}
                               onDragEnd={handleDragEnd}
-                              className={`group relative bg-[#FAF8F5] dark:bg-[#1E202A] hover:bg-white dark:hover:bg-[#252834] border-2 border-black dark:border-gray-700 rounded-2xl p-3.5 shadow-neo-sm cursor-grab active:cursor-grabbing border-l-[6px] ${slot.stripeColor} ${
+                              className={`group relative bg-white dark:bg-[#1E202B] hover:bg-white dark:hover:bg-[#252836] border-2 border-black dark:border-gray-700 rounded-2xl p-3.5 shadow-neo-sm hover:shadow-neo cursor-grab active:cursor-grabbing border-l-[6px] ${slot.stripeColor} transition-all ${
                                 draggedMealId === meal.id ? 'opacity-30 border-dashed scale-[0.98]' : 'opacity-100'
                               }`}
                             >
@@ -390,7 +400,7 @@ export default function KanbanBentoBoard({
                           <button
                             type="button"
                             onClick={() => onQuickAddMeal(activeDayObj.dateString, slot.type)}
-                            className="w-full py-6 text-center text-xs font-black text-gray-400 dark:text-gray-500 hover:text-black dark:hover:text-white rounded-2xl border-2 border-dashed border-black/20 dark:border-gray-800 hover:border-black dark:hover:border-white transition-all flex flex-col items-center justify-center gap-1.5 bg-[#FAF8F5]/50 dark:bg-[#1E202A]/40"
+                            className="w-full py-5 text-center text-xs font-black text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white rounded-2xl border-2 border-dashed border-black/20 dark:border-white/20 hover:border-black dark:hover:border-white transition-all flex flex-col items-center justify-center gap-1.5 bg-white/60 dark:bg-black/20 hover:bg-white dark:hover:bg-black/40"
                           >
                             <Plus className="w-4 h-4 stroke-[2.5]" />
                             <span>Plan {slot.title}</span>
@@ -400,7 +410,7 @@ export default function KanbanBentoBoard({
                             <button
                               type="button"
                               onClick={() => onAteOut(undefined, activeDayObj.dateString, slot.type)}
-                              className="w-full py-2 px-3 text-center text-[10px] font-black text-gray-700 dark:text-gray-300 hover:text-black dark:hover:text-white rounded-xl border border-black/20 dark:border-gray-700 hover:border-black bg-[#FAF8F5] dark:bg-[#20222E] hover:bg-[#00E5FF] hover:text-black dark:hover:bg-[#00E5FF] dark:hover:text-black transition-all flex items-center justify-center gap-1.5 shadow-neo-sm"
+                              className="w-full py-2 px-3 text-center text-[10px] font-black text-gray-700 dark:text-gray-300 hover:text-black dark:hover:text-black rounded-xl border border-black/30 dark:border-gray-700 hover:border-black bg-white dark:bg-[#1E202B] hover:bg-[#00E5FF] dark:hover:bg-[#00E5FF] transition-all flex items-center justify-center gap-1.5 shadow-neo-sm"
                               title="Ate out or had something else for this slot?"
                             >
                               <Utensils className="w-3 h-3" />
