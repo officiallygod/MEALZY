@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { X, ChefHat, Sparkles, Check, ShieldCheck } from 'lucide-react';
 import { MealItem, MealType } from '@/types/meal';
+import NeoSelect, { NeoSelectOption } from '@/components/common/NeoSelect';
 
 interface CookMealModalProps {
   meal: MealItem | null;
@@ -221,24 +222,28 @@ export default function CookMealModal({
                       <div className="space-y-2.5">
                         {/* Day Selector */}
                         <div className="flex items-center gap-2">
-                          <span className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase w-12 flex-shrink-0">
+                          <span className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase w-16 flex-shrink-0">
                             Target Day:
                           </span>
-                          <select
-                            value={alloc.date}
-                            onChange={(e) => handleUpdateDate(idx, e.target.value)}
-                            className="flex-1 bg-white dark:bg-[#16171E] border-2 border-black dark:border-gray-700 rounded-xl px-3 py-1.5 text-xs font-black text-gray-900 dark:text-white focus:outline-none shadow-neo-sm cursor-pointer"
-                          >
-                            {rollingDays.map((d, dayIndex) => (
-                              <option key={d.dateString} value={d.dateString}>
-                                {dayIndex === 0
-                                  ? `Today (${d.dayName} ${d.dayNumber})`
-                                  : dayIndex === 1
-                                  ? `Tomorrow (${d.dayName} ${d.dayNumber})`
-                                  : `${d.dayName} (${d.dayNumber})`}
-                              </option>
-                            ))}
-                          </select>
+                          <div className="flex-1">
+                            <NeoSelect
+                              value={alloc.date}
+                              onChange={(val) => handleUpdateDate(idx, val)}
+                              options={rollingDays.map((d, dayIndex) => ({
+                                value: d.dateString,
+                                label:
+                                  dayIndex === 0
+                                    ? `Today (${d.dayNumber})`
+                                    : dayIndex === 1
+                                    ? `Tomorrow (${d.dayNumber})`
+                                    : `${d.dayName} (${d.dayNumber})`,
+                              }))}
+                              size="md"
+                              align="left"
+                              className="w-full"
+                              ariaLabel={`Portion ${alloc.portionNumber} Target Day`}
+                            />
+                          </div>
                         </div>
 
                         {/* Interactive Meal Slot Selector (Never forced!) */}

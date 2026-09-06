@@ -1,5 +1,5 @@
 {
-  "name": "MEALZY — Aesthetic Gen-Z Meal Planner",
+  "name": "MEALZY • Aesthetic Meal Planner",
   "short_name": "MEALZY",
   "description": "Plan what to make and when to eat. Never let food rot.",
   "start_url": "/",
@@ -8,14 +8,9 @@
   "theme_color": "#0A0B0E",
   "icons": [
     {
-      "src": "https://images.unsplash.com/photo-1517673132405-a56a62b18caf?w=192&auto=format&fit=crop&q=80",
-      "sizes": "192x192",
-      "type": "image/png"
-    },
-    {
-      "src": "https://images.unsplash.com/photo-1517673132405-a56a62b18caf?w=512&auto=format&fit=crop&q=80",
-      "sizes": "512x512",
-      "type": "image/png"
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
     }
   ]
 }

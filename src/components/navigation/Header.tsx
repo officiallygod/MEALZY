@@ -29,21 +29,36 @@ export default function Header({
   return (
     <header className="sticky top-0 z-40 bg-[#FAF8F5]/95 dark:bg-[#0D0E12]/95 backdrop-blur-xl border-b-2 border-black dark:border-gray-800 px-4 sm:px-8 py-3 transition-colors">
       <div className="max-w-7xl mx-auto flex items-center justify-between gap-2 sm:gap-4">
-        {/* Logo & Funky Stickers */}
-        <div className="flex items-center gap-3 sm:gap-4 flex-shrink-0">
+        {/* Logo & Brand Emblem */}
+        <div
+          className="flex items-center gap-2.5 sm:gap-3 flex-shrink-0 group cursor-pointer"
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+        >
+          {/* Neo-Brutalist Brand Emblem (Matching Favicon) */}
+          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#FF5500] border-2 border-black flex items-center justify-center shadow-neo-sm group-hover:rotate-6 group-hover:scale-105 active:scale-95 transition-all flex-shrink-0">
+            <svg viewBox="0 0 32 32" className="w-5 h-5 sm:w-5.5 sm:h-5.5 fill-none">
+              <path d="M7 23V9.5L13.5 17.5L20 9.5V23" stroke="#FFFFFF" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M25 5L25.8 7.2L28 8L25.8 8.8L25 11L24.2 8.8L22 8L24.2 7.2Z" fill="#D4FF00" stroke="#000000" strokeWidth="0.8" />
+            </svg>
+          </div>
+
+          {/* Typography: Solid MEAL + Solid High-Contrast Electric Orange ZY */}
           <div className="flex items-center tracking-tight">
             <span className="font-funky font-black text-2xl sm:text-3xl text-gray-900 dark:text-white">
               MEAL
             </span>
-            <span className="font-funky font-black text-2xl sm:text-3xl text-stroke-orange tracking-tight">
+            <span className="font-funky font-black text-2xl sm:text-3xl text-[#FF5500] drop-shadow-[2px_2px_0px_#000000] tracking-tight">
               ZY
+            </span>
+            <span className="text-[#D4FF00] text-xs font-black self-start -ml-0.5 -mt-1 select-none animate-pulse">
+              ✦
             </span>
           </div>
 
-          {/* Rotated Neo-Brutalist Sticker Badges (from Allen Benny Portfolio) */}
+          {/* Rotated Neo-Brutalist Sticker Badges */}
           <div className="hidden md:flex items-center gap-2">
             <div className="rotate-[-3deg] bg-[#FFE600] text-black font-black text-[10px] uppercase px-2.5 py-0.5 rounded-full border-2 border-black shadow-neo-sm">
-              ✦ 7-Day Bento
+              7-Day Bento
             </div>
             <div className="rotate-[2deg] bg-[#D4FF00] text-black font-black text-[10px] uppercase px-2.5 py-0.5 rounded-full border-2 border-black shadow-neo-sm">
               Zero Waste

@@ -192,7 +192,7 @@ export default function ExportWeekModal({
           <p className="text-xs text-gray-500 dark:text-gray-400 font-bold">
             Current 7 rolling days from Today:{' '}
             <span className="text-black dark:text-white font-black">
-              {startDay?.dayName} ({startDay?.dayNumber}) — {endDay?.dayName} ({endDay?.dayNumber})
+              {startDay?.dayName} ({startDay?.dayNumber}) to {endDay?.dayName} ({endDay?.dayNumber})
             </span>
           </p>
         </div>

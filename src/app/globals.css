@@ -90,38 +90,124 @@ body {
   animation-play-state: paused;
 }
 
-/* Hide scrollbars utility */
+/* Robust scrollbar-none utility */
 .scrollbar-none::-webkit-scrollbar {
-  display: none;
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  background: transparent !important;
 }
 .scrollbar-none {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
 }
 
-/* Universal sleek custom scrollbars matching dark/light themes */
+/* Universal sleek custom scrollbars matching dark/light Neo-Brutalist themes */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(140, 140, 140, 0.4) transparent;
+}
+
+html.dark * {
+  scrollbar-color: rgba(255, 255, 255, 0.25) transparent;
+}
+
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
+
+::-webkit-scrollbar-button {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent !important;
+}
+
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: transparent !important;
 }
+
+::-webkit-scrollbar-track-piece {
+  background: transparent !important;
+}
+
 ::-webkit-scrollbar-thumb {
-  background: rgba(140, 140, 140, 0.3);
-  border-radius: 9999px;
+  background: rgba(0, 0, 0, 0.22) !important;
+  border-radius: 9999px !important;
+  border: none !important;
 }
+
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(140, 140, 140, 0.5);
+  background: #FF5500 !important;
 }
+
 html.dark ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.22) !important;
 }
+
 html.dark ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.35);
+  background: #FFE600 !important;
+}
+
+/* High-priority custom scrollbar utility for modals and popover menus */
+.custom-scrollbar {
+  scrollbar-width: thin !important;
+  scrollbar-color: rgba(0, 0, 0, 0.25) transparent !important;
+}
+
+html.dark .custom-scrollbar {
+  scrollbar-color: rgba(255, 255, 255, 0.25) transparent !important;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px !important;
+  height: 5px !important;
+}
+
+.custom-scrollbar::-webkit-scrollbar-button {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.25) !important;
+  border-radius: 9999px !important;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #FF5500 !important;
+}
+
+html.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.25) !important;
+}
+
+html.dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #FFE600 !important;
 }
 
 * {
   box-sizing: border-box;
 }
+
+/* Remove default number input spinners across all browsers */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
 

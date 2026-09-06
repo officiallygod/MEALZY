@@ -3,12 +3,16 @@ import './globals.css';
 import CookieConsent from '@/components/common/CookieConsent';
 
 export const metadata: Metadata = {
-  title: 'MEALZY — Aesthetic Gen-Z Meal Planner & Fridge Radar',
+  title: 'MEALZY • Aesthetic Meal Planner & Fridge Radar',
   description:
     'Plan what to make and when to eat. Never let food rot. Cook once, eat 3-4x. Aesthetic, responsive, smart, and 100% offline capable.',
   manifest: '/manifest.json',
   icons: {
-    icon: '/favicon.ico',
+    icon: [
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+      { url: '/favicon.ico' },
+    ],
+    apple: '/favicon.svg',
   },
 };
 

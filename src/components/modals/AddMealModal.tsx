@@ -16,6 +16,7 @@ import {
 } from '@/lib/dish-database';
 import { db } from '@/lib/db';
 import confetti from 'canvas-confetti';
+import NeoSelect, { NeoSelectOption } from '@/components/common/NeoSelect';
 
 interface AddMealModalProps {
   isOpen: boolean;
@@ -477,7 +478,7 @@ export default function AddMealModal({
                   initial={{ opacity: 0, y: -4 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -4 }}
-                  className="absolute left-0 right-0 top-full mt-1.5 bg-white dark:bg-[#1E202A] border-2 border-black dark:border-gray-700 rounded-2xl shadow-neo-lg z-20 max-h-56 overflow-y-auto scrollbar-none p-1.5 space-y-1"
+                  className="absolute left-0 right-0 top-full mt-1.5 bg-white dark:bg-[#1E202A] border-2 border-black dark:border-gray-700 rounded-2xl shadow-neo-lg z-20 max-h-56 overflow-y-auto custom-scrollbar p-1.5 space-y-1"
                 >
                   <div className="px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-gray-400 flex items-center justify-between">
                     <span>Suggestions for {selectedSlot}</span>
@@ -541,7 +542,7 @@ export default function AddMealModal({
                           {dish.title}
                         </h4>
                         <p className="text-[10px] text-gray-500 font-bold">
-                          {dish.calories} kcal • {dish.protein}g Protein • Open data
+                          {dish.calories} kcal • {dish.protein}g Protein
                         </p>
                       </div>
                       <Plus className="w-3.5 h-3.5 text-gray-400" />
@@ -612,17 +613,22 @@ export default function AddMealModal({
                       <span className="text-[10px] font-black uppercase px-2 py-0.5 bg-black text-white dark:bg-[#FFE600] dark:text-black rounded-md">
                         Portion #{alloc.portionNumber}
                       </span>
-                      <select
+                      <NeoSelect
                         value={alloc.date}
-                        onChange={(e) => handleUpdateBatchDate(idx, e.target.value)}
-                        className="bg-[#FAF8F5] dark:bg-[#20222E] border-2 border-black dark:border-gray-700 rounded-lg px-2 py-0.5 text-[11px] font-bold text-gray-800 dark:text-white shadow-neo-sm cursor-pointer"
-                      >
-                        {rollingDays.map((d, dIdx) => (
-                          <option key={d.dateString} value={d.dateString}>
-                            {dIdx === 0 ? `Today (${d.dayName})` : dIdx === 1 ? `Tomorrow (${d.dayName})` : `${d.dayName} (${d.dayNumber})`}
-                          </option>
-                        ))}
-                      </select>
+                        onChange={(val) => handleUpdateBatchDate(idx, val)}
+                        options={rollingDays.map((d, dIdx) => ({
+                          value: d.dateString,
+                          label:
+                            dIdx === 0
+                              ? `Today (${d.dayNumber})`
+                              : dIdx === 1
+                              ? `Tomorrow (${d.dayNumber})`
+                              : `${d.dayName} (${d.dayNumber})`,
+                        }))}
+                        size="sm"
+                        align="right"
+                        ariaLabel={`Portion ${alloc.portionNumber} Day`}
+                      />
                     </div>
 
                     <div className="grid grid-cols-4 gap-1">
@@ -709,7 +715,7 @@ export default function AddMealModal({
               className="w-full flex items-center justify-between text-xs font-black uppercase text-gray-600 dark:text-gray-400 hover:text-black dark:hover:text-white py-1"
             >
               <span>
-                Calories &amp; Macros ({calories} kcal • {protein}g P) — {isCustomNutrition ? 'Custom' : 'Auto-Estimated'}
+                Calories &amp; Macros ({calories} kcal • {protein}g P) • {isCustomNutrition ? 'Custom' : 'Auto-Estimated'}
               </span>
               {showMacroSettings ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
             </button>
@@ -781,14 +787,16 @@ export default function AddMealModal({
             <Clock className="w-4 h-4 text-gray-400" />
             <div className="flex-1 flex items-center justify-between">
               <span className="text-xs font-black text-gray-700 dark:text-gray-300 uppercase">Preparation Time</span>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1.5">
                 <input
                   type="number"
+                  min="1"
+                  max="480"
                   value={prepTime}
                   onChange={(e) => setPrepTime(e.target.value)}
-                  className="w-12 bg-white dark:bg-[#16171E] border-2 border-black dark:border-gray-700 rounded-lg px-2 py-0.5 text-xs text-right font-black text-gray-900 dark:text-white"
+                  className="w-16 bg-white dark:bg-[#16171E] border-2 border-black dark:border-gray-700 rounded-xl px-2 py-1 text-xs text-center font-black text-gray-900 dark:text-white shadow-neo-sm focus:outline-none focus:border-black"
                 />
-                <span className="text-xs text-gray-500 font-bold">mins</span>
+                <span className="text-xs text-gray-500 dark:text-gray-400 font-bold">mins</span>
               </div>
             </div>
           </div>

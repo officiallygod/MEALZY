@@ -136,20 +136,55 @@ export async function generateWeekPlanImage({
   // 4. Main App Branding Header
   const startDay = days[0];
   const endDay = days[days.length - 1];
-  const dateRangeText = `${startDay.dayName.toUpperCase()} ${startDay.dayNumber} — ${endDay.dayName.toUpperCase()} ${endDay.dayNumber}`;
+  const dateRangeText = `${startDay.dayName.toUpperCase()} ${startDay.dayNumber} TO ${endDay.dayName.toUpperCase()} ${endDay.dayNumber}`;
 
-  // Logo: MEAL in solid, ZY in orange
+  // Logo: Iconic Neo-Brutalist brand emblem badge + MEALZY
+  ctx.fillStyle = shadowColor;
+  roundRect(ctx, 60 + 3, 86 + 3, 46, 46, 12);
+  ctx.fill();
+
+  ctx.fillStyle = '#FF5500';
+  roundRect(ctx, 60, 86, 46, 46, 12);
+  ctx.fill();
+  ctx.strokeStyle = '#000000';
+  ctx.lineWidth = 2.5;
+  roundRect(ctx, 60, 86, 46, 46, 12);
+  ctx.stroke();
+
+  // White 'M' mark inside badge
+  ctx.strokeStyle = '#FFFFFF';
+  ctx.lineWidth = 4;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  ctx.moveTo(68, 118);
+  ctx.lineTo(68, 98);
+  ctx.lineTo(83, 111);
+  ctx.lineTo(98, 98);
+  ctx.lineTo(98, 118);
+  ctx.stroke();
+
+  // Neon Lime spark on badge
+  ctx.fillStyle = '#D4FF00';
+  ctx.beginPath();
+  ctx.arc(97, 93, 3.5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = '#000000';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  // Logo Text: MEAL in solid, ZY in vibrant orange
   ctx.textAlign = 'left';
-  ctx.font = '900 48px "Inter", -apple-system, sans-serif';
+  ctx.font = '900 44px "Inter", -apple-system, sans-serif';
   ctx.fillStyle = textColor;
-  ctx.fillText('MEAL', 60, 125);
+  ctx.fillText('MEAL', 120, 124);
   const mealWidth = ctx.measureText('MEAL').width;
   ctx.fillStyle = '#FF5500';
-  ctx.fillText('ZY', 60 + mealWidth, 125);
+  ctx.fillText('ZY', 120 + mealWidth, 124);
 
   // Subtitle / Date Range Badge
   ctx.save();
-  ctx.translate(60 + mealWidth + 85, 105);
+  ctx.translate(120 + mealWidth + 85, 105);
   ctx.rotate((-2 * Math.PI) / 180);
   ctx.fillStyle = '#000000';
   roundRect(ctx, 3, 3, 210, 32, 10);
@@ -336,7 +371,7 @@ export async function generateWeekPlanImage({
           ctx.textAlign = 'left';
           ctx.font = '600 12px "Inter", -apple-system, sans-serif';
           ctx.fillStyle = isDark ? '#4B5563' : '#9CA3AF';
-          ctx.fillText('— Unscheduled', slotX + 10, slotY + 48);
+          ctx.fillText('Unscheduled', slotX + 10, slotY + 48);
 
           ctx.font = '500 10px "Inter", -apple-system, sans-serif';
           ctx.fillStyle = isDark ? '#374151' : '#CBD5E1';
@@ -457,7 +492,7 @@ export async function generateWeekPlanImage({
         ctx.textAlign = 'left';
         ctx.font = '700 13px "Inter", -apple-system, sans-serif';
         ctx.fillStyle = meal ? textColor : (isDark ? '#4B5563' : '#9CA3AF');
-        const mTitle = meal ? cleanMealTitle(meal.title) : '— Empty';
+        const mTitle = meal ? cleanMealTitle(meal.title) : 'Empty Slot';
         ctx.fillText(truncateText(ctx, mTitle, slotW - 20), sX + 10, sY + 54);
 
         if (meal && meal.protein) {
