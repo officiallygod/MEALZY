@@ -158,10 +158,10 @@ export default function CookMealModal({
                   key={item.count}
                   type="button"
                   onClick={() => setPortions(item.count)}
-                  className={`py-3 px-2 rounded-2xl border-2 font-black transition-all flex flex-col items-center justify-center gap-0.5 ${
+                  className={`py-3 px-2 rounded-2xl border-2 font-black transition-colors flex flex-col items-center justify-center gap-0.5 ${
                     portions === item.count
-                      ? 'bg-[#FFE600] text-black border-2 border-black shadow-neo -translate-y-0.5'
-                      : 'bg-[#FAF8F5] dark:bg-[#1E202A] border-black/30 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-black active:translate-y-0'
+                      ? 'bg-[#FFE600] text-black border-2 border-black shadow-neo'
+                      : 'bg-[#FAF8F5] dark:bg-[#1E202A] border-black/30 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-black active:scale-[0.98]'
                   }`}
                 >
                   <span className="text-base font-funky">{item.title}</span>

@@ -91,7 +91,7 @@ export default function NeoSelect({
         aria-label={ariaLabel}
         aria-haspopup="listbox"
         aria-expanded={isOpen}
-        className={`bg-[#FAF8F5] dark:bg-[#20222E] border-2 border-black dark:border-gray-700 text-gray-800 dark:text-white shadow-neo-sm hover:shadow-neo hover:-translate-x-[0.5px] hover:-translate-y-[0.5px] active:translate-x-0 active:translate-y-0 transition-all flex items-center justify-between gap-2 cursor-pointer select-none ${
+        className={`bg-[#FAF8F5] dark:bg-[#20222E] border-2 border-black dark:border-gray-700 text-gray-800 dark:text-white shadow-neo-sm hover:bg-white dark:hover:bg-[#282B38] hover:border-black dark:hover:border-gray-500 active:scale-[0.98] transition-colors flex items-center justify-between gap-2 cursor-pointer select-none ${
           sizeStyles[size]
         } ${disabled ? 'opacity-50 cursor-not-allowed' : ''} ${className}`}
       >
@@ -132,7 +132,7 @@ export default function NeoSelect({
                     onChange(option.value);
                     setIsOpen(false);
                   }}
-                  className={`w-full px-2.5 py-1.5 text-left rounded-xl text-xs font-black transition-all flex items-center justify-between gap-2 select-none ${
+                  className={`w-full px-2.5 py-1.5 text-left rounded-xl text-xs font-black transition-colors flex items-center justify-between gap-2 select-none ${
                     isSelected
                       ? 'bg-[#FFE600] text-black border-2 border-black shadow-neo-sm'
                       : 'text-gray-800 dark:text-gray-200 hover:bg-[#FAF8F5] dark:hover:bg-[#282B38] border-2 border-transparent hover:border-black'

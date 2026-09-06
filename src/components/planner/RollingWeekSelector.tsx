@@ -90,7 +90,7 @@ export default function RollingWeekSelector({
         {onExportWeekImage && (
           <button
             onClick={onExportWeekImage}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-[#FFE600] hover:bg-yellow-400 text-black font-black text-xs border-2 border-black shadow-neo-sm hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-neo active:translate-x-0.5 active:translate-y-0.5 transition-all"
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-[#FFE600] hover:bg-yellow-400 text-black font-black text-xs border-2 border-black shadow-neo-sm active:scale-[0.98] transition-colors"
             title="Generate & Save 7-Day Plan Image for Phone"
           >
             <Smartphone className="w-3.5 h-3.5 stroke-[2.5]" />

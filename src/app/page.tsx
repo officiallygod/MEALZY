@@ -5,6 +5,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db, getRollingWeekDates, seedInitialDataIfEmpty } from '@/lib/db';
 import { MealItem, MealType, FridgePantryItem, AISuggestion } from '@/types/meal';
 import Header from '@/components/navigation/Header';
+import Footer from '@/components/navigation/Footer';
 import BottomNav, { ActiveTab } from '@/components/navigation/BottomNav';
 import RollingWeekSelector from '@/components/planner/RollingWeekSelector';
 import DailyNutritionMonitor from '@/components/planner/DailyNutritionMonitor';
@@ -693,6 +694,9 @@ export default function Home() {
           </div>
         )}
       </main>
+
+      {/* Footer Strip */}
+      <Footer />
 
       {/* Floating Bottom Navigation Dock */}
       <BottomNav

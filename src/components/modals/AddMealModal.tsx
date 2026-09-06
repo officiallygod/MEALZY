@@ -548,6 +548,14 @@ export default function AddMealModal({
                       <Plus className="w-3.5 h-3.5 text-gray-400" />
                     </div>
                   ))}
+
+                  {onlineSuggestions.length > 0 && (
+                    <div className="pt-1.5 pb-1 px-2 text-center border-t border-gray-200 dark:border-gray-800">
+                      <span className="text-[9px] font-bold text-gray-400">
+                        Nutrition data powered by Open Food Facts &amp; open data
+                      </span>
+                    </div>
+                  )}
                 </motion.div>
               )}
             </AnimatePresence>
@@ -804,7 +812,7 @@ export default function AddMealModal({
           {/* Action Button: Neon Orange like Get In Touch from Portfolio */}
           <button
             type="submit"
-            className="w-full py-3.5 bg-[#FF5500] hover:bg-[#ff681a] text-white font-black text-xs uppercase tracking-wider rounded-2xl border-2 border-black shadow-neo hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-neo-lg active:translate-x-0.5 active:translate-y-0.5 transition-all flex items-center justify-center gap-2 mt-3"
+            className="w-full py-3.5 bg-[#FF5500] hover:bg-[#ff681a] text-white font-black text-xs uppercase tracking-wider rounded-2xl border-2 border-black shadow-neo active:scale-[0.98] transition-colors flex items-center justify-center gap-2 mt-3"
           >
             <span>SAVE TO {selectedSlot.toUpperCase()} {divideDays > 1 ? `(${divideDays} DAYS)` : ''}</span>
           </button>

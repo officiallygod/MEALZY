@@ -35,7 +35,7 @@ export default function Header({
           onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
         >
           {/* Neo-Brutalist Brand Emblem (Matching Favicon) */}
-          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#FF5500] border-2 border-black flex items-center justify-center shadow-neo-sm group-hover:rotate-6 group-hover:scale-105 active:scale-95 transition-all flex-shrink-0">
+          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#FF5500] border-2 border-black flex items-center justify-center shadow-neo-sm group-hover:shadow-neo transition-all flex-shrink-0">
             <svg viewBox="0 0 32 32" className="w-5 h-5 sm:w-5.5 sm:h-5.5 fill-none">
               <path d="M7 23V9.5L13.5 17.5L20 9.5V23" stroke="#FFFFFF" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" />
               <path d="M25 5L25.8 7.2L28 8L25.8 8.8L25 11L24.2 8.8L22 8L24.2 7.2Z" fill="#D4FF00" stroke="#000000" strokeWidth="0.8" />
@@ -91,7 +91,7 @@ export default function Header({
           <button
             onClick={onToggleTheme}
             aria-label="Toggle Theme"
-            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full bg-white dark:bg-[#16171E] border-2 border-black dark:border-gray-700 text-xs font-black text-gray-900 dark:text-white shadow-neo-sm hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-neo active:translate-x-0.5 active:translate-y-0.5 transition-all flex-shrink-0"
+            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full bg-white dark:bg-[#16171E] hover:bg-gray-100 dark:hover:bg-[#20222D] border-2 border-black dark:border-gray-700 text-xs font-black text-gray-900 dark:text-white shadow-neo-sm active:scale-[0.98] transition-colors flex-shrink-0"
             title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
           >
             {theme === 'dark' ? (
@@ -112,7 +112,7 @@ export default function Header({
             <button
               onClick={onExportWeekImage}
               aria-label="Save Week Image"
-              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-[#FFE600] hover:bg-yellow-400 text-black font-black text-xs border-2 border-black shadow-neo-sm hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-neo active:translate-x-0.5 active:translate-y-0.5 transition-all flex-shrink-0"
+              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-[#FFE600] hover:bg-yellow-400 text-black font-black text-xs border-2 border-black shadow-neo-sm active:scale-[0.98] transition-colors flex-shrink-0"
               title="Generate & Save 7-Day Plan Image for Phone"
             >
               <Smartphone className="w-3.5 h-3.5" />
@@ -123,7 +123,7 @@ export default function Header({
           {/* Primary Action Button: Neon Orange "ADD MEAL" */}
           <button
             onClick={onOpenAddMeal}
-            className="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 bg-[#FF5500] hover:bg-[#ff681a] text-white font-black text-xs rounded-xl border-2 border-black shadow-neo hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-neo-lg active:translate-x-0.5 active:translate-y-0.5 transition-all flex-shrink-0"
+            className="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 bg-[#FF5500] hover:bg-[#ff681a] text-white font-black text-xs rounded-xl border-2 border-black shadow-neo active:scale-[0.98] transition-colors flex-shrink-0"
           >
             <Plus className="w-3.5 h-3.5 stroke-[3]" />
             <span className="hidden xs:inline">ADD MEAL</span>
@@ -132,7 +132,7 @@ export default function Header({
           {/* User Auth Pill */}
           <button
             onClick={onOpenAuth}
-            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-white dark:bg-[#16171E] hover:bg-gray-100 dark:hover:bg-[#20222D] border-2 border-black dark:border-gray-700 text-gray-900 dark:text-white shadow-neo-sm active:translate-x-0.5 active:translate-y-0.5 transition-all text-xs font-black flex-shrink-0"
+            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-white dark:bg-[#16171E] hover:bg-gray-100 dark:hover:bg-[#20222D] border-2 border-black dark:border-gray-700 text-gray-900 dark:text-white shadow-neo-sm active:scale-[0.98] transition-colors text-xs font-black flex-shrink-0"
           >
             <div className="w-5 h-5 rounded-md bg-black dark:bg-[#D4FF00] text-white dark:text-black flex items-center justify-center text-[10px] font-black">
               {userEmail ? userEmail[0].toUpperCase() : <User className="w-3 h-3" />}
