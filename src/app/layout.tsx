@@ -34,11 +34,11 @@ export default function RootLayout({
       <head>
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem('mealzy_theme')||'dark';document.documentElement.className=t;}catch(e){}})();`,
+            __html: `(function(){try{var t=localStorage.getItem('mealzy_theme');if(!t){t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';}if(t==='light'){document.documentElement.classList.remove('dark');document.documentElement.classList.add('light');}else{document.documentElement.classList.remove('light');document.documentElement.classList.add('dark');}}catch(e){}})();`,
           }}
         />
       </head>
-      <body className="bg-[#0A0B0E] text-white min-h-screen antialiased selection:bg-[#D4FF00] selection:text-black">
+      <body className="bg-[#FAF8F5] dark:bg-[#0A0B0E] text-gray-900 dark:text-white min-h-screen antialiased selection:bg-[#D4FF00] selection:text-black transition-colors">
         {children}
         <CookieConsent />
       </body>

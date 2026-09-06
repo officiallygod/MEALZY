@@ -27,6 +27,8 @@ export interface AteOutConfirmData {
   leftoverScheduleDate: string;
   leftoverScheduleSlot: MealType;
   originalMealAction?: 'push_tomorrow' | 'save_fridge' | 'replace';
+  originalMealPushDate?: string;
+  originalMealPushSlot?: MealType;
   originalMeal?: MealItem;
   originalMeals?: MealItem[];
 }
@@ -91,6 +93,8 @@ export default function AteOutModal({
 
   // Original planned meal disposition
   const [originalMealAction, setOriginalMealAction] = useState<'push_tomorrow' | 'save_fridge' | 'replace'>('push_tomorrow');
+  const [originalMealPushDate, setOriginalMealPushDate] = useState(tomorrow);
+  const [originalMealPushSlot, setOriginalMealPushSlot] = useState<MealType>(targetSlot);
 
   const effectiveMeals = (targetMeals && targetMeals.length > 0) ? targetMeals : (targetMeal ? [targetMeal] : []);
 
@@ -107,6 +111,8 @@ export default function AteOutModal({
       setLeftoverDate(tomorrow);
       setLeftoverSlot(defaultLeftoverSlot);
       setOriginalMealAction('push_tomorrow');
+      setOriginalMealPushDate(tomorrow);
+      setOriginalMealPushSlot(targetSlot);
     }
   }, [isOpen, targetMeal, targetMeals, targetDate, targetSlot]);
 
@@ -143,6 +149,8 @@ export default function AteOutModal({
       leftoverScheduleDate: leftoverDate,
       leftoverScheduleSlot: leftoverSlot,
       originalMealAction: effectiveMeals.length > 0 ? originalMealAction : undefined,
+      originalMealPushDate: effectiveMeals.length > 0 && originalMealAction === 'push_tomorrow' ? originalMealPushDate : undefined,
+      originalMealPushSlot: effectiveMeals.length > 0 && originalMealAction === 'push_tomorrow' ? originalMealPushSlot : undefined,
       originalMeal: effectiveMeals[0],
       originalMeals: effectiveMeals,
     });
@@ -240,6 +248,52 @@ export default function AteOutModal({
                 <span className="text-[10px] uppercase leading-tight">Cancel Dish</span>
               </button>
             </div>
+
+            {originalMealAction === 'push_tomorrow' && (
+              <div className="mt-2.5 p-2.5 bg-white dark:bg-[#16171E] rounded-xl border border-black/20 dark:border-gray-700 space-y-2">
+                <div className="flex items-center justify-between text-[10px] font-black uppercase text-gray-500">
+                  <span>Move Planned Meals To Day:</span>
+                  <span className="text-[#FF5500] font-black">{originalMealPushDate}</span>
+                </div>
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 custom-scrollbar">
+                  {rollingDays.map((d, dIdx) => (
+                    <button
+                      key={d.dateString}
+                      type="button"
+                      onClick={() => setOriginalMealPushDate(d.dateString)}
+                      className={`px-2.5 py-1 rounded-lg text-[10px] font-black border transition-colors flex-shrink-0 active:scale-95 ${
+                        originalMealPushDate === d.dateString
+                          ? 'bg-[#FFE600] text-black border-black shadow-neo-sm'
+                          : 'bg-[#FAF8F5] dark:bg-[#20222E] text-gray-700 dark:text-gray-300 border-black/20 dark:border-gray-700'
+                      }`}
+                    >
+                      {dIdx === 0 ? 'Today' : dIdx === 1 ? 'Tomorrow' : d.dayName}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="flex items-center justify-between text-[10px] font-black uppercase text-gray-500 pt-0.5">
+                  <span>Target Slot:</span>
+                  <span className="text-[#00E5FF] font-black uppercase">{originalMealPushSlot}</span>
+                </div>
+                <div className="grid grid-cols-4 gap-1">
+                  {(['breakfast', 'lunch', 'dinner', 'snack'] as MealType[]).map((slot) => (
+                    <button
+                      key={slot}
+                      type="button"
+                      onClick={() => setOriginalMealPushSlot(slot)}
+                      className={`py-1 text-center text-[10px] font-black uppercase rounded-lg border transition-colors active:scale-95 ${
+                        originalMealPushSlot === slot
+                          ? 'bg-[#00E5FF] text-black border-black shadow-neo-sm'
+                          : 'bg-[#FAF8F5] dark:bg-[#20222E] text-gray-700 dark:text-gray-300 border-black/20 dark:border-gray-700'
+                      }`}
+                    >
+                      {slot === 'breakfast' ? 'Bfast' : slot === 'lunch' ? 'Lunch' : slot === 'dinner' ? 'Dinner' : 'Snack'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 

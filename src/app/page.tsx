@@ -39,6 +39,7 @@ export default function Home() {
   // Modals state
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [userEmail, setUserEmail] = useState<string | undefined>(undefined);
+  const [userName, setUserName] = useState<string | undefined>(undefined);
   const [isAddMealOpen, setIsAddMealOpen] = useState(false);
   const [isExportWeekOpen, setIsExportWeekOpen] = useState(false);
   const [addMealSlot, setAddMealSlot] = useState<MealType>('lunch');
@@ -141,8 +142,10 @@ export default function Home() {
     }
 
     const savedEmail = localStorage.getItem('mealzy_user_email');
+    const savedName = localStorage.getItem('mealzy_user_name');
     if (savedEmail) {
       setUserEmail(savedEmail);
+      setUserName(savedName || savedEmail.split('@')[0]);
     }
   }, []);
 
@@ -157,22 +160,55 @@ export default function Home() {
       document.documentElement.classList.remove('light');
       document.documentElement.classList.add('dark');
     }
+
+    setUndoAction({
+      id: `theme-${Date.now()}`,
+      badge: nextTheme === 'dark' ? '🌙' : '☀️',
+      message: nextTheme === 'dark' ? 'Dark Mode Engaged' : 'Light Mode Activated',
+      funSubtext: nextTheme === 'dark' ? 'Night kitchen vibes on. Sleek and easy on the eyes!' : 'Kitchen blinds pulled open. Crisp and bright!',
+    });
   };
 
-  const handleLoginSuccess = (email: string) => {
+  const handleLoginSuccess = (email: string, name?: string) => {
     setUserEmail(email);
+    const resolvedName = name || email.split('@')[0];
+    setUserName(resolvedName);
     localStorage.setItem('mealzy_user_email', email);
+    localStorage.setItem('mealzy_user_name', resolvedName);
+
+    setUndoAction({
+      id: `auth-${Date.now()}`,
+      badge: '👨‍🍳',
+      message: `Welcome chef, ${resolvedName}!`,
+      funSubtext: 'Account & preferences safely remembered on this device.',
+    });
   };
 
   const handleLogout = () => {
     setUserEmail(undefined);
+    setUserName(undefined);
     localStorage.removeItem('mealzy_user_email');
+    localStorage.removeItem('mealzy_user_name');
+
+    setUndoAction({
+      id: `logout-${Date.now()}`,
+      badge: '👋',
+      message: 'Signed Out Successfully',
+      funSubtext: 'Switched to offline mode. Your recipes and plans remain intact.',
+    });
   };
 
   const handleLogoClick = () => {
+    setIsAddMealOpen(false);
+    setSelectedMealForDetail(null);
+    setIsAuthOpen(false);
+    setMealToCook(null);
+    setIsExportWeekOpen(false);
+    setAteOutTarget(null);
+    setAutoFillTarget(null);
     setActiveTab('planner');
     setIsAllDaysView(false);
-    setSelectedDate(rollingDays[0].dateString);
+    setSelectedDate(rollingDays[0]?.dateString || new Date().toISOString().split('T')[0]);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -242,7 +278,9 @@ export default function Home() {
 
     setUndoAction({
       id: `autofill-${Date.now()}`,
-      message: `Added ${newMeals.length} suggested meals`,
+      badge: '✨',
+      message: `Added ${newMeals.length} suggested dishes`,
+      funSubtext: 'Your sous-chef did the heavy lifting for you! 🤖',
       onUndo: async () => {
         for (const m of newMeals) {
           await db.meals.delete(m.id);
@@ -256,6 +294,16 @@ export default function Home() {
     await db.meals.add({
       ...newMeal,
       id,
+    });
+
+    setUndoAction({
+      id: `add-${Date.now()}`,
+      badge: '🥗',
+      message: `Added "${newMeal.title}" to ${newMeal.mealType}`,
+      funSubtext: 'Future you is already pumped for this dish! 😋',
+      onUndo: async () => {
+        await db.meals.delete(id);
+      },
     });
   };
 
@@ -272,7 +320,9 @@ export default function Home() {
 
     setUndoAction({
       id: `move-${Date.now()}`,
+      badge: '🎯',
       message: `Moved "${m.title}" to ${targetType}`,
+      funSubtext: 'Tactical dish redeployment complete! Menu reshuffled. 🍱',
       onUndo: async () => {
         await db.meals.update(mealId, {
           dateScheduled: prevDate,
@@ -296,7 +346,9 @@ export default function Home() {
       }
       setUndoAction({
         id: `delete-${Date.now()}`,
-        message: `Deleted "${m.title}"`,
+        badge: '🗑️',
+        message: `Removed "${m.title}"`,
+        funSubtext: 'Cleared off the board. Room made for new flavors! 🚀',
         onUndo: async () => {
           await db.meals.bulkAdd(dupes);
         },
@@ -353,6 +405,23 @@ export default function Home() {
       category: sourceMeal.mealType,
       accentColor: sourceMeal.accentColor,
     });
+
+    setUndoAction({
+      id: `cook-${Date.now()}`,
+      badge: '🍳',
+      message: `Cooked "${cleanDish}" (${portions} portions)`,
+      funSubtext: portions > 1 ? `Chef mode on! ${portions - 1} extra portion(s) saved in Fridge Radar.` : 'Cooked and enjoyed hot off the skillet!',
+      onUndo: async () => {
+        await db.meals.update(sourceMeal.id, {
+          totalPortionsCooked: undefined,
+          portionsRemaining: undefined,
+        });
+        for (const lm of leftoverMeals) {
+          await db.meals.delete(lm.id);
+        }
+        await db.fridge.delete(`fridge-batch-${sourceMeal.id}`);
+      },
+    });
   };
 
   // Early item clearance handler with 5s undo
@@ -384,7 +453,9 @@ export default function Home() {
 
     setUndoAction({
       id: `gone-${Date.now()}`,
+      badge: '🧹',
       message: `Cleared "${mealTitle}"`,
+      funSubtext: 'Zero crumbs left behind! Kitchen efficiency 100%. ✨',
       onUndo: async () => {
         if (originalCopy) {
           await db.meals.put(originalCopy);
@@ -439,6 +510,23 @@ export default function Home() {
       });
     }
 
+    setUndoAction({
+      id: `consume-${Date.now()}`,
+      badge: '🧊',
+      message: `Reheated "${cleanName}" for ${slot}`,
+      funSubtext: 'Zero food waste achieved! Fridge hero status unlocked. 🦸‍♂️',
+      onUndo: async () => {
+        if (existingInSlot) {
+          await db.meals.update(existingInSlot.id, {
+            portions: existingInSlot.portions,
+          });
+        } else {
+          await db.meals.where('dateScheduled').equals(today).and((m) => m.title === cleanName).delete();
+        }
+        await db.fridge.put(item);
+      },
+    });
+
     setActiveTab('planner');
   };
 
@@ -456,9 +544,12 @@ export default function Home() {
     if (targetMealsToProcess.length > 0) {
       for (const origMeal of targetMealsToProcess) {
         if (data.originalMealAction === 'push_tomorrow') {
+          const targetPushDate = data.originalMealPushDate || tomorrow;
+          const targetPushSlot = data.originalMealPushSlot || origMeal.mealType;
           await db.meals.update(origMeal.id, {
-            dateScheduled: tomorrow,
-            notes: `${origMeal.notes ? origMeal.notes + ' • ' : ''}Pushed from ${data.dateScheduled} (ate out).`,
+            dateScheduled: targetPushDate,
+            mealType: targetPushSlot,
+            notes: `${origMeal.notes ? origMeal.notes + ' • ' : ''}Moved from ${data.dateScheduled} (ate out).`,
           });
         } else if (data.originalMealAction === 'save_fridge') {
           const origClean = cleanMealTitle(origMeal.title);
@@ -539,7 +630,9 @@ export default function Home() {
     // 5s Undo Toast for Ate Out Action
     setUndoAction({
       id: `ateout-${Date.now()}`,
+      badge: '🥂',
       message: `Marked ${data.mealType} as Ate Out`,
+      funSubtext: 'Zero pots or pans were harmed tonight. Enjoy dining out! 🍷',
       onUndo: async () => {
         await db.meals.delete(ateOutId);
         if (data.hasLeftover) {
@@ -620,6 +713,7 @@ export default function Home() {
         onExportWeekImage={() => setIsExportWeekOpen(true)}
         onLogoClick={handleLogoClick}
         userEmail={userEmail}
+        userName={userName}
         todayCalories={todayCalories}
         calorieTarget={calorieTarget}
         theme={theme}
@@ -750,6 +844,7 @@ export default function Home() {
                 setSelectedDate(d);
                 setIsAllDaysView(false);
               }}
+              onTriggerToast={setUndoAction}
             />
           </div>
         )}
@@ -857,6 +952,7 @@ export default function Home() {
         isOpen={isAuthOpen}
         onClose={() => setIsAuthOpen(false)}
         userEmail={userEmail}
+        userName={userName}
         onLoginSuccess={handleLoginSuccess}
         onLogout={handleLogout}
       />

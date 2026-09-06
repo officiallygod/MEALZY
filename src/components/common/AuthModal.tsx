@@ -10,11 +10,12 @@ interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
   userEmail?: string;
-  onLoginSuccess: (email: string) => void;
+  userName?: string;
+  onLoginSuccess: (email: string, name?: string) => void;
   onLogout?: () => void;
 }
 
-export default function AuthModal({ isOpen, onClose, userEmail, onLoginSuccess, onLogout }: AuthModalProps) {
+export default function AuthModal({ isOpen, onClose, userEmail, userName, onLoginSuccess, onLogout }: AuthModalProps) {
   const [tab, setTab] = useState<'login' | 'register'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -26,12 +27,12 @@ export default function AuthModal({ isOpen, onClose, userEmail, onLoginSuccess, 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) return;
-    onLoginSuccess(email);
+    onLoginSuccess(email, name || email.split('@')[0]);
     onClose();
   };
 
   const handleGuestContinue = () => {
-    onLoginSuccess('Guest Chef');
+    onLoginSuccess('Guest Chef', 'Guest Chef');
     onClose();
   };
 
@@ -120,12 +121,17 @@ export default function AuthModal({ isOpen, onClose, userEmail, onLoginSuccess, 
               <span className="text-[10px] font-black uppercase tracking-wider text-gray-500 dark:text-gray-400 block mb-1">
                 Currently Signed In
               </span>
-              <p className="font-funky font-black text-lg text-gray-900 dark:text-white truncate">
+              {userName && userName !== userEmail && (
+                <p className="font-funky font-black text-xl text-gray-900 dark:text-white truncate">
+                  {userName}
+                </p>
+              )}
+              <p className="text-xs font-bold text-gray-600 dark:text-gray-300 truncate mt-0.5">
                 {userEmail}
               </p>
-              <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-300 text-[10px] font-black border border-emerald-500">
-                <CheckCircle2 className="w-3 h-3" />
-                <span>Account Remembered on Device</span>
+              <div className="mt-2.5 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-300 text-[10px] font-black border border-emerald-500 shadow-neo-sm">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                <span>Account &amp; Theme Saved on This Device</span>
               </div>
             </div>
 

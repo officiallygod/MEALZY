@@ -37,6 +37,7 @@ interface KanbanBentoBoardProps {
   onAteOut?: (meal?: MealItem, dateString?: string, mealType?: MealType) => void;
   onAteOutSlot?: (dateString: string, mealType: MealType, meals: MealItem[]) => void;
   onFocusDay?: (dateString: string) => void;
+  onTriggerToast?: (action: { id: string; message: string; funSubtext?: string; badge?: string; onUndo?: () => Promise<void> | void }) => void;
 }
 
 const MEAL_SLOTS: {
@@ -115,6 +116,7 @@ export default function KanbanBentoBoard({
   onAteOut,
   onAteOutSlot,
   onFocusDay,
+  onTriggerToast,
 }: KanbanBentoBoardProps) {
   const [draggedMealId, setDraggedMealId] = useState<string | null>(null);
   const [activeDropZone, setActiveDropZone] = useState<string | null>(null);
@@ -141,12 +143,38 @@ export default function KanbanBentoBoard({
       localStorage.setItem('mealzy_snacks_minimized', String(minimized));
       localStorage.setItem('mealzy_snacks_prompted', 'true');
     }
+    if (onTriggerToast) {
+      onTriggerToast({
+        id: `snacks-pref-${Date.now()}`,
+        badge: '🍱',
+        message: minimized ? 'Snacks Minimized to Side Tab' : '4 Dedicated Columns Kept',
+        funSubtext: minimized
+          ? 'Breakfast, Lunch, and Dinner expanded to 33% each!'
+          : 'All 4 columns visible side-by-side.',
+        onUndo: () => {
+          handleSetSnacksPreference(!minimized);
+        },
+      });
+    }
   };
 
   const toggleSnacksMinimized = (val: boolean) => {
     setIsSnacksMinimized(val);
     if (typeof window !== 'undefined') {
       localStorage.setItem('mealzy_snacks_minimized', String(val));
+    }
+    if (onTriggerToast) {
+      onTriggerToast({
+        id: `snacks-toggle-${Date.now()}`,
+        badge: val ? '🍱' : '🍪',
+        message: val ? 'Snacks Minimized to Side Tab' : 'Snacks Column Expanded',
+        funSubtext: val
+          ? 'Tucked into the vertical side tab next to Dinner.'
+          : 'Dedicated snacking headquarters open!',
+        onUndo: () => {
+          toggleSnacksMinimized(!val);
+        },
+      });
     }
   };
 
@@ -262,11 +290,11 @@ export default function KanbanBentoBoard({
                 <button
                   type="button"
                   onClick={() => onAteOutSlot(activeDayObj.dateString, slot.type, slotMeals)}
-                  className="px-2 py-1 rounded-xl bg-[#00E5FF] hover:bg-[#00cbe2] text-black font-black text-[10px] uppercase border border-black shadow-neo-sm active:scale-95 transition-colors flex items-center gap-1"
+                  className="px-2 sm:px-2.5 py-1 rounded-xl bg-[#00E5FF] hover:bg-[#00cbe2] text-black font-black text-[10px] uppercase border border-black shadow-neo-sm active:scale-95 transition-colors flex items-center gap-1 flex-shrink-0"
                   title={`Ate out instead of ${slot.title}? Move or save planned meals.`}
                 >
-                  <Utensils className="w-3 h-3 stroke-[2.5]" />
-                  <span className="hidden sm:inline">Ate Out?</span>
+                  <Utensils className="w-3.5 h-3.5 stroke-[2.5]" />
+                  <span>Ate Out?</span>
                 </button>
               )}
 

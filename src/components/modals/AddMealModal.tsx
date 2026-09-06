@@ -38,7 +38,7 @@ const SLOT_PRESETS: { type: MealType; label: string; code: string; activeColor: 
   { type: 'breakfast', label: 'Breakfast', code: 'B', activeColor: 'bg-[#FFE600]', textColor: 'text-black' },
   { type: 'lunch', label: 'Lunch', code: 'L', activeColor: 'bg-[#00E5FF]', textColor: 'text-black' },
   { type: 'dinner', label: 'Dinner', code: 'D', activeColor: 'bg-[#FF5500]', textColor: 'text-white' },
-  { type: 'snack', label: 'Snack', code: 'S', activeColor: 'bg-[#D4FF00]', textColor: 'text-black' },
+  { type: 'snack', label: 'Snack (Opt)', code: 'S', activeColor: 'bg-[#D4FF00]', textColor: 'text-black' },
 ];
 
 export default function AddMealModal({

@@ -9,6 +9,7 @@ interface HeaderProps {
   onExportWeekImage?: () => void;
   onLogoClick?: () => void;
   userEmail?: string;
+  userName?: string;
   todayCalories: number;
   calorieTarget: number;
   theme: 'dark' | 'light';
@@ -21,6 +22,7 @@ export default function Header({
   onExportWeekImage,
   onLogoClick,
   userEmail,
+  userName,
   todayCalories,
   calorieTarget,
   theme,
@@ -145,11 +147,11 @@ export default function Header({
             onClick={onOpenAuth}
             className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-white dark:bg-[#16171E] hover:bg-gray-100 dark:hover:bg-[#20222D] border-2 border-black dark:border-gray-700 text-gray-900 dark:text-white shadow-neo-sm active:scale-[0.98] transition-colors text-xs font-black flex-shrink-0"
           >
-            <div className="w-5 h-5 rounded-md bg-black dark:bg-[#D4FF00] text-white dark:text-black flex items-center justify-center text-[10px] font-black">
-              {userEmail ? userEmail[0].toUpperCase() : <User className="w-3 h-3" />}
+            <div className="w-5 h-5 rounded-md bg-black dark:bg-[#D4FF00] text-white dark:text-black flex items-center justify-center text-[10px] font-black uppercase">
+              {userName ? userName[0] : userEmail ? userEmail[0] : <User className="w-3 h-3" />}
             </div>
             <span className="hidden sm:inline">
-              {userEmail ? userEmail.split('@')[0] : 'Sign In'}
+              {userName || (userEmail ? userEmail.split('@')[0] : 'Sign In')}
             </span>
           </button>
         </div>
