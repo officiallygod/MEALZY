@@ -375,28 +375,28 @@ export default function KanbanBentoBoard({
 
                                   <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-1.5 flex-wrap">
-                                      <h4 className="font-funky font-black text-xs text-gray-900 dark:text-white truncate group-hover:underline">
+                                      <h4 className="font-funky font-black text-xs text-gray-950 dark:text-white truncate group-hover:underline">
                                         {cleanMealTitle(meal.title)}
                                       </h4>
                                       {meal.isLeftover && (
-                                        <span className="px-1.5 py-0.2 rounded text-[8px] font-black bg-purple-100 text-purple-800 border border-purple-400">
+                                        <span className="px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider bg-purple-200 dark:bg-purple-900/60 text-purple-950 dark:text-purple-200 border border-purple-600/50 shadow-neo-sm">
                                           LEFTOVER
                                         </span>
                                       )}
                                       {meal.portions && meal.portions > 1 && (
-                                        <span className="px-1.5 py-0.2 rounded text-[8px] font-black bg-amber-100 text-amber-900 border border-amber-400">
+                                        <span className="px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider bg-amber-200 dark:bg-amber-900/60 text-amber-950 dark:text-amber-200 border border-amber-600/50 shadow-neo-sm">
                                           {meal.portions}x PORTIONS
                                         </span>
                                       )}
                                     </div>
 
-                                    <div className="flex items-center gap-2 mt-1 text-[10px] text-gray-600 dark:text-gray-400 font-bold flex-wrap">
+                                    <div className="flex items-center gap-2 mt-1 text-[10px] text-gray-700 dark:text-gray-300 font-bold flex-wrap">
                                       {meal.calories && meal.calories > 0 ? (
-                                        <span className="text-gray-900 dark:text-[#D4FF00] font-black">
+                                        <span className="text-gray-950 dark:text-[#D4FF00] font-black">
                                           {meal.calories} kcal
                                         </span>
                                       ) : (
-                                        <span className="px-1.5 py-0.5 rounded-md bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-[9px] font-black border border-black/20">
+                                        <span className="px-1.5 py-0.5 rounded-md bg-gray-200 dark:bg-gray-800 text-gray-800 dark:text-gray-200 text-[9px] font-black border border-black/20">
                                           Calories Not Given
                                         </span>
                                       )}
@@ -661,9 +661,14 @@ export default function KanbanBentoBoard({
                 </div>
 
                 <div className="hidden lg:flex flex-1 items-center justify-center py-6">
-                  <span className="[writing-mode:vertical-rl] rotate-180 text-xs font-black uppercase tracking-widest text-lime-900 dark:text-lime-300 group-hover:text-black dark:group-hover:text-[#D4FF00] transition-colors">
-                    SNACKS
-                  </span>
+                  <div className="flex flex-col items-center justify-center gap-1.5 font-black text-xs uppercase tracking-widest text-lime-950 dark:text-lime-300 group-hover:text-black dark:group-hover:text-[#D4FF00] transition-colors select-none">
+                    <span>S</span>
+                    <span>N</span>
+                    <span>A</span>
+                    <span>C</span>
+                    <span>K</span>
+                    <span>S</span>
+                  </div>
                 </div>
 
                 <div className="lg:hidden flex items-center gap-2">

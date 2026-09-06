@@ -51,10 +51,10 @@ export default function RollingWeekSelector({
                 <span
                   className={`text-[10px] font-black uppercase tracking-wider leading-none ${
                     day.isToday
-                      ? 'text-lime-600 dark:text-[#D4FF00]'
+                      ? 'text-lime-700 dark:text-[#D4FF00]'
                       : isSelected
-                      ? 'text-gray-900 dark:text-white'
-                      : 'text-gray-500 dark:text-gray-400'
+                      ? 'text-gray-950 dark:text-white'
+                      : 'text-gray-700 dark:text-gray-300'
                   }`}
                 >
                   {day.dayName}
@@ -66,7 +66,7 @@ export default function RollingWeekSelector({
 
               <span
                 className={`text-xl font-funky font-black mt-1 leading-none ${
-                  isSelected ? 'text-gray-900 dark:text-white' : 'text-gray-800 dark:text-gray-200'
+                  isSelected ? 'text-gray-950 dark:text-white' : 'text-gray-900 dark:text-gray-100'
                 }`}
               >
                 {day.dayNumber}
@@ -74,7 +74,11 @@ export default function RollingWeekSelector({
 
               {/* Meal & Calorie Subtitle */}
               <div className="mt-1.5 flex items-center justify-center gap-1 leading-none">
-                <span className="text-[9px] font-black text-gray-500 dark:text-gray-400 leading-none">
+                <span className={`text-[10px] font-black tabular-nums leading-none ${
+                  stats.calories > 0
+                    ? 'text-gray-800 dark:text-gray-200'
+                    : 'text-gray-500 dark:text-gray-400'
+                }`}>
                   {stats.calories > 0 ? `${stats.calories} kcal` : 'Empty'}
                 </span>
               </div>

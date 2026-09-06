@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Flame, Plus, User, Sun, Moon, Smartphone } from 'lucide-react';
+import { Flame, Plus, User, Sun, Moon, Smartphone, Heart } from 'lucide-react';
 
 interface HeaderProps {
   onOpenAuth: () => void;
@@ -77,14 +77,14 @@ export default function Header({
                 ✦
               </span>
             </div>
-            <span className="text-[10px] font-bold text-gray-600 dark:text-gray-300 leading-tight mt-0.5 flex items-center gap-1 whitespace-nowrap">
-              Made with <span className="text-rose-500">❤️</span> by{' '}
+            <span className="text-[11px] font-bold text-gray-700 dark:text-gray-300 leading-tight mt-1 flex items-center gap-1 whitespace-nowrap">
+              Made with <Heart className="w-3 h-3 fill-rose-500 text-rose-500 inline-block flex-shrink-0" /> by{' '}
               <a
                 href="https://allenbenny.me/"
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={(e) => e.stopPropagation()}
-                className="font-black text-black dark:text-[#FFE600] underline decoration-[#FF5500] decoration-2 underline-offset-1 hover:text-[#FF5500] dark:hover:text-white transition-colors cursor-pointer"
+                className="font-black text-black dark:text-[#FFE600] underline decoration-[#FF5500] decoration-2 underline-offset-2 hover:text-[#FF5500] dark:hover:text-white transition-colors cursor-pointer"
                 title="Visit Allen Benny's Portfolio"
               >
                 Allen Benny

@@ -86,33 +86,33 @@ export default function DailyNutritionMonitor({
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 flex-1 max-w-2xl">
           {/* Energy Capsule */}
           <div className="bg-[#FAF8F5] dark:bg-[#20222D] border border-black/30 dark:border-gray-700 rounded-xl px-3 py-1.5 flex items-center justify-between gap-1.5 border-l-4 border-l-[#D4FF00] shadow-neo-sm">
-            <span className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase leading-none">Cals</span>
-            <span className="text-xs font-black text-gray-900 dark:text-[#D4FF00] leading-none">
-              {totalCalories}<span className="text-[10px] text-gray-400 font-bold">/{calTargetSafe}</span>
+            <span className="text-[10px] font-black text-gray-700 dark:text-gray-300 uppercase leading-none">Cals</span>
+            <span className="text-xs font-black text-gray-950 dark:text-[#D4FF00] leading-none tabular-nums">
+              {totalCalories}<span className="text-[10px] text-gray-600 dark:text-gray-400 font-black">/{calTargetSafe}</span>
             </span>
           </div>
 
           {/* Protein Capsule */}
           <div className="bg-[#FAF8F5] dark:bg-[#20222D] border border-black/30 dark:border-gray-700 rounded-xl px-3 py-1.5 flex items-center justify-between gap-1.5 border-l-4 border-l-rose-500 shadow-neo-sm">
-            <span className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase leading-none">Prot</span>
-            <span className="text-xs font-black text-rose-600 dark:text-rose-400 leading-none">
-              {totalProtein}g<span className="text-[10px] text-gray-400 font-bold">/{proteinTargetSafe}g</span>
+            <span className="text-[10px] font-black text-gray-700 dark:text-gray-300 uppercase leading-none">Prot</span>
+            <span className="text-xs font-black text-rose-600 dark:text-rose-400 leading-none tabular-nums">
+              {totalProtein}g<span className="text-[10px] text-gray-600 dark:text-gray-400 font-black">/{proteinTargetSafe}g</span>
             </span>
           </div>
 
           {/* Carbs Capsule */}
           <div className="bg-[#FAF8F5] dark:bg-[#20222D] border border-black/30 dark:border-gray-700 rounded-xl px-3 py-1.5 flex items-center justify-between gap-1.5 border-l-4 border-l-[#00E5FF] shadow-neo-sm">
-            <span className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase leading-none">Carb</span>
-            <span className="text-xs font-black text-sky-600 dark:text-[#00E5FF] leading-none">
-              {totalCarbs}g<span className="text-[10px] text-gray-400 font-bold">/{carbsTargetSafe}g</span>
+            <span className="text-[10px] font-black text-gray-700 dark:text-gray-300 uppercase leading-none">Carb</span>
+            <span className="text-xs font-black text-sky-600 dark:text-[#00E5FF] leading-none tabular-nums">
+              {totalCarbs}g<span className="text-[10px] text-gray-600 dark:text-gray-400 font-black">/{carbsTargetSafe}g</span>
             </span>
           </div>
 
           {/* Fats Capsule */}
           <div className="bg-[#FAF8F5] dark:bg-[#20222D] border border-black/30 dark:border-gray-700 rounded-xl px-3 py-1.5 flex items-center justify-between gap-1.5 border-l-4 border-l-purple-500 shadow-neo-sm">
-            <span className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase leading-none">Fat</span>
-            <span className="text-xs font-black text-purple-600 dark:text-purple-400 leading-none">
-              {totalFat}g<span className="text-[10px] text-gray-400 font-bold">/{fatTargetSafe}g</span>
+            <span className="text-[10px] font-black text-gray-700 dark:text-gray-300 uppercase leading-none">Fat</span>
+            <span className="text-xs font-black text-purple-600 dark:text-purple-400 leading-none tabular-nums">
+              {totalFat}g<span className="text-[10px] text-gray-600 dark:text-gray-400 font-black">/{fatTargetSafe}g</span>
             </span>
           </div>
         </div>

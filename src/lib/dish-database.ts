@@ -466,7 +466,7 @@ export function searchDishCatalog(query: string, slot?: MealType): OpenSourceDis
   }
 
   if (!clean) {
-    return matches.slice(0, 8);
+    return matches.slice(0, 40);
   }
 
   return OPEN_SOURCE_DISHES.filter((dish) => {
@@ -474,7 +474,7 @@ export function searchDishCatalog(query: string, slot?: MealType): OpenSourceDis
     const tagMatch = dish.tags.some((t) => t.toLowerCase().includes(clean));
     const twistMatch = dish.twist?.title.toLowerCase().includes(clean);
     return titleMatch || tagMatch || twistMatch;
-  }).slice(0, 8);
+  }).slice(0, 40);
 }
 
 // Find twist variation for a dish title
@@ -496,7 +496,7 @@ export async function searchOpenFoodFactsFallback(query: string): Promise<Partia
     const res = await fetch(
       `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(
         query.trim()
-      )}&search_simple=1&action=process&json=1&page_size=4`
+      )}&search_simple=1&action=process&json=1&page_size=8`
     );
     if (!res.ok) return [];
     const data = await res.json();

@@ -88,7 +88,6 @@ export default function AddMealModal({
   const [batchAllocations, setBatchAllocations] = useState<BatchPortionConfig[]>([]);
 
   // Typeahead suggestions
-  const [showSuggestions, setShowSuggestions] = useState(false);
   const [localSuggestions, setLocalSuggestions] = useState<OpenSourceDish[]>([]);
   const [onlineSuggestions, setOnlineSuggestions] = useState<Partial<OpenSourceDish>[]>([]);
   const [isSearchingOnline, setIsSearchingOnline] = useState(false);
@@ -108,7 +107,6 @@ export default function AddMealModal({
   const [isSearchingCloseOnline, setIsSearchingCloseOnline] = useState(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Initialize or reset when opened
   useEffect(() => {
@@ -126,7 +124,6 @@ export default function AddMealModal({
       setShowCloseMatchSearch(false);
       setCloseMatchQuery('');
       setLocalSuggestions(searchDishCatalog('', targetSlot || 'lunch'));
-      setShowSuggestions(false);
 
       // Estimate initial benchmarks for slot
       const initialEstimate = estimateDishNutrition('', targetSlot || 'lunch');
@@ -248,21 +245,7 @@ export default function AddMealModal({
     }
   }, [closeMatchQuery, selectedSlot, showCloseMatchSearch]);
 
-  // Close dropdown on outside click
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(e.target as Node) &&
-        inputRef.current &&
-        !inputRef.current.contains(e.target as Node)
-      ) {
-        setShowSuggestions(false);
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+
 
   if (!isOpen) return null;
 
@@ -283,7 +266,6 @@ export default function AddMealModal({
       setActiveTwist(getTwistForDishTitle(dish.title) || null);
     }
     setIsTwistApplied(false);
-    setShowSuggestions(false);
   };
 
   const handleSelectRediscoverMeal = (past: RediscoverMeal) => {
@@ -296,7 +278,6 @@ export default function AddMealModal({
     if (past.recipeUrl) setRecipeUrl(past.recipeUrl);
     setIsCustomNutrition(true);
     setMatchedFoodName(`Your past meal (${past.daysSinceLastEaten}d ago)`);
-    setShowSuggestions(false);
   };
 
   const handleSelectCloseMatch = (dish: Partial<OpenSourceDish>) => {
@@ -446,7 +427,7 @@ export default function AddMealModal({
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 12 }}
         transition={{ type: 'spring', damping: 25, stiffness: 350 }}
-        className="relative w-full max-w-lg md:max-w-xl 2xl:max-w-2xl bg-white dark:bg-[#16171E] border-2 border-black dark:border-gray-700 rounded-3xl p-4 sm:p-6 shadow-neo-xl text-gray-900 dark:text-white max-h-[92vh] flex flex-col transition-colors overflow-hidden"
+        className="relative w-full max-w-lg md:max-w-xl 2xl:max-w-2xl bg-white dark:bg-[#16171E] border-2 border-black dark:border-gray-700 rounded-3xl p-4 sm:p-6 shadow-neo-xl text-gray-900 dark:text-white h-[580px] sm:h-[660px] max-h-[92vh] flex flex-col transition-colors overflow-hidden"
       >
         {/* Top Close Button */}
         <button
@@ -528,204 +509,226 @@ export default function AddMealModal({
             {/* STEP 1: DISH SELECTION */}
             {/* ================================================================= */}
             {currentStep === 1 && (
-              <div className="space-y-4">
+              <div className="flex-1 flex flex-col min-h-0 space-y-3">
                 {/* Dish Name Search Input */}
-                <div className="relative">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="block text-xs font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">
+                <div className="space-y-1.5 flex-shrink-0">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-xs font-black uppercase tracking-wider text-gray-800 dark:text-gray-200">
                       Meal Name or Recipe
                     </label>
                     {matchedFoodName && (
-                      <span className="text-[10px] font-bold text-emerald-600 dark:text-[#D4FF00]">
+                      <span className="text-[10px] font-black text-emerald-600 dark:text-[#D4FF00]">
                         ~{calories} kcal • {protein}g P
                       </span>
                     )}
                   </div>
 
                   <div className="relative">
-                    <Search className="absolute left-3.5 top-3 w-4 h-4 text-gray-400" />
+                    <Search className="absolute left-3.5 top-3.5 w-4 h-4 text-gray-400" />
                     <input
                       ref={inputRef}
                       type="text"
                       autoFocus
                       required
                       value={dishTitle}
-                      onFocus={() => setShowSuggestions(true)}
                       onChange={(e) => {
                         setDishTitle(e.target.value);
                         setIsCustomNutrition(false);
-                        setShowSuggestions(true);
                       }}
-                      placeholder="e.g. Pistachio Pesto Rigatoni, Lentil Curry..."
-                      className="w-full bg-[#FAF8F5] dark:bg-[#20222E] border-2 border-black dark:border-gray-700 rounded-2xl pl-10 pr-4 py-3 text-xs sm:text-sm text-gray-900 dark:text-white focus:outline-none shadow-neo-sm font-medium"
+                      placeholder="Search dish (e.g. Kadai Paneer, Pasta, Salad)..."
+                      className="w-full bg-[#FAF8F5] dark:bg-[#20222E] border-2 border-black dark:border-gray-700 rounded-2xl pl-10 pr-10 py-2.5 sm:py-3 text-xs sm:text-sm text-gray-900 dark:text-white focus:outline-none shadow-neo-sm font-medium"
                     />
-                  </div>
-
-                  {/* Live Autocomplete Dropdown */}
-                  <AnimatePresence>
-                    {showSuggestions && (
-                      <motion.div
-                        ref={dropdownRef}
-                        initial={{ opacity: 0, y: -4 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -4 }}
-                        className="absolute left-0 right-0 top-full mt-1.5 bg-white dark:bg-[#1E202A] border-2 border-black dark:border-gray-700 rounded-2xl shadow-neo-lg z-30 max-h-56 overflow-y-auto custom-scrollbar p-1.5 space-y-1"
+                    {dishTitle.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDishTitle('');
+                          setMatchedFoodName(null);
+                        }}
+                        className="absolute right-3 top-2.5 sm:top-3 p-1 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-400 hover:text-black dark:hover:text-white transition-colors"
+                        title="Clear search text"
                       >
-                        <div className="px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-gray-400 flex items-center justify-between">
-                          <span>Suggestions</span>
-                          {isSearchingOnline && (
-                            <span className="flex items-center gap-1 text-black dark:text-[#D4FF00]">
-                              <span className="w-2 h-2 rounded-full bg-[#FF5500] animate-pulse" />
-                              Searching open data...
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Section Header with match count and search status */}
+                <div className="flex items-center justify-between text-[11px] font-black uppercase tracking-wider text-gray-600 dark:text-gray-400 px-1 flex-shrink-0">
+                  <span>
+                    Matching Dishes ({localSuggestions.length + onlineSuggestions.length + (dishTitle.trim() ? 1 : 0)})
+                  </span>
+                  {isSearchingOnline && (
+                    <span className="flex items-center gap-1.5 text-[10px] font-black text-[#FF5500]">
+                      <span className="w-2 h-2 rounded-full bg-[#FF5500] animate-pulse" />
+                      Searching database...
+                    </span>
+                  )}
+                </div>
+
+                {/* Generous Dedicated Scrollable Results Container */}
+                <div className="flex-1 min-h-[220px] max-h-[380px] overflow-y-auto custom-scrollbar p-2.5 bg-[#FAF8F5] dark:bg-[#1A1C26] border-2 border-black dark:border-gray-700 rounded-2xl space-y-2 shadow-inner">
+                  {/* 1. Custom Written Dish Card */}
+                  {dishTitle.trim().length > 0 && (
+                    <div
+                      onClick={() => {
+                        setIsCustomNutrition(true);
+                        setMatchedFoodName('Custom written dish');
+                      }}
+                      className={`p-2.5 rounded-xl border-2 cursor-pointer flex items-center justify-between gap-2 transition-all active:scale-[0.99] shadow-neo-sm ${
+                        matchedFoodName === 'Custom written dish' || isCustomNutrition
+                          ? 'bg-[#FFE600] text-black border-black ring-2 ring-[#FF5500]'
+                          : 'bg-white dark:bg-[#20222E] text-gray-900 dark:text-white border-black dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-[#282b3a]'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <span className="w-8 h-8 rounded-lg bg-white border-2 border-black flex items-center justify-center text-black font-black text-xs flex-shrink-0 shadow-neo-sm">
+                          ✍️
+                        </span>
+                        <div className="min-w-0">
+                          <span className="text-xs font-black truncate block text-gray-950 dark:text-white">
+                            Use written text: &quot;{dishTitle.trim()}&quot;
+                          </span>
+                          <span className="text-[10px] font-bold text-gray-700 dark:text-gray-300 block mt-0.5">
+                            Keep your own custom recipe title
+                          </span>
+                        </div>
+                      </div>
+                      <span className="px-2 py-0.5 rounded-md bg-black text-white dark:bg-[#D4FF00] dark:text-black text-[9px] font-black uppercase tracking-wider flex-shrink-0 border border-black shadow-neo-sm">
+                        {matchedFoodName === 'Custom written dish' ? '✓ Selected' : 'Custom Meal'}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* 2. Curated Local Dishes */}
+                  {localSuggestions.map((dish) => {
+                    const initials = getMealInitials(dish.title);
+                    const isSelected = cleanMealTitle(dishTitle).toLowerCase() === dish.title.toLowerCase();
+
+                    return (
+                      <div
+                        key={dish.id}
+                        onClick={() => handleSelectDish(dish)}
+                        className={`p-2.5 rounded-xl cursor-pointer flex items-center justify-between gap-2.5 transition-all border-2 active:scale-[0.99] ${
+                          isSelected
+                            ? 'bg-[#F6FCF0] dark:bg-[#131911] border-lime-500 ring-2 ring-lime-400 shadow-neo-sm'
+                            : 'bg-white dark:bg-[#20222E] border-black/20 dark:border-gray-700 hover:border-black dark:hover:border-white hover:bg-gray-50 dark:hover:bg-[#282b3a]'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div
+                            className="w-8 h-8 rounded-lg flex items-center justify-center font-black text-xs text-white flex-shrink-0 border border-black shadow-neo-sm"
+                            style={{ backgroundColor: dish.accentColor }}
+                          >
+                            {initials}
+                          </div>
+                          <div className="min-w-0">
+                            <h4 className="font-bold text-xs text-gray-900 dark:text-white truncate">
+                              {dish.title}
+                            </h4>
+                            <div className="flex items-center gap-1.5 text-[10px] text-gray-600 dark:text-gray-300 font-bold">
+                              <span className="text-gray-950 dark:text-[#D4FF00] font-black">
+                                {dish.calories} kcal
+                              </span>
+                              <span>•</span>
+                              <span>{dish.protein}g P</span>
+                              <span>•</span>
+                              <span>{dish.prepTimeMinutes}m</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-1.5 flex-shrink-0">
+                          {dish.twist && (
+                            <span className="hidden sm:inline-block px-2 py-0.5 rounded-full text-[9px] font-black bg-[#D4FF00] text-black border border-black">
+                              Twist ready
+                            </span>
+                          )}
+                          {isSelected ? (
+                            <span className="px-2 py-0.5 rounded-md bg-[#D4FF00] text-black font-black text-[9px] border border-black uppercase shadow-neo-sm">
+                              ✓ Selected
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded-md bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold text-[9px] border border-black/20">
+                              Select
                             </span>
                           )}
                         </div>
+                      </div>
+                    );
+                  })}
 
-                        {/* Option to use written text directly */}
-                        {dishTitle.trim().length > 0 && (
-                          <div
-                            onMouseDown={(e) => {
-                              e.preventDefault();
-                              setShowSuggestions(false);
-                              setIsCustomNutrition(true);
-                              setMatchedFoodName('Custom written dish');
-                            }}
-                            className="p-2.5 rounded-xl bg-[#FFE600] text-black border-2 border-black cursor-pointer flex items-center justify-between gap-2 transition-all hover:bg-[#ffd900] active:scale-[0.99] mb-1.5 shadow-neo-sm"
-                          >
-                            <div className="flex items-center gap-2.5 min-w-0">
-                              <span className="w-7 h-7 rounded-lg bg-white border-2 border-black flex items-center justify-center text-black font-black text-xs flex-shrink-0 shadow-neo-sm">
-                                ✍️
-                              </span>
-                              <div className="min-w-0">
-                                <span className="text-xs font-black truncate block text-black">
-                                  Use written text: &quot;{dishTitle.trim()}&quot;
-                                </span>
-                                <span className="text-[10px] font-bold text-gray-900 block mt-0.5">
-                                  Keep your own custom recipe title
-                                </span>
-                              </div>
-                            </div>
-                            <span className="px-2 py-0.5 rounded-md bg-black text-white text-[9px] font-black uppercase tracking-wider flex-shrink-0 border border-black shadow-neo-sm">
-                              Custom Meal
+                  {/* 3. Online Open Food Facts Matches */}
+                  {onlineSuggestions.map((dish, idx) => {
+                    const isSelected = cleanMealTitle(dishTitle).toLowerCase() === (dish.title || '').toLowerCase();
+                    return (
+                      <div
+                        key={`online-${idx}`}
+                        onClick={() => handleSelectDish(dish)}
+                        className={`p-2.5 rounded-xl cursor-pointer flex items-center justify-between gap-2.5 transition-all border-2 active:scale-[0.99] ${
+                          isSelected
+                            ? 'bg-[#F0FAFD] dark:bg-[#10181E] border-cyan-500 ring-2 ring-cyan-400 shadow-neo-sm'
+                            : 'bg-white dark:bg-[#20222E] border-black/20 dark:border-gray-700 hover:border-black hover:bg-gray-50 dark:hover:bg-[#282b3a]'
+                        }`}
+                      >
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <h4 className="font-bold text-xs text-gray-900 dark:text-white truncate">
+                              {dish.title}
+                            </h4>
+                            <span className="px-1.5 py-0.2 rounded text-[8px] font-black bg-cyan-100 dark:bg-cyan-950 text-cyan-800 dark:text-cyan-300 border border-cyan-400">
+                              Open Data
                             </span>
                           </div>
+                          <p className="text-[10px] text-gray-600 dark:text-gray-400 font-bold mt-0.5">
+                            {dish.calories} kcal • {dish.protein}g Protein
+                          </p>
+                        </div>
+                        {isSelected ? (
+                          <span className="px-2 py-0.5 rounded-md bg-[#00E5FF] text-black font-black text-[9px] border border-black uppercase shadow-neo-sm">
+                            ✓ Selected
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded-md bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold text-[9px] border border-black/20">
+                            + Select
+                          </span>
                         )}
+                      </div>
+                    );
+                  })}
 
-                        {localSuggestions.map((dish) => {
-                          const initials = getMealInitials(dish.title);
-                          return (
-                            <div
-                              key={dish.id}
-                              onMouseDown={(e) => {
-                                e.preventDefault();
-                                handleSelectDish(dish);
-                              }}
-                              className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-[#282b3a] cursor-pointer flex items-center justify-between gap-2.5 transition-colors border border-transparent hover:border-black"
-                            >
-                              <div className="flex items-center gap-2.5 min-w-0">
-                                <div
-                                  className="w-7 h-7 rounded-lg flex items-center justify-center font-black text-[10px] text-white flex-shrink-0 border border-black"
-                                  style={{ backgroundColor: dish.accentColor }}
-                                >
-                                  {initials}
-                                </div>
-                                <div className="min-w-0">
-                                  <h4 className="font-bold text-xs text-gray-900 dark:text-white truncate">
-                                    {dish.title}
-                                  </h4>
-                                  <div className="flex items-center gap-1.5 text-[10px] text-gray-500 dark:text-gray-400 font-bold">
-                                    <span className="text-gray-900 dark:text-[#D4FF00] font-black">
-                                      {dish.calories} kcal
-                                    </span>
-                                    <span>•</span>
-                                    <span>{dish.protein}g P</span>
-                                    <span>•</span>
-                                    <span>{dish.prepTimeMinutes}m</span>
-                                  </div>
-                                </div>
-                              </div>
-
-                              {dish.twist && (
-                                <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-[#D4FF00] text-black border border-black flex-shrink-0">
-                                  Twist ready
-                                </span>
-                              )}
-                            </div>
-                          );
-                        })}
-
-                        {onlineSuggestions.map((dish, idx) => (
-                          <div
-                            key={`online-${idx}`}
-                            onMouseDown={(e) => {
-                              e.preventDefault();
-                              handleSelectDish(dish);
-                            }}
-                            className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-[#282b3a] cursor-pointer flex items-center justify-between gap-2.5 transition-colors border-t border-gray-200 dark:border-gray-800"
+                  {/* 4. Rediscover / Previously Made Section */}
+                  {rediscoverMeals.length > 0 && (
+                    <div className="pt-2 border-t border-black/10 dark:border-gray-700 space-y-1.5">
+                      <span className="text-[10px] font-black uppercase tracking-wider text-gray-600 dark:text-gray-400 flex items-center gap-1.5">
+                        <RotateCcw className="w-3.5 h-3.5 text-orange-500" />
+                        <span>Previously Made for {selectedSlot} (Tap to repeat):</span>
+                      </span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {rediscoverMeals.map((past, idx) => (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => handleSelectRediscoverMeal(past)}
+                            className="px-2.5 py-1 rounded-xl bg-white dark:bg-[#262938] hover:bg-[#FFE600] hover:text-black dark:hover:bg-[#D4FF00] dark:hover:text-black border border-black dark:border-gray-700 text-xs font-bold transition-all shadow-neo-sm flex items-center gap-1 active:scale-95"
                           >
-                            <div className="min-w-0">
-                              <h4 className="font-bold text-xs text-gray-900 dark:text-white truncate">
-                                {dish.title}
-                              </h4>
-                              <p className="text-[10px] text-gray-500 font-bold">
-                                {dish.calories} kcal • {dish.protein}g Protein
-                              </p>
-                            </div>
-                            <Plus className="w-3.5 h-3.5 text-gray-400" />
-                          </div>
+                            <span>{past.title}</span>
+                            <span className="text-[9px] opacity-70">({past.daysSinceLastEaten}d ago)</span>
+                          </button>
                         ))}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 5. Empty State */}
+                  {dishTitle.trim().length > 0 && localSuggestions.length === 0 && onlineSuggestions.length === 0 && !isSearchingOnline && (
+                    <div className="py-6 text-center text-xs text-gray-500 dark:text-gray-400 space-y-1">
+                      <p className="font-bold text-gray-800 dark:text-gray-200">No exact database matches found.</p>
+                      <p className="text-[11px]">Tap the custom dish above to keep &quot;{dishTitle}&quot; or search a close dish in Step 3.</p>
+                    </div>
+                  )}
                 </div>
-
-                {/* Selected Dish Indicator */}
-                {dishTitle.trim().length > 0 && (
-                  <div className="p-3 bg-[#F6FCF0] dark:bg-[#131911] rounded-2xl border-2 border-lime-500 shadow-neo-sm flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <div
-                        className="w-8 h-8 rounded-xl flex items-center justify-center text-white font-black text-xs flex-shrink-0 border-2 border-black shadow-neo-sm"
-                        style={{ backgroundColor: getMealAccent(dishTitle) }}
-                      >
-                        {getMealInitials(dishTitle)}
-                      </div>
-                      <div className="min-w-0">
-                        <span className="text-xs font-black text-gray-900 dark:text-white truncate block">
-                          {cleanMealTitle(dishTitle)}
-                        </span>
-                        <span className="text-[10px] font-bold text-gray-600 dark:text-gray-300 block">
-                          ~{calories} kcal • {protein}g P • {prepTime}m prep
-                        </span>
-                      </div>
-                    </div>
-                    <span className="px-2 py-0.5 rounded-md bg-[#D4FF00] text-black font-black text-[9px] border border-black uppercase flex-shrink-0">
-                      Ready
-                    </span>
-                  </div>
-                )}
-
-                {/* Past Rediscovered Meals */}
-                {rediscoverMeals.length > 0 && (
-                  <div className="p-3.5 bg-[#FAF8F5] dark:bg-[#1E202A] rounded-2xl border-2 border-black dark:border-gray-700 shadow-neo-sm space-y-2">
-                    <span className="text-[10px] font-black uppercase tracking-wider text-gray-600 dark:text-gray-400 flex items-center gap-1.5">
-                      <RotateCcw className="w-3.5 h-3.5 text-orange-500" />
-                      <span>Previously Made (Tap to repeat):</span>
-                    </span>
-                    <div className="flex flex-wrap gap-1.5">
-                      {rediscoverMeals.map((past, idx) => (
-                        <button
-                          key={idx}
-                          type="button"
-                          onClick={() => handleSelectRediscoverMeal(past)}
-                          className="px-2.5 py-1.5 rounded-xl bg-white dark:bg-[#262938] hover:bg-[#FFE600] hover:text-black dark:hover:bg-[#D4FF00] dark:hover:text-black border border-black dark:border-gray-700 text-xs font-bold transition-all shadow-neo-sm flex items-center gap-1 active:scale-95"
-                        >
-                          <span>{past.title}</span>
-                          <span className="text-[9px] opacity-70">({past.daysSinceLastEaten}d ago)</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </div>
             )}
 
@@ -1083,17 +1086,18 @@ export default function AddMealModal({
                       </div>
 
                       {/* Close Match Search Results */}
-                      <div className="max-h-40 overflow-y-auto custom-scrollbar space-y-1">
+                      <div className="max-h-52 overflow-y-auto custom-scrollbar space-y-1">
                         {isSearchingCloseOnline && (
-                          <div className="text-[10px] text-gray-500 py-1 text-center">
-                            Searching open database...
+                          <div className="text-[10px] font-bold text-gray-500 py-1 text-center flex items-center justify-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#FF5500] animate-pulse" />
+                            <span>Searching open database...</span>
                           </div>
                         )}
-                        {closeMatchLocalResults.slice(0, 5).map((dish) => (
+                        {closeMatchLocalResults.slice(0, 15).map((dish) => (
                           <div
                             key={dish.id}
                             onClick={() => handleSelectCloseMatch(dish)}
-                            className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-[#282b3a] cursor-pointer flex items-center justify-between border border-transparent hover:border-black"
+                            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-[#282b3a] cursor-pointer flex items-center justify-between border border-transparent hover:border-black transition-colors"
                           >
                             <span className="text-xs font-bold text-gray-900 dark:text-white truncate">
                               {dish.title}
@@ -1103,11 +1107,11 @@ export default function AddMealModal({
                             </span>
                           </div>
                         ))}
-                        {closeMatchOnlineResults.slice(0, 4).map((dish, i) => (
+                        {closeMatchOnlineResults.slice(0, 10).map((dish, i) => (
                           <div
                             key={`close-online-${i}`}
                             onClick={() => handleSelectCloseMatch(dish)}
-                            className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-[#282b3a] cursor-pointer flex items-center justify-between border-t border-gray-200 dark:border-gray-800"
+                            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-[#282b3a] cursor-pointer flex items-center justify-between border-t border-gray-200 dark:border-gray-800 transition-colors"
                           >
                             <span className="text-xs font-bold text-gray-900 dark:text-white truncate">
                               {dish.title}

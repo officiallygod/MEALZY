@@ -33,8 +33,9 @@ const config: Config = {
         },
       },
       fontFamily: {
-        funky: ["'Space Grotesk'", "system-ui", "sans-serif"],
-        display: ["'Plus Jakarta Sans'", "system-ui", "sans-serif"],
+        sans: ["var(--font-sans)", "'Plus Jakarta Sans'", "system-ui", "-apple-system", "BlinkMacSystemFont", "sans-serif"],
+        funky: ["var(--font-funky)", "'Space Grotesk'", "system-ui", "sans-serif"],
+        display: ["var(--font-sans)", "'Plus Jakarta Sans'", "system-ui", "sans-serif"],
       },
       boxShadow: {
         neo: "3px 3px 0px #000000",
