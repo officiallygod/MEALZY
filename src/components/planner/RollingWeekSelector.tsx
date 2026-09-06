@@ -29,9 +29,9 @@ export default function RollingWeekSelector({
   onExportWeekImage,
 }: RollingWeekSelectorProps) {
   return (
-    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
       {/* Date Pill Scroller (Starts specifically with TODAY) */}
-      <div className="w-full sm:w-auto overflow-x-auto pt-2.5 pb-2.5 px-1.5 scrollbar-none flex items-center gap-2.5">
+      <div className="w-full sm:w-auto overflow-x-auto py-3.5 px-2 scrollbar-none flex items-center gap-2.5">
         {days.map((day) => {
           const isSelected = selectedDate === day.dateString && !isAllDaysView;
           const stats = dayMealCounts[day.dateString] || { count: 0, calories: 0 };
@@ -43,15 +43,15 @@ export default function RollingWeekSelector({
                 onToggleAllDaysView(false);
                 onSelectDate(day.dateString);
               }}
-              className={`relative px-4 py-2.5 rounded-2xl flex flex-col items-center justify-center min-w-[84px] flex-shrink-0 transition-all text-center border-2 ${
+              className={`relative px-3.5 py-2 rounded-2xl flex flex-col items-center justify-center min-w-[80px] flex-shrink-0 transition-all text-center border-2 ${
                 isSelected
-                  ? 'bg-white dark:bg-[#1E202A] border-black dark:border-[#D4FF00] shadow-neo -translate-y-1'
+                  ? 'bg-white dark:bg-[#1E202A] border-black dark:border-[#D4FF00] shadow-neo ring-2 ring-[#D4FF00]/50'
                   : 'bg-white dark:bg-[#16171E] border-black/30 dark:border-gray-800 hover:border-black dark:hover:border-gray-500 shadow-neo-sm text-gray-600 dark:text-gray-300'
               }`}
             >
-              <div className="flex items-center gap-1">
+              <div className="flex items-center justify-center gap-1 leading-none">
                 <span
-                  className={`text-[10px] font-black uppercase tracking-wider ${
+                  className={`text-[10px] font-black uppercase tracking-wider leading-none ${
                     day.isToday
                       ? 'text-lime-600 dark:text-[#D4FF00]'
                       : isSelected
@@ -67,7 +67,7 @@ export default function RollingWeekSelector({
               </div>
 
               <span
-                className={`text-xl font-funky font-black mt-0.5 ${
+                className={`text-xl font-funky font-black mt-1 leading-none ${
                   isSelected ? 'text-gray-900 dark:text-white' : 'text-gray-800 dark:text-gray-200'
                 }`}
               >
@@ -75,8 +75,8 @@ export default function RollingWeekSelector({
               </span>
 
               {/* Meal & Calorie Subtitle */}
-              <div className="mt-1 flex items-center gap-1">
-                <span className="text-[9px] font-black text-gray-500 dark:text-gray-400">
+              <div className="mt-1.5 flex items-center justify-center gap-1 leading-none">
+                <span className="text-[9px] font-black text-gray-500 dark:text-gray-400 leading-none">
                   {stats.calories > 0 ? `${stats.calories} kcal` : 'Empty'}
                 </span>
               </div>

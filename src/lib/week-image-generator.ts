@@ -55,6 +55,34 @@ function truncateText(ctx: CanvasRenderingContext2D, text: string, maxWidth: num
   return truncated + '...';
 }
 
+function wrapOrTruncate(ctx: CanvasRenderingContext2D, text: string, maxWidth: number, maxLines: number = 2): string[] {
+  const words = text.split(' ');
+  const lines: string[] = [];
+  let currentLine = '';
+
+  for (const word of words) {
+    const testLine = currentLine ? `${currentLine} ${word}` : word;
+    if (ctx.measureText(testLine).width <= maxWidth) {
+      currentLine = testLine;
+    } else {
+      if (currentLine) lines.push(currentLine);
+      currentLine = word;
+      if (lines.length === maxLines - 1) break;
+    }
+  }
+
+  if (currentLine && lines.length < maxLines) {
+    lines.push(currentLine);
+  }
+
+  const combined = lines.join(' ');
+  if (combined.length < text.length && lines.length > 0) {
+    lines[lines.length - 1] = truncateText(ctx, lines[lines.length - 1], maxWidth);
+  }
+
+  return lines;
+}
+
 export async function generateWeekPlanImage({
   days,
   meals,
@@ -169,60 +197,67 @@ export async function generateWeekPlanImage({
       const dayCals = dayMeals.reduce((sum, m) => sum + (m.calories || 0), 0);
       const dayProtein = dayMeals.reduce((sum, m) => sum + (m.protein || 0), 0);
 
-      // Card Shadow
+      // 1. Card Shadow
       ctx.fillStyle = shadowColor;
       roundRect(ctx, 60 + 4, y + 4, cardWidth, cardHeight, 18);
       ctx.fill();
 
-      // Card Body
-      ctx.fillStyle = cardBg;
+      // 2. Card Body + Clipped Accent Stripe (Stops color from overflowing rounded corners)
+      ctx.save();
+      ctx.beginPath();
       roundRect(ctx, 60, y, cardWidth, cardHeight, 18);
+      ctx.fillStyle = cardBg;
       ctx.fill();
-      ctx.strokeStyle = borderColor;
-      ctx.lineWidth = isDark ? 2 : 2.5;
-      ctx.stroke();
+      ctx.clip();
 
-      // Left Accent Stripe
+      // Left Accent Stripe strictly clipped inside card rounded corners
       const accentColors = ['#FF5500', '#FFE600', '#00E5FF', '#D4FF00', '#A855F7', '#EC4899', '#10B981'];
       ctx.fillStyle = accentColors[index % accentColors.length];
-      ctx.beginPath();
-      roundRect(ctx, 60, y, 10, cardHeight, 18);
-      ctx.fill();
-      ctx.fillRect(65, y, 6, cardHeight);
+      ctx.fillRect(60, y, 12, cardHeight);
 
-      // Day Badge (e.g. MON 7 • TODAY)
+      ctx.restore();
+
+      // 3. Card Border
+      ctx.strokeStyle = borderColor;
+      ctx.lineWidth = isDark ? 2.5 : 2.5;
+      roundRect(ctx, 60, y, cardWidth, cardHeight, 18);
+      ctx.stroke();
+
+      // Day Badge (e.g. MON 7 or TODAY 6) - No repetitive • TODAY
       const isToday = day.isToday;
-      const dayLabel = `${day.dayName.toUpperCase()} ${day.dayNumber}${isToday ? ' • TODAY' : ''}`;
+      const dayLabel = isToday
+        ? `TODAY ${day.dayNumber}`
+        : `${day.dayName.toUpperCase()} ${day.dayNumber}`;
 
       ctx.textAlign = 'left';
-      ctx.font = '900 15px "Inter", -apple-system, sans-serif';
+      ctx.font = '900 16px "Inter", -apple-system, sans-serif';
       ctx.fillStyle = isToday ? '#FF5500' : textColor;
-      ctx.fillText(dayLabel, 86, y + 26);
+      ctx.fillText(dayLabel, 86, y + 25);
 
       // Daily macro metrics
       ctx.textAlign = 'right';
-      ctx.font = '700 13px "Inter", -apple-system, sans-serif';
+      ctx.font = '800 13px "Inter", -apple-system, sans-serif';
       ctx.fillStyle = subtextColor;
       ctx.fillText(
-        dayCals > 0 ? `${dayCals} kcal • ${dayProtein}g P` : 'No meals planned',
+        dayCals > 0 ? `${dayCals} kcal • ${dayProtein}g Protein` : 'No meals planned',
         width - 76,
-        y + 26
+        y + 25
       );
 
       // 4 Slot mini-cards
       const slots: MealType[] = ['breakfast', 'lunch', 'dinner', 'snack'];
       const slotWidth = Math.floor((cardWidth - 50) / 4);
-      const slotHeight = cardHeight - 42;
-      const slotY = y + 34;
+      const slotHeight = cardHeight - 40;
+      const slotY = y + 32;
 
       slots.forEach((slot, sIdx) => {
         const slotX = 86 + sIdx * (slotWidth + 8);
-        const meal = dayMeals.find((m) => m.mealType === slot);
+        const rawMeal = dayMeals.find((m) => m.mealType === slot);
         const slotConfig = SLOT_COLORS[slot];
 
-        // Slot Background
+        // Slot mini-card background
         ctx.fillStyle = isDark ? '#1E202A' : '#FAF8F5';
-        roundRect(ctx, slotX, slotY, slotWidth, slotHeight, 10);
+        roundRect(ctx, slotX, slotY, slotWidth, slotHeight, 12);
         ctx.fill();
         ctx.strokeStyle = isDark ? '#2D303E' : '#E5E7EB';
         ctx.lineWidth = 1.5;
@@ -230,26 +265,82 @@ export async function generateWeekPlanImage({
 
         // Slot Header Pill
         ctx.fillStyle = slotConfig.bg;
-        roundRect(ctx, slotX + 6, slotY + 6, 52, 16, 5);
+        roundRect(ctx, slotX + 8, slotY + 8, 56, 18, 5);
         ctx.fill();
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+
         ctx.fillStyle = slotConfig.text;
-        ctx.font = '900 9px "Inter", -apple-system, sans-serif';
+        ctx.font = '900 10px "Inter", -apple-system, sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText(slotConfig.label, slotX + 32, slotY + 18);
+        ctx.fillText(slotConfig.label, slotX + 36, slotY + 21);
 
-        // Meal Title
-        ctx.textAlign = 'left';
-        ctx.font = '700 12px "Inter", -apple-system, sans-serif';
-        ctx.fillStyle = meal ? textColor : (isDark ? '#4B5563' : '#9CA3AF');
-        const titleText = meal ? cleanMealTitle(meal.title) : '— Empty';
-        const truncated = truncateText(ctx, titleText, slotWidth - 14);
-        ctx.fillText(truncated, slotX + 8, slotY + 38);
-
-        // Calorie micro-label
-        if (meal) {
-          ctx.font = '800 10px "Inter", -apple-system, sans-serif';
+        if (rawMeal) {
+          // Calories badge on top right of mini-card
+          ctx.textAlign = 'right';
+          ctx.font = '800 11px "Inter", -apple-system, sans-serif';
           ctx.fillStyle = isDark ? '#34D399' : '#059669';
-          ctx.fillText(`${meal.calories} kcal`, slotX + 8, slotY + 54);
+          ctx.fillText(`${rawMeal.calories} kcal`, slotX + slotWidth - 10, slotY + 21);
+
+          // Meal Title (clean, up to 2 lines)
+          const title = cleanMealTitle(rawMeal.title);
+          ctx.textAlign = 'left';
+          ctx.font = '700 13px "Inter", -apple-system, sans-serif';
+          ctx.fillStyle = textColor;
+
+          const titleLines = wrapOrTruncate(ctx, title, slotWidth - 18, 2);
+          titleLines.forEach((line, lIdx) => {
+            ctx.fillText(line, slotX + 10, slotY + 44 + lIdx * 18);
+          });
+
+          // Badges: Leftover & Portions
+          const badgeY = slotY + 44 + titleLines.length * 18 + 6;
+          if (rawMeal.isLeftover) {
+            ctx.fillStyle = isDark ? 'rgba(168, 85, 247, 0.2)' : '#F3E8FF';
+            roundRect(ctx, slotX + 10, badgeY, 62, 16, 4);
+            ctx.fill();
+            ctx.strokeStyle = isDark ? '#A855F7' : '#C084FC';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+
+            ctx.fillStyle = isDark ? '#D8B4FE' : '#6B21A8';
+            ctx.font = '900 8px "Inter", -apple-system, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('LEFTOVER', slotX + 41, badgeY + 11);
+          }
+
+          if (rawMeal.portions && rawMeal.portions > 1) {
+            const portionX = rawMeal.isLeftover ? slotX + 78 : slotX + 10;
+            ctx.fillStyle = isDark ? 'rgba(245, 158, 11, 0.2)' : '#FEF3C7';
+            roundRect(ctx, portionX, badgeY, 32, 16, 4);
+            ctx.fill();
+            ctx.strokeStyle = isDark ? '#F59E0B' : '#FCD34D';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+
+            ctx.fillStyle = isDark ? '#FDE68A' : '#92400E';
+            ctx.font = '900 8px "Inter", -apple-system, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(`${rawMeal.portions}x`, portionX + 16, badgeY + 11);
+          }
+
+          // Bottom Macro Bar inside mini-card
+          ctx.textAlign = 'left';
+          ctx.font = '600 11px "Inter", -apple-system, sans-serif';
+          ctx.fillStyle = subtextColor;
+          const metaText = `${rawMeal.protein || 0}g protein${rawMeal.prepTimeMinutes ? ` • ${rawMeal.prepTimeMinutes}m prep` : ''}`;
+          ctx.fillText(truncateText(ctx, metaText, slotWidth - 18), slotX + 10, slotY + slotHeight - 12);
+        } else {
+          // Empty Slot
+          ctx.textAlign = 'left';
+          ctx.font = '600 12px "Inter", -apple-system, sans-serif';
+          ctx.fillStyle = isDark ? '#4B5563' : '#9CA3AF';
+          ctx.fillText('— Unscheduled', slotX + 10, slotY + 48);
+
+          ctx.font = '500 10px "Inter", -apple-system, sans-serif';
+          ctx.fillStyle = isDark ? '#374151' : '#CBD5E1';
+          ctx.fillText('Tap to plan', slotX + 10, slotY + 66);
         }
       });
     });
@@ -280,32 +371,42 @@ export async function generateWeekPlanImage({
       roundRect(ctx, x + 4, y + 4, cardWidth, cardHeight, 20);
       ctx.fill();
 
-      // Body
-      ctx.fillStyle = cardBg;
+      // Body + Clipped Header (No color overflow)
+      ctx.save();
+      ctx.beginPath();
       roundRect(ctx, x, y, cardWidth, cardHeight, 20);
+      ctx.fillStyle = cardBg;
       ctx.fill();
-      ctx.strokeStyle = borderColor;
-      ctx.lineWidth = 2.5;
-      ctx.stroke();
+      ctx.clip();
 
       // Top Accent Header
       ctx.fillStyle = day.isToday ? '#FFE600' : isDark ? '#262938' : '#FAF8F5';
-      roundRect(ctx, x, y, cardWidth, 48, 20);
-      ctx.fill();
-      ctx.fillRect(x, y + 25, cardWidth, 23);
+      ctx.fillRect(x, y, cardWidth, 48);
+
+      ctx.restore();
+
+      // Card Border + Header Divider Line
       ctx.strokeStyle = borderColor;
-      ctx.lineWidth = 2;
+      ctx.lineWidth = 2.5;
+      roundRect(ctx, x, y, cardWidth, cardHeight, 20);
       ctx.stroke();
 
-      // Day Title
+      ctx.beginPath();
+      ctx.moveTo(x, y + 48);
+      ctx.lineTo(x + cardWidth, y + 48);
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = borderColor;
+      ctx.stroke();
+
+      // Day Title (no repetitive • TODAY)
+      const bentoDayLabel = day.isToday
+        ? `TODAY ${day.dayNumber}`
+        : `${day.dayName.toUpperCase()} ${day.dayNumber}`;
+
       ctx.textAlign = 'left';
       ctx.font = '900 16px "Inter", -apple-system, sans-serif';
       ctx.fillStyle = day.isToday ? '#000000' : textColor;
-      ctx.fillText(
-        `${day.dayName.toUpperCase()} ${day.dayNumber}${day.isToday ? ' • TODAY' : ''}`,
-        x + 18,
-        y + 31
-      );
+      ctx.fillText(bentoDayLabel, x + 18, y + 31);
 
       ctx.textAlign = 'right';
       ctx.font = '800 13px "Inter", -apple-system, sans-serif';
@@ -336,6 +437,10 @@ export async function generateWeekPlanImage({
         ctx.fillStyle = slotConfig.bg;
         roundRect(ctx, sX + 10, sY + 10, 56, 18, 6);
         ctx.fill();
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+
         ctx.fillStyle = slotConfig.text;
         ctx.font = '900 10px "Inter", -apple-system, sans-serif';
         ctx.textAlign = 'center';

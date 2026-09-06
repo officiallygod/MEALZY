@@ -460,20 +460,28 @@ export default function KanbanBentoBoard({
                     {/* Day Header */}
                     <div className="flex items-center justify-between pb-3 mb-3 border-b-2 border-black/10 dark:border-gray-800">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-black font-funky text-gray-900 dark:text-white uppercase">
-                          {day.dayName}
-                        </span>
-                        <span className="text-xs text-gray-500 dark:text-gray-400 font-bold">
-                          {day.dayNumber}
-                        </span>
-                        {day.isToday && (
-                          <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-[#D4FF00] text-black border border-black shadow-neo-sm">
-                            TODAY
-                          </span>
+                        {day.isToday ? (
+                          <>
+                            <span className="px-2 py-0.5 rounded-md text-[10px] font-black bg-[#D4FF00] text-black border border-black shadow-neo-sm leading-none uppercase">
+                              TODAY
+                            </span>
+                            <span className="text-xs text-gray-500 dark:text-gray-400 font-bold leading-none">
+                              {day.dayNumber}
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            <span className="text-sm font-black font-funky text-gray-900 dark:text-white uppercase leading-none">
+                              {day.dayName}
+                            </span>
+                            <span className="text-xs text-gray-500 dark:text-gray-400 font-bold leading-none">
+                              {day.dayNumber}
+                            </span>
+                          </>
                         )}
                       </div>
 
-                      <span className="text-xs font-black text-lime-600 dark:text-[#D4FF00]">
+                      <span className="text-xs font-black text-lime-600 dark:text-[#D4FF00] leading-none">
                         {totalCalories > 0 ? `${totalCalories} kcal` : 'Empty'}
                       </span>
                     </div>
