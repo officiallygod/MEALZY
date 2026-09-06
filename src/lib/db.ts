@@ -72,12 +72,49 @@ export function getRollingWeekDates(): {
   return days;
 }
 
-// Initial seed data so the user opens a jaw-dropping populated board
+export const SEED_ONCE_KEY = 'mealzy_sample_seeded_once';
+export const LAST_LOCAL_MODIFIED_KEY = 'mealzy_last_local_modified';
+
+export function markLocalDataModified(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(LAST_LOCAL_MODIFIED_KEY, Date.now().toString());
+  } catch (_) {}
+}
+
+export function getLastLocalModifiedTime(): number {
+  if (typeof window === 'undefined') return 0;
+  try {
+    return Number(localStorage.getItem(LAST_LOCAL_MODIFIED_KEY) || 0);
+  } catch (_) {
+    return 0;
+  }
+}
+
+// Initial seed data: strictly added ONCE during first use
 export async function seedInitialDataIfEmpty() {
   if (typeof window === 'undefined') return;
 
+  // If already seeded once, never re-add sample data (even if user wiped everything)
+  const alreadySeeded = localStorage.getItem(SEED_ONCE_KEY);
+  if (alreadySeeded === 'true') return;
+
   const count = await db.meals.count();
-  if (count > 0) return;
+  if (count > 0) {
+    // Database already has records, mark as seeded so future wipes stay clean
+    localStorage.setItem(SEED_ONCE_KEY, 'true');
+    return;
+  }
+
+  // If user has an existing account session, backup, or preferences, do not seed sample data
+  const hasExistingSession =
+    localStorage.getItem('mealzy_google_access_token') ||
+    localStorage.getItem('mealzy_user_email') ||
+    localStorage.getItem('mealzy_local_backup_snapshot');
+  if (hasExistingSession) {
+    localStorage.setItem(SEED_ONCE_KEY, 'true');
+    return;
+  }
 
   const rolling = getRollingWeekDates();
   const today = rolling[0].dateString;
@@ -237,4 +274,6 @@ export async function seedInitialDataIfEmpty() {
   };
 
   await db.preferences.put(initialPreferences);
+  localStorage.setItem(SEED_ONCE_KEY, 'true');
+  markLocalDataModified();
 }

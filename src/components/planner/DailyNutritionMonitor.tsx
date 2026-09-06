@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Flame, ShieldCheck, Sparkles, TrendingUp, ChevronDown, ChevronUp, Zap, Target, Utensils } from 'lucide-react';
 import { MealItem } from '@/types/meal';
@@ -20,7 +20,7 @@ interface DailyNutritionMonitorProps {
   onAteOut?: () => void;
 }
 
-export default function DailyNutritionMonitor({
+function DailyNutritionMonitor({
   dayName,
   dayDateFormatted,
   isToday,
@@ -320,3 +320,5 @@ export default function DailyNutritionMonitor({
     </div>
   );
 }
+
+export default memo(DailyNutritionMonitor);

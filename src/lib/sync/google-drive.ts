@@ -1,4 +1,10 @@
-import { db } from '../db';
+import {
+  db,
+  markLocalDataModified,
+  getLastLocalModifiedTime,
+  SEED_ONCE_KEY,
+  LAST_LOCAL_MODIFIED_KEY,
+} from '../db';
 import { getActiveGoogleClientId } from '@/config/app-config';
 
 export interface ClientPreferences {
@@ -100,36 +106,46 @@ export async function restoreDataFromPayload(payload: MealzyBackupPayload): Prom
       }
     });
 
-    if (typeof window !== 'undefined' && payload.clientSettings) {
-      const cs = payload.clientSettings;
-      if (cs.theme) {
-        localStorage.setItem('mealzy_theme', cs.theme);
-        if (cs.theme === 'light') {
-          document.documentElement.classList.remove('dark');
-          document.documentElement.classList.add('light');
-        } else {
-          document.documentElement.classList.remove('light');
-          document.documentElement.classList.add('dark');
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(SEED_ONCE_KEY, 'true');
+      if (payload.exportedAt) {
+        const cloudTime = new Date(payload.exportedAt).getTime();
+        if (cloudTime > 0) {
+          localStorage.setItem(LAST_LOCAL_MODIFIED_KEY, cloudTime.toString());
         }
       }
-      if (cs.snacksMinimized !== undefined) {
-        localStorage.setItem('mealzy_snacks_minimized', String(cs.snacksMinimized));
-      }
-      if (cs.snacksPrompted !== undefined) {
-        localStorage.setItem('mealzy_snacks_prompted', String(cs.snacksPrompted));
-      }
-      if (cs.userName) {
-        localStorage.setItem('mealzy_user_name', cs.userName);
-      }
-      if (cs.userAvatar) {
-        localStorage.setItem('mealzy_user_avatar', cs.userAvatar);
-      }
-      if (cs.userEmail) {
-        localStorage.setItem('mealzy_user_email', cs.userEmail);
-      }
 
-      // Dispatch notification event so active mounted components update their UI state
-      window.dispatchEvent(new CustomEvent('mealzy_cloud_sync_applied', { detail: cs }));
+      if (payload.clientSettings) {
+        const cs = payload.clientSettings;
+        if (cs.theme) {
+          localStorage.setItem('mealzy_theme', cs.theme);
+          if (cs.theme === 'light') {
+            document.documentElement.classList.remove('dark');
+            document.documentElement.classList.add('light');
+          } else {
+            document.documentElement.classList.remove('light');
+            document.documentElement.classList.add('dark');
+          }
+        }
+        if (cs.snacksMinimized !== undefined) {
+          localStorage.setItem('mealzy_snacks_minimized', String(cs.snacksMinimized));
+        }
+        if (cs.snacksPrompted !== undefined) {
+          localStorage.setItem('mealzy_snacks_prompted', String(cs.snacksPrompted));
+        }
+        if (cs.userName) {
+          localStorage.setItem('mealzy_user_name', cs.userName);
+        }
+        if (cs.userAvatar) {
+          localStorage.setItem('mealzy_user_avatar', cs.userAvatar);
+        }
+        if (cs.userEmail) {
+          localStorage.setItem('mealzy_user_email', cs.userEmail);
+        }
+
+        // Dispatch notification event so active mounted components update their UI state
+        window.dispatchEvent(new CustomEvent('mealzy_cloud_sync_applied', { detail: cs }));
+      }
     }
   } finally {
     setTimeout(() => {
@@ -247,7 +263,7 @@ export type PullResult =
   | { success: true; payload: MealzyBackupPayload }
   | { success: false; reason: 'unauthorized' | 'not_found' | 'network_error' };
 
-// Download and restore sync file from Google Drive appDataFolder
+// Download and restore sync file from Google Drive appDataFolder with conflict resolution
 export async function pullFromGoogleDriveAppData(accessToken: string): Promise<PullResult> {
   try {
     const listRes = await fetch(
@@ -280,7 +296,23 @@ export async function pullFromGoogleDriveAppData(accessToken: string): Promise<P
     }
 
     const payload = (await downloadRes.json()) as MealzyBackupPayload;
+
+    // Check timestamps before restoring to avoid resurrecting deleted meals
+    const cloudTime = payload.exportedAt ? new Date(payload.exportedAt).getTime() : 0;
+    const localTime = getLastLocalModifiedTime();
+
+    if (localTime > 0 && localTime > cloudTime + 1000) {
+      // Local changes are newer than the cloud file (e.g. user cleared meals or planned offline).
+      // Do NOT overwrite local changes with stale cloud data. Instead, push local state to cloud.
+      console.log('[Mealzy] Local state is newer than cloud backup. Pushing local state to Google Drive.');
+      await syncToGoogleDriveAppData(accessToken);
+      return { success: true, payload };
+    }
+
     await restoreDataFromPayload(payload);
+    if (cloudTime > 0 && typeof window !== 'undefined') {
+      localStorage.setItem(LAST_LOCAL_MODIFIED_KEY, cloudTime.toString());
+    }
     return { success: true, payload };
   } catch (err) {
     console.error('[Mealzy] Failed to pull from Google Drive:', err);
@@ -299,7 +331,7 @@ export async function syncAcrossDevicesOnStartup(): Promise<{
   try {
     const pullResult = await pullFromGoogleDriveAppData(token);
     if (pullResult.success) {
-      console.log('[Mealzy] Successfully pulled fresh cross-device state from Google Drive.');
+      console.log('[Mealzy] Successfully checked cross-device state with Google Drive.');
       return { status: 'synced_from_cloud' };
     }
 
@@ -323,25 +355,86 @@ export async function syncAcrossDevicesOnStartup(): Promise<{
   return { status: 'idle' };
 }
 
-// Background auto-sync throttled to save battery and network bandwidth
+export type SaveSyncStatus = 'idle' | 'saving' | 'saved_locally' | 'synced';
+
+export interface SaveSyncEventDetail {
+  status: SaveSyncStatus;
+  timestamp: number;
+}
+
 let autoSyncTimer: ReturnType<typeof setTimeout> | null = null;
+
+// Execute save locally to localStorage snapshot AND push to Google Drive if connected
+export async function performIdleSaveAndSync(): Promise<void> {
+  if (typeof window === 'undefined') return;
+
+  window.dispatchEvent(
+    new CustomEvent('mealzy_save_status', {
+      detail: { status: 'saving', timestamp: Date.now() },
+    })
+  );
+
+  try {
+    // 1. Always create an offline snapshot in localStorage
+    const payload = await exportLocalDataToPayload();
+    try {
+      localStorage.setItem('mealzy_local_backup_snapshot', JSON.stringify(payload));
+    } catch (snapErr) {
+      console.warn('[Mealzy] Local snapshot write notice:', snapErr);
+    }
+    markLocalDataModified();
+
+    // 2. If signed into Google Drive, sync to cloud
+    const token = localStorage.getItem('mealzy_google_access_token');
+    if (token) {
+      const pushed = await syncToGoogleDriveAppData(token);
+      if (pushed) {
+        window.dispatchEvent(
+          new CustomEvent('mealzy_save_status', {
+            detail: { status: 'synced', timestamp: Date.now() },
+          })
+        );
+        return;
+      }
+    }
+
+    // Guest / offline mode
+    window.dispatchEvent(
+      new CustomEvent('mealzy_save_status', {
+        detail: { status: 'saved_locally', timestamp: Date.now() },
+      })
+    );
+  } catch (err) {
+    console.warn('[Mealzy] Idle save notice:', err);
+    window.dispatchEvent(
+      new CustomEvent('mealzy_save_status', {
+        detail: { status: 'saved_locally', timestamp: Date.now() },
+      })
+    );
+  }
+}
+
+// Background auto-save & sync: debounced to 1.5s idle
 export function scheduleBackgroundDriveSync(delayMs = 1500): void {
   if (typeof window === 'undefined') return;
-  const token = localStorage.getItem('mealzy_google_access_token');
-  if (!token) return;
 
   if (autoSyncTimer) clearTimeout(autoSyncTimer);
-  autoSyncTimer = setTimeout(async () => {
-    try {
-      await syncToGoogleDriveAppData(token);
-      console.log('[Mealzy] Auto-synced changes to Google Drive in background.');
-    } catch (err) {
-      console.warn('[Mealzy] Background cloud sync skipped:', err);
-    }
+  autoSyncTimer = setTimeout(() => {
+    autoSyncTimer = null;
+    performIdleSaveAndSync();
   }, delayMs);
 }
 
-// Hook Dexie transactions to seamlessly sync on any database change across any device
+// Flush pending save immediately on tab switch or before unload
+export function flushPendingAutoSave(): void {
+  if (autoSyncTimer) {
+    clearTimeout(autoSyncTimer);
+    autoSyncTimer = null;
+    performIdleSaveAndSync();
+  }
+}
+
+// Hook Dexie transactions to seamlessly save on idle across any change
 let hasRegisteredDexieHooks = false;
 export function enableAutomaticDriveSync(): void {
   if (typeof window === 'undefined' || hasRegisteredDexieHooks) return;
@@ -349,7 +442,8 @@ export function enableAutomaticDriveSync(): void {
 
   const triggerChange = () => {
     if (isSyncInProgress) return;
-    scheduleBackgroundDriveSync(2000);
+    markLocalDataModified();
+    scheduleBackgroundDriveSync(1500);
   };
 
   try {
@@ -373,15 +467,27 @@ export function enableAutomaticDriveSync(): void {
       this.onsuccess = triggerChange;
     });
 
-    db.preferences.hook('creating', function () {
-      this.onsuccess = triggerChange;
+    if (db.preferences) {
+      db.preferences.hook('creating', function () {
+        this.onsuccess = triggerChange;
+      });
+      db.preferences.hook('updating', function () {
+        this.onsuccess = triggerChange;
+      });
+    }
+
+    window.addEventListener('beforeunload', () => {
+      flushPendingAutoSave();
     });
-    db.preferences.hook('updating', function () {
-      this.onsuccess = triggerChange;
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') {
+        flushPendingAutoSave();
+      }
     });
 
     hasRegisteredDexieHooks = true;
-    console.log('[Mealzy] Reactive background Google Drive sync listeners activated.');
+    console.log('[Mealzy] Reactive idle auto-save and sync listeners activated.');
   } catch (err) {
     console.warn('[Mealzy] Could not attach reactive auto-sync hooks:', err);
   }

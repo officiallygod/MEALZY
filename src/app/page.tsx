@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, getRollingWeekDates, seedInitialDataIfEmpty } from '@/lib/db';
 import { MealItem, MealType, FridgePantryItem, AISuggestion, UserPreferences } from '@/types/meal';
@@ -93,9 +93,13 @@ export default function Home() {
   const fridgeItems = useLiveQuery(() => db.fridge?.toArray(), []) || [];
   const userPreferences = useLiveQuery(() => db.preferences?.get('user-default-settings'), []);
 
-  // Auto-sanitize existing database: strip ugly prefixes ("Fridge Rescue:", "Leftover:", etc.)
-  // and consolidate duplicate meals in the same slot into a single card with portions count
+  // Auto-sanitize existing database: strip prefixes and consolidate duplicate meals
+  // Run once per client to keep page load lightning-fast
   const sanitizeDatabase = async () => {
+    if (typeof window !== 'undefined' && localStorage.getItem('mealzy_db_sanitized_v3') === 'true') {
+      return;
+    }
+
     try {
       const allMeals = await db.meals.toArray();
       const seenMap = new Map<string, MealItem>();
@@ -136,6 +140,10 @@ export default function Home() {
             originalMealTitle: cleanMealTitle(item.originalMealTitle || cleanName),
           });
         }
+      }
+
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('mealzy_db_sanitized_v3', 'true');
       }
     } catch (e) {
       console.warn('DB Sanitization notice:', e);
@@ -274,45 +282,65 @@ export default function Home() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Compute daily totals for all rolling days
-  const dayMealCounts: Record<string, { count: number; calories: number }> = {};
-  rollingDays.forEach((d) => {
-    const dMeals = meals.filter((m) => m.dateScheduled === d.dateString);
-    dayMealCounts[d.dateString] = {
-      count: dMeals.length,
-      calories: dMeals.reduce((sum, m) => sum + (m.calories || 0), 0),
-    };
-  });
+  // High-performance single-pass computation of daily totals for all rolling days
+  const dayMealCounts: Record<string, { count: number; calories: number }> = useMemo(() => {
+    const counts: Record<string, { count: number; calories: number }> = {};
+    for (const d of rollingDays) {
+      counts[d.dateString] = { count: 0, calories: 0 };
+    }
+    for (const m of meals) {
+      if (m.dateScheduled && counts[m.dateScheduled]) {
+        counts[m.dateScheduled].count += 1;
+        counts[m.dateScheduled].calories += m.calories || 0;
+      }
+    }
+    return counts;
+  }, [meals, rollingDays]);
 
   // Today's total calories for the header meter
-  const todayCalories = dayMealCounts[rollingDays[0].dateString]?.calories || 0;
+  const todayCalories = useMemo(() => {
+    return dayMealCounts[rollingDays[0]?.dateString]?.calories || 0;
+  }, [dayMealCounts, rollingDays]);
+
   const calorieTarget = userPreferences?.calorieTarget || 2200;
 
-  // Rotting items count for the bottom dock badge: strictly > 7 days old AND unassigned
-  const rottingCount = fridgeItems.filter((item) => {
-    const isOverAWeekOld = item.daysInFridge > 7;
-    const nameClean = cleanMealTitle(item.name).toLowerCase();
-    const isAssigned = meals.some((m) => {
-      const mealTitleClean = cleanMealTitle(m.title).toLowerCase();
-      const matchesSource = m.sourceMealId === item.id || m.sourceMealId === `fridge-batch-${item.id}`;
-      const matchesTitle = mealTitleClean.includes(nameClean) || nameClean.includes(mealTitleClean);
-      return matchesSource || matchesTitle;
-    });
-    return isOverAWeekOld && !isAssigned;
-  }).length;
+  // Rotting items count: strictly > 7 days old AND unassigned, computed in a fast set-based pass
+  const rottingCount = useMemo(() => {
+    if (fridgeItems.length === 0) return 0;
+    const assignedMealTitles = new Set<string>();
+    const assignedSourceIds = new Set<string>();
+    for (const m of meals) {
+      if (m.sourceMealId) assignedSourceIds.add(m.sourceMealId);
+      assignedMealTitles.add(cleanMealTitle(m.title).toLowerCase());
+    }
+
+    return fridgeItems.filter((item) => {
+      if (item.daysInFridge <= 7) return false;
+      if (assignedSourceIds.has(item.id) || assignedSourceIds.has(`fridge-batch-${item.id}`)) return false;
+      const nameClean = cleanMealTitle(item.name).toLowerCase();
+      return !assignedMealTitles.has(nameClean);
+    }).length;
+  }, [fridgeItems, meals]);
 
   // Selected day object and its meals
-  const selectedDayObj = rollingDays.find((d) => d.dateString === selectedDate) || rollingDays[0];
-  const selectedDayMeals = meals.filter((m) => m.dateScheduled === selectedDate);
+  const selectedDayObj = useMemo(
+    () => rollingDays.find((d) => d.dateString === selectedDate) || rollingDays[0],
+    [rollingDays, selectedDate]
+  );
 
-  // Handlers
-  const handleQuickAdd = (dateString: string, slot: MealType) => {
+  const selectedDayMeals = useMemo(
+    () => meals.filter((m) => m.dateScheduled === selectedDate),
+    [meals, selectedDate]
+  );
+
+  // Handlers (wrapped in useCallback to stabilize references across renders)
+  const handleQuickAdd = useCallback((dateString: string, slot: MealType) => {
     setAddMealDate(dateString);
     setAddMealSlot(slot);
     setIsAddMealOpen(true);
-  };
+  }, []);
 
-  const handleAutoFillClick = (targetDate: string) => {
+  const handleAutoFillClick = useCallback((targetDate: string) => {
     const dayMeals = meals.filter((m) => m.dateScheduled === targetDate);
     const existingSlots = new Set(dayMeals.map((m) => m.mealType));
     const slots: MealType[] = ['breakfast', 'lunch', 'dinner', 'snack'];
@@ -321,7 +349,7 @@ export default function Home() {
     if (missingSlots.length === 0) return;
 
     setAutoFillTarget({ targetDate, missingSlots });
-  };
+  }, [meals]);
 
   const handleApplyAutoFillSuggestions = async (suggestedMeals: Omit<MealItem, 'id'>[]) => {
     const newMeals: MealItem[] = suggestedMeals.map((m) => ({

@@ -1,7 +1,7 @@
 'use client';
 
-import React from 'react';
-import { Flame, Plus, User, Sun, Moon, Smartphone, Heart } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Flame, Plus, User, Sun, Moon, Smartphone, Heart, RefreshCw, Check } from 'lucide-react';
 
 interface HeaderProps {
   onOpenAuth: () => void;
@@ -31,6 +31,18 @@ export default function Header({
   onToggleTheme,
 }: HeaderProps) {
   const percent = Math.min(100, Math.round((todayCalories / (calorieTarget || 2200)) * 100));
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved_locally' | 'synced'>('idle');
+
+  useEffect(() => {
+    const handleStatus = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail && detail.status) {
+        setSaveStatus(detail.status);
+      }
+    };
+    window.addEventListener('mealzy_save_status', handleStatus);
+    return () => window.removeEventListener('mealzy_save_status', handleStatus);
+  }, []);
 
   return (
     <header className="sticky top-0 z-40 bg-[#FAF8F5]/95 dark:bg-[#0D0E12]/95 backdrop-blur-xl border-b-2 border-black dark:border-gray-800 px-4 sm:px-8 py-3 transition-colors">
@@ -131,6 +143,41 @@ export default function Header({
 
         {/* Right Actions */}
         <div className="flex items-center gap-2 sm:gap-2.5 flex-shrink-0">
+          {/* Real-time Save & Sync Status Pill */}
+          <div
+            className={`hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[10px] font-black tracking-wide transition-all select-none ${
+              saveStatus === 'saving'
+                ? 'bg-amber-100 dark:bg-amber-950/60 border-amber-400 text-amber-900 dark:text-amber-200'
+                : saveStatus === 'synced'
+                ? 'bg-[#E8F8D0] dark:bg-[#1C2C10] border-lime-500 text-lime-900 dark:text-[#D4FF00]'
+                : 'bg-white dark:bg-[#16171E] border-black/20 dark:border-gray-700 text-gray-600 dark:text-gray-400'
+            }`}
+            title={
+              saveStatus === 'synced'
+                ? 'All changes automatically saved locally and synced to Google Drive'
+                : saveStatus === 'saving'
+                ? 'Saving changes locally and syncing...'
+                : 'All changes saved locally to device storage'
+            }
+          >
+            {saveStatus === 'saving' ? (
+              <>
+                <RefreshCw className="w-2.5 h-2.5 animate-spin" />
+                <span>SAVING...</span>
+              </>
+            ) : saveStatus === 'synced' ? (
+              <>
+                <span className="w-2 h-2 rounded-full bg-[#D4FF00] border border-black animate-pulse" />
+                <span>SYNCED</span>
+              </>
+            ) : (
+              <>
+                <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                <span>SAVED</span>
+              </>
+            )}
+          </div>
+
           {/* Neo-Brutalist Theme Toggle (Pill like Portfolio) */}
           <button
             onClick={onToggleTheme}

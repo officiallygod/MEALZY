@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { memo } from 'react';
 import { CalendarDays, LayoutGrid } from 'lucide-react';
 
 interface RollingWeekSelectorProps {
@@ -18,7 +18,7 @@ interface RollingWeekSelectorProps {
   dayMealCounts: Record<string, { count: number; calories: number }>;
 }
 
-export default function RollingWeekSelector({
+function RollingWeekSelector({
   days,
   selectedDate,
   onSelectDate,
@@ -118,3 +118,5 @@ export default function RollingWeekSelector({
     </div>
   );
 }
+
+export default memo(RollingWeekSelector);

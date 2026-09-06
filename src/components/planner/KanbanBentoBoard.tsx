@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus,
@@ -105,7 +105,7 @@ const MEAL_SLOTS: {
   },
 ];
 
-export default function KanbanBentoBoard({
+function KanbanBentoBoard({
   days,
   selectedDate,
   meals,
@@ -152,19 +152,25 @@ export default function KanbanBentoBoard({
   });
 
   // Slot-level minimization for any meal in day bento
-  const [minimizedSlots, setMinimizedSlots] = useState<Record<MealType, boolean>>({
-    breakfast: false,
-    lunch: false,
-    dinner: false,
-    snack: false,
+  const [minimizedSlots, setMinimizedSlots] = useState<Record<MealType, boolean>>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('mealzy_minimized_slots');
+        if (saved) return JSON.parse(saved);
+      } catch (_) {}
+    }
+    return { breakfast: false, lunch: false, dinner: false, snack: false };
   });
 
-  const toggleSlotMinimized = (type: MealType) => {
-    setMinimizedSlots((prev) => ({
-      ...prev,
-      [type]: !prev[type],
-    }));
-  };
+  const toggleSlotMinimized = useCallback((type: MealType) => {
+    setMinimizedSlots((prev) => {
+      const next = { ...prev, [type]: !prev[type] };
+      try {
+        localStorage.setItem('mealzy_minimized_slots', JSON.stringify(next));
+      } catch (_) {}
+      return next;
+    });
+  }, []);
 
   // Card-level minimization for any individual meal
   const [minimizedMealIds, setMinimizedMealIds] = useState<Set<string>>(new Set());
@@ -1003,3 +1009,5 @@ export default function KanbanBentoBoard({
     </div>
   );
 }
+
+export default memo(KanbanBentoBoard);
