@@ -40,6 +40,7 @@ export default function Home() {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [userEmail, setUserEmail] = useState<string | undefined>(undefined);
   const [userName, setUserName] = useState<string | undefined>(undefined);
+  const [userAvatar, setUserAvatar] = useState<string | undefined>(undefined);
   const [isAddMealOpen, setIsAddMealOpen] = useState(false);
   const [isExportWeekOpen, setIsExportWeekOpen] = useState(false);
   const [addMealSlot, setAddMealSlot] = useState<MealType>('lunch');
@@ -143,9 +144,11 @@ export default function Home() {
 
     const savedEmail = localStorage.getItem('mealzy_user_email');
     const savedName = localStorage.getItem('mealzy_user_name');
+    const savedAvatar = localStorage.getItem('mealzy_user_avatar');
     if (savedEmail) {
       setUserEmail(savedEmail);
       setUserName(savedName || savedEmail.split('@')[0]);
+      if (savedAvatar) setUserAvatar(savedAvatar);
     }
   }, []);
 
@@ -169,10 +172,14 @@ export default function Home() {
     });
   };
 
-  const handleLoginSuccess = (email: string, name?: string) => {
+  const handleLoginSuccess = (email: string, name?: string, avatar?: string) => {
     setUserEmail(email);
     const resolvedName = name || email.split('@')[0];
     setUserName(resolvedName);
+    if (avatar) {
+      setUserAvatar(avatar);
+      localStorage.setItem('mealzy_user_avatar', avatar);
+    }
     localStorage.setItem('mealzy_user_email', email);
     localStorage.setItem('mealzy_user_name', resolvedName);
 
@@ -180,21 +187,24 @@ export default function Home() {
       id: `auth-${Date.now()}`,
       badge: '👨‍🍳',
       message: `Welcome chef, ${resolvedName}!`,
-      funSubtext: 'Account & preferences safely remembered on this device.',
+      funSubtext: 'Signed in with Google. Meals synced to Google Drive AppData.',
     });
   };
 
   const handleLogout = () => {
     setUserEmail(undefined);
     setUserName(undefined);
+    setUserAvatar(undefined);
     localStorage.removeItem('mealzy_user_email');
     localStorage.removeItem('mealzy_user_name');
+    localStorage.removeItem('mealzy_user_avatar');
+    localStorage.removeItem('mealzy_google_access_token');
 
     setUndoAction({
       id: `logout-${Date.now()}`,
       badge: '👋',
-      message: 'Signed Out Successfully',
-      funSubtext: 'Switched to offline mode. Your recipes and plans remain intact.',
+      message: 'Signed Out of Google',
+      funSubtext: 'Switched to offline guest mode. Local data preserved.',
     });
   };
 
@@ -714,6 +724,7 @@ export default function Home() {
         onLogoClick={handleLogoClick}
         userEmail={userEmail}
         userName={userName}
+        userAvatar={userAvatar}
         todayCalories={todayCalories}
         calorieTarget={calorieTarget}
         theme={theme}
@@ -953,6 +964,7 @@ export default function Home() {
         onClose={() => setIsAuthOpen(false)}
         userEmail={userEmail}
         userName={userName}
+        userAvatar={userAvatar}
         onLoginSuccess={handleLoginSuccess}
         onLogout={handleLogout}
       />
