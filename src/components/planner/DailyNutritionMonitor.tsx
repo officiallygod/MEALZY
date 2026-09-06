@@ -2,7 +2,7 @@
 
 import React, { useState, memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Flame, ShieldCheck, Sparkles, TrendingUp, ChevronDown, ChevronUp, Zap, Target, Utensils } from 'lucide-react';
+import { Flame, ShieldCheck, Sparkles, TrendingUp, ChevronDown, Zap, Target, Utensils } from 'lucide-react';
 import { MealItem } from '@/types/meal';
 
 interface DailyNutritionMonitorProps {
@@ -34,7 +34,22 @@ function DailyNutritionMonitor({
   onQuickAddMeal,
   onAteOut,
 }: DailyNutritionMonitorProps) {
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('mealzy_macros_expanded') === 'true';
+    }
+    return false;
+  });
+
+  const toggleExpanded = () => {
+    setIsExpanded((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('mealzy_macros_expanded', String(next));
+      } catch (_) {}
+      return next;
+    });
+  };
 
   const totalCalories = meals.reduce((sum, m) => sum + (m.calories || 0), 0);
   const totalProtein = meals.reduce((sum, m) => sum + (m.protein || 0), 0);
@@ -84,39 +99,56 @@ function DailyNutritionMonitor({
           )}
         </div>
 
-        {/* Center: 4 Color-Coded Macro Capsules (Readable in ONE glance) */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 flex-1 max-w-2xl">
-          {/* Energy Capsule */}
-          <div className="bg-[#FAF8F5] dark:bg-[#20222D] border border-black/30 dark:border-gray-700 rounded-xl px-3 py-1.5 flex items-center justify-between gap-1.5 border-l-4 border-l-[#D4FF00] shadow-neo-sm">
+        {/* Center: Macro Summary (Only Cals exposed by default; Prot, Carb, Fat revealed when expanded) */}
+        <div className="flex items-center gap-2 flex-1 max-w-2xl min-w-0">
+          {/* Energy Capsule (Always visible) */}
+          <div
+            onClick={toggleExpanded}
+            className="bg-[#FAF8F5] dark:bg-[#20222D] border border-black/30 dark:border-gray-700 rounded-xl px-3 py-1.5 flex items-center justify-between gap-2 border-l-4 border-l-[#D4FF00] shadow-neo-sm cursor-pointer hover:border-black dark:hover:border-white transition-all select-none flex-shrink-0"
+            title={isExpanded ? 'Click to collapse details' : 'Click to show protein and nutrition details'}
+          >
             <span className="text-[10px] font-black text-gray-700 dark:text-gray-300 uppercase leading-none">Cals</span>
             <span className="text-xs font-black text-gray-950 dark:text-[#D4FF00] leading-none tabular-nums">
               {totalCalories}<span className="text-[10px] text-gray-600 dark:text-gray-400 font-black">/{calTargetSafe}</span>
             </span>
           </div>
 
-          {/* Protein Capsule */}
-          <div className="bg-[#FAF8F5] dark:bg-[#20222D] border border-black/30 dark:border-gray-700 rounded-xl px-3 py-1.5 flex items-center justify-between gap-1.5 border-l-4 border-l-rose-500 shadow-neo-sm">
-            <span className="text-[10px] font-black text-gray-700 dark:text-gray-300 uppercase leading-none">Prot</span>
-            <span className="text-xs font-black text-rose-600 dark:text-rose-400 leading-none tabular-nums">
-              {totalProtein}g<span className="text-[10px] text-gray-600 dark:text-gray-400 font-black">/{proteinTargetSafe}g</span>
-            </span>
-          </div>
+          {/* Color-Coded Macro Capsules (Revealed when expanded) */}
+          <AnimatePresence>
+            {isExpanded && (
+              <motion.div
+                initial={{ opacity: 0, x: -8 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -8 }}
+                transition={{ duration: 0.15 }}
+                className="hidden sm:grid grid-cols-3 gap-2 flex-1 min-w-0"
+              >
+                {/* Protein Capsule */}
+                <div className="bg-[#FAF8F5] dark:bg-[#20222D] border border-black/30 dark:border-gray-700 rounded-xl px-2.5 py-1.5 flex items-center justify-between gap-1.5 border-l-4 border-l-rose-500 shadow-neo-sm truncate">
+                  <span className="text-[10px] font-black text-gray-700 dark:text-gray-300 uppercase leading-none">Prot</span>
+                  <span className="text-xs font-black text-rose-600 dark:text-rose-400 leading-none tabular-nums truncate">
+                    {totalProtein}g<span className="text-[10px] text-gray-600 dark:text-gray-400 font-black">/{proteinTargetSafe}g</span>
+                  </span>
+                </div>
 
-          {/* Carbs Capsule */}
-          <div className="bg-[#FAF8F5] dark:bg-[#20222D] border border-black/30 dark:border-gray-700 rounded-xl px-3 py-1.5 flex items-center justify-between gap-1.5 border-l-4 border-l-[#00E5FF] shadow-neo-sm">
-            <span className="text-[10px] font-black text-gray-700 dark:text-gray-300 uppercase leading-none">Carb</span>
-            <span className="text-xs font-black text-sky-600 dark:text-[#00E5FF] leading-none tabular-nums">
-              {totalCarbs}g<span className="text-[10px] text-gray-600 dark:text-gray-400 font-black">/{carbsTargetSafe}g</span>
-            </span>
-          </div>
+                {/* Carbs Capsule */}
+                <div className="bg-[#FAF8F5] dark:bg-[#20222D] border border-black/30 dark:border-gray-700 rounded-xl px-2.5 py-1.5 flex items-center justify-between gap-1.5 border-l-4 border-l-[#00E5FF] shadow-neo-sm truncate">
+                  <span className="text-[10px] font-black text-gray-700 dark:text-gray-300 uppercase leading-none">Carb</span>
+                  <span className="text-xs font-black text-sky-600 dark:text-[#00E5FF] leading-none tabular-nums truncate">
+                    {totalCarbs}g<span className="text-[10px] text-gray-600 dark:text-gray-400 font-black">/{carbsTargetSafe}g</span>
+                  </span>
+                </div>
 
-          {/* Fats Capsule */}
-          <div className="bg-[#FAF8F5] dark:bg-[#20222D] border border-black/30 dark:border-gray-700 rounded-xl px-3 py-1.5 flex items-center justify-between gap-1.5 border-l-4 border-l-purple-500 shadow-neo-sm">
-            <span className="text-[10px] font-black text-gray-700 dark:text-gray-300 uppercase leading-none">Fat</span>
-            <span className="text-xs font-black text-purple-600 dark:text-purple-400 leading-none tabular-nums">
-              {totalFat}g<span className="text-[10px] text-gray-600 dark:text-gray-400 font-black">/{fatTargetSafe}g</span>
-            </span>
-          </div>
+                {/* Fats Capsule */}
+                <div className="bg-[#FAF8F5] dark:bg-[#20222D] border border-black/30 dark:border-gray-700 rounded-xl px-2.5 py-1.5 flex items-center justify-between gap-1.5 border-l-4 border-l-purple-500 shadow-neo-sm truncate">
+                  <span className="text-[10px] font-black text-gray-700 dark:text-gray-300 uppercase leading-none">Fat</span>
+                  <span className="text-xs font-black text-purple-600 dark:text-purple-400 leading-none tabular-nums truncate">
+                    {totalFat}g<span className="text-[10px] text-gray-600 dark:text-gray-400 font-black">/{fatTargetSafe}g</span>
+                  </span>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* Right: Actions & Expand Toggle */}
@@ -144,13 +176,19 @@ function DailyNutritionMonitor({
             </button>
           )}
 
+          {/* Downward Arrow Button (No "Compact" or "Stats" text - smooth rotate on toggle) */}
           <button
-            onClick={() => setIsExpanded(!isExpanded)}
-            className="px-3 py-1.5 bg-[#FAF8F5] dark:bg-[#20222D] hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 font-black text-[11px] rounded-xl border border-black shadow-neo-sm active:translate-x-0.5 active:translate-y-0.5 transition-all flex items-center gap-1.5 leading-none cursor-pointer"
-            title={isExpanded ? 'Collapse macro details' : 'Expand full macro target bars'}
+            type="button"
+            onClick={toggleExpanded}
+            className="w-8 h-8 bg-[#FAF8F5] dark:bg-[#20222D] hover:bg-[#FFE600] hover:text-black dark:hover:bg-[#D4FF00] dark:hover:text-black text-gray-800 dark:text-gray-200 font-black rounded-xl border-2 border-black dark:border-gray-700 shadow-neo-sm active:scale-95 transition-all flex items-center justify-center cursor-pointer flex-shrink-0"
+            title={isExpanded ? 'Collapse nutrition details' : 'Show protein and nutrition details'}
+            aria-label={isExpanded ? 'Collapse nutrition details' : 'Show protein and nutrition details'}
           >
-            <span>{isExpanded ? 'Compact' : 'Stats'}</span>
-            {isExpanded ? <ChevronUp className="w-3 h-3 stroke-[2.5]" /> : <ChevronDown className="w-3 h-3 stroke-[2.5]" />}
+            <ChevronDown
+              className={`w-4 h-4 stroke-[2.5] transition-transform duration-200 ${
+                isExpanded ? 'rotate-180' : ''
+              }`}
+            />
           </button>
         </div>
       </div>
