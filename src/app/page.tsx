@@ -17,11 +17,12 @@ import CookMealModal from '@/components/modals/CookMealModal';
 import AuthModal from '@/components/common/AuthModal';
 import { generateSmartSuggestions } from '@/lib/ai-engine';
 import confetti from 'canvas-confetti';
-import { Sparkles, Trophy, RotateCcw } from 'lucide-react';
+import { RotateCcw, CheckCircle2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function Home() {
   const [isClient, setIsClient] = useState(false);
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [activeTab, setActiveTab] = useState<ActiveTab>('planner');
   const [isAllDaysView, setIsAllDaysView] = useState(false);
 
@@ -50,12 +51,35 @@ export default function Home() {
   const fridgeItems = useLiveQuery(() => db.fridge?.toArray(), []) || [];
   const userPreferences = useLiveQuery(() => db.preferences?.get('user-default-settings'), []);
 
-  // Initialize and seed on client mount
+  // Initialize theme and database on client mount
   useEffect(() => {
     setIsClient(true);
     seedInitialDataIfEmpty();
     setRollingDays(getRollingWeekDates());
+
+    const savedTheme = (localStorage.getItem('mealzy_theme') as 'dark' | 'light') || 'dark';
+    setTheme(savedTheme);
+    if (savedTheme === 'light') {
+      document.documentElement.classList.remove('dark');
+      document.documentElement.classList.add('light');
+    } else {
+      document.documentElement.classList.remove('light');
+      document.documentElement.classList.add('dark');
+    }
   }, []);
+
+  const handleToggleTheme = () => {
+    const nextTheme = theme === 'dark' ? 'light' : 'dark';
+    setTheme(nextTheme);
+    localStorage.setItem('mealzy_theme', nextTheme);
+    if (nextTheme === 'light') {
+      document.documentElement.classList.remove('dark');
+      document.documentElement.classList.add('light');
+    } else {
+      document.documentElement.classList.remove('light');
+      document.documentElement.classList.add('dark');
+    }
+  };
 
   // Compute daily totals for all rolling days
   const dayMealCounts: Record<string, { count: number; calories: number }> = {};
@@ -109,13 +133,11 @@ export default function Home() {
     portions: number,
     targetSlots: { date: string; slot: MealType }[]
   ) => {
-    // Mark source meal with portions cooked
     await db.meals.update(sourceMeal.id, {
       totalPortionsCooked: portions,
       portionsRemaining: portions - 1,
     });
 
-    // Auto-create leftover meal cards in target slots
     const leftoverMeals: MealItem[] = targetSlots.map((slot, idx) => ({
       id: `leftover-${sourceMeal.id}-${idx + 1}`,
       title: `Leftover: ${sourceMeal.title}`,
@@ -125,22 +147,19 @@ export default function Home() {
       carbs: sourceMeal.carbs,
       fat: sourceMeal.fat,
       prepTimeMinutes: 3,
-      imageUrl: sourceMeal.imageUrl,
       ingredients: sourceMeal.ingredients,
       tags: ['leftover', 'quick-heat'],
       isLeftover: true,
       sourceMealId: sourceMeal.id,
       dateScheduled: slot.date,
-      customEmoji: '🥡',
-      accentColor: sourceMeal.accentColor || '#22C55E',
-      notes: `Batch cooked portion #${idx + 2}. Reheat for 2 mins.`,
+      accentColor: sourceMeal.accentColor || '#10B981',
+      notes: `Batch prepared portion #${idx + 2}. Reheat for 2 minutes.`,
     }));
 
     if (leftoverMeals.length > 0) {
       await db.meals.bulkAdd(leftoverMeals);
     }
 
-    // Add tracking to fridge radar
     await db.fridge.put({
       id: `fridge-batch-${sourceMeal.id}`,
       name: sourceMeal.title,
@@ -150,14 +169,12 @@ export default function Home() {
       status: 'fresh',
       portionsLeft: portions - 1,
       category: sourceMeal.mealType,
-      customEmoji: sourceMeal.customEmoji || '🍲',
       accentColor: sourceMeal.accentColor,
     });
   };
 
-  // "Gone Already!" quick clear and replan trigger
+  // Early item clearance handler
   const handleMarkGoneEarly = async (mealIdOrFridgeId: string, mealTitle: string) => {
-    // Delete the specific meal or any leftovers linked to it
     const item = await db.meals.get(mealIdOrFridgeId);
     if (item) {
       await db.meals.delete(mealIdOrFridgeId);
@@ -168,12 +185,11 @@ export default function Home() {
       await db.fridge.delete(mealIdOrFridgeId);
     }
 
-    // Trigger celebratory confetti & badge
     confetti({
-      particleCount: 50,
-      spread: 60,
+      particleCount: 40,
+      spread: 50,
       origin: { y: 0.7 },
-      colors: ['#D4FF00', '#FF3388'],
+      colors: ['#84CC16', '#06B6D4'],
     });
 
     setQuickGoneBadge({
@@ -183,7 +199,7 @@ export default function Home() {
 
     setTimeout(() => {
       setQuickGoneBadge({ title: '', show: false });
-    }, 6000);
+    }, 5000);
   };
 
   // Consume Fridge Item Today
@@ -191,22 +207,20 @@ export default function Home() {
     const today = rollingDays[0].dateString;
     await db.meals.add({
       id: `meal-consumed-${Date.now()}`,
-      title: `Fridge Rescue: ${item.name}`,
+      title: `Reheated: ${item.name}`,
       mealType: slot,
       calories: 520,
       protein: 26,
       carbs: 58,
       fat: 18,
       prepTimeMinutes: 3,
-      ingredients: [{ name: item.name, amount: '1 leftover container' }],
-      tags: ['leftover', 'fridge-rescue'],
+      ingredients: [{ name: item.name, amount: '1 portion' }],
+      tags: ['leftover', 'reheated'],
       isLeftover: true,
       dateScheduled: today,
-      customEmoji: item.customEmoji || '🥡',
-      accentColor: item.accentColor || '#D4FF00',
+      accentColor: item.accentColor || '#10B981',
     });
 
-    // Remove or decrement in fridge
     if (item.portionsLeft <= 1) {
       await db.fridge.delete(item.id);
     } else {
@@ -235,19 +249,10 @@ export default function Home() {
       carbs: suggestion.suggestedMeal.carbs || 50,
       fat: suggestion.suggestedMeal.fat || 18,
       prepTimeMinutes: suggestion.suggestedMeal.prepTimeMinutes || 20,
-      imageUrl: suggestion.suggestedMeal.imageUrl,
-      ingredients: suggestion.suggestedMeal.ingredients || [{ name: 'Chef curated ingredients', amount: '1 serving' }],
-      tags: suggestion.suggestedMeal.tags || ['ai-twist'],
+      ingredients: suggestion.suggestedMeal.ingredients || [{ name: 'Selected Ingredients', amount: '1 serving' }],
+      tags: suggestion.suggestedMeal.tags || ['recommended'],
       dateScheduled: targetDate,
-      customEmoji: suggestion.emoji,
       accentColor: suggestion.accentColor,
-    });
-
-    confetti({
-      particleCount: 60,
-      spread: 60,
-      origin: { y: 0.7 },
-      colors: ['#C084FC', '#D4FF00'],
     });
 
     setActiveTab('planner');
@@ -255,8 +260,8 @@ export default function Home() {
 
   if (!isClient) {
     return (
-      <div className="min-h-screen bg-[#0A0B0E] flex items-center justify-center">
-        <div className="w-12 h-12 rounded-2xl bg-[#D4FF00] border-2 border-black animate-spin shadow-neo flex items-center justify-center text-black font-black text-xl">
+      <div className="min-h-screen bg-slate-50 dark:bg-[#0A0B0E] flex items-center justify-center">
+        <div className="w-10 h-10 rounded-xl bg-black dark:bg-[#D4FF00] flex items-center justify-center text-white dark:text-black font-black text-lg">
           M
         </div>
       </div>
@@ -264,37 +269,39 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0A0B0E] text-white pb-28">
-      {/* Top App Header */}
+    <div className="min-h-screen bg-slate-50 dark:bg-[#0A0B0E] text-gray-900 dark:text-white pb-28 transition-colors duration-200">
+      {/* Header */}
       <Header
         onOpenAuth={() => setIsAuthOpen(true)}
         onOpenAddMeal={() => handleQuickAdd(selectedDate, 'lunch')}
         userEmail={userEmail}
         todayCalories={todayCalories}
         calorieTarget={calorieTarget}
+        theme={theme}
+        onToggleTheme={handleToggleTheme}
       />
 
-      {/* Main App Container */}
+      {/* Main Container */}
       <main className="max-w-7xl mx-auto px-4 sm:px-8 pt-6">
-        {/* Quick Gone-Already Celebration Banner */}
+        {/* Early Item Completion Notice */}
         <AnimatePresence>
           {quickGoneBadge.show && (
             <motion.div
-              initial={{ opacity: 0, y: -20, scale: 0.95 }}
+              initial={{ opacity: 0, y: -15, scale: 0.96 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -10, scale: 0.95 }}
-              className="mb-6 p-4 rounded-2xl bg-[#181A24] border-2 border-yellow-400 shadow-neo flex items-center justify-between gap-4"
+              exit={{ opacity: 0, y: -10, scale: 0.96 }}
+              className="mb-6 p-4 rounded-2xl bg-white dark:bg-[#181A24] border border-amber-300 dark:border-amber-500/40 shadow-sm flex items-center justify-between gap-4"
             >
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-yellow-400 text-black flex items-center justify-center font-black text-xl">
-                  ⚡
+                <div className="w-9 h-9 rounded-xl bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-yellow-300 flex items-center justify-center font-bold">
+                  <CheckCircle2 className="w-5 h-5" />
                 </div>
                 <div>
-                  <h4 className="font-funky font-black text-sm text-yellow-300">
-                    GONE ALREADY! QUICK MUNCHER 🏆
+                  <h4 className="font-funky font-black text-sm text-gray-900 dark:text-white">
+                    Completed Ahead of Schedule
                   </h4>
-                  <p className="text-xs text-gray-300">
-                    You polished off <span className="font-bold text-white">&quot;{quickGoneBadge.title}&quot;</span> ahead of schedule!
+                  <p className="text-xs text-gray-500 dark:text-gray-300">
+                    Finished &quot;{quickGoneBadge.title}&quot;. Inventory updated.
                   </p>
                 </div>
               </div>
@@ -304,10 +311,10 @@ export default function Home() {
                   handleQuickAdd(rollingDays[0].dateString, 'dinner');
                   setQuickGoneBadge({ title: '', show: false });
                 }}
-                className="px-3.5 py-2 bg-yellow-400 hover:bg-yellow-300 text-black font-black text-xs rounded-xl shadow-sm transition-all flex items-center gap-1.5 flex-shrink-0"
+                className="px-3 py-1.5 bg-gray-900 hover:bg-black text-white dark:bg-[#D4FF00] dark:hover:bg-[#c3ed00] dark:text-black font-black text-xs rounded-xl shadow-sm transition-all flex items-center gap-1.5 flex-shrink-0"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
-                <span>Cook Again?</span>
+                <span>Re-Plan Meal</span>
               </button>
             </motion.div>
           )}
@@ -316,7 +323,7 @@ export default function Home() {
         {/* TAB 1: PLANNER (BENTO + KANBAN) */}
         {activeTab === 'planner' && (
           <div className="space-y-6">
-            {/* Rolling 7-day selector starting specifically from Today! */}
+            {/* Rolling 7-day selector starting specifically from Today */}
             <RollingWeekSelector
               days={rollingDays}
               selectedDate={selectedDate}
@@ -326,7 +333,7 @@ export default function Home() {
               dayMealCounts={dayMealCounts}
             />
 
-            {/* Gen-Z Urgent Fridge Rot Radar Banner */}
+            {/* Compact Fridge Rot / Perishable Notification */}
             <FridgeRotBanner
               items={fridgeItems}
               onConsumeItemToday={handleConsumeFridgeItem}
@@ -334,7 +341,7 @@ export default function Home() {
               onDeleteItem={(id) => db.fridge.delete(id)}
             />
 
-            {/* The Core Drag-and-Drop Kanban / Bento Board */}
+            {/* Core Kanban / Bento Board */}
             <KanbanBentoBoard
               days={rollingDays}
               selectedDate={selectedDate}
@@ -353,15 +360,17 @@ export default function Home() {
         {/* TAB 2: FRIDGE RADAR */}
         {activeTab === 'fridge' && (
           <div className="space-y-6">
-            <div className="bg-[#12141B] border-2 border-black rounded-3xl p-6 shadow-neo flex items-center justify-between">
+            <div className="bg-white dark:bg-[#12141B] border border-gray-200 dark:border-black rounded-3xl p-6 shadow-sm flex items-center justify-between transition-colors">
               <div>
-                <h2 className="font-funky font-black text-2xl text-white">FRIDGE RADAR</h2>
-                <p className="text-xs text-gray-400 mt-1">
-                  Tracks cooked batches and leftovers so food is eaten before it spoils.
+                <h2 className="font-funky font-black text-xl text-gray-900 dark:text-white">
+                  PERISHABLE INVENTORY & REFRIGERATION
+                </h2>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Tracks prepared batches and leftovers so meals are consumed before spoilage.
                 </p>
               </div>
-              <div className="px-3 py-1.5 rounded-full bg-[#D4FF00] text-black font-black text-xs">
-                {fridgeItems.length} Batches Tracked
+              <div className="px-3 py-1.5 rounded-full bg-lime-400 dark:bg-[#D4FF00] text-black font-black text-xs">
+                {fridgeItems.length} Batches Active
               </div>
             </div>
 
@@ -374,7 +383,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* TAB 3: RECIPE VAULT (200+ CURATED DISHES) */}
+        {/* TAB 3: RECIPE VAULT */}
         {activeTab === 'vault' && (
           <RecipeVault
             onScheduleMeal={handleAddMealConfirm}
@@ -382,7 +391,7 @@ export default function Home() {
           />
         )}
 
-        {/* TAB 4: AI FLAVOR TWISTS */}
+        {/* TAB 4: RECOMMENDATIONS */}
         {activeTab === 'twists' && (
           <AITwistsView
             suggestions={smartSuggestions}

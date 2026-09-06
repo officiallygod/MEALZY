@@ -1,8 +1,8 @@
 'use client';
 
 import React from 'react';
-import { Sparkles, ArrowRight, Flame, ChefHat, Check, AlertTriangle, RefreshCw } from 'lucide-react';
-import { AISuggestion, MealItem, MealType } from '@/types/meal';
+import { Sparkles, ArrowRight, Zap } from 'lucide-react';
+import { AISuggestion, MealType } from '@/types/meal';
 
 interface AITwistsViewProps {
   suggestions: AISuggestion[];
@@ -19,21 +19,18 @@ export default function AITwistsView({
 
   return (
     <div className="space-y-6">
-      {/* Gen-Z AI Banner */}
-      <div className="bg-gradient-to-r from-[#181A24] to-[#20152B] border-2 border-black rounded-3xl p-6 shadow-neo">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="w-10 h-10 rounded-2xl bg-[#C084FC] text-black font-black flex items-center justify-center text-xl shadow-neo">
-            ✨
+      {/* Header Banner */}
+      <div className="bg-white dark:bg-[#12141B] border border-gray-200 dark:border-black rounded-3xl p-6 shadow-sm transition-colors">
+        <div className="flex items-center gap-3 mb-1">
+          <div className="w-8 h-8 rounded-xl bg-purple-100 dark:bg-[#C084FC]/20 text-purple-700 dark:text-[#C084FC] border border-purple-200 dark:border-[#C084FC]/40 flex items-center justify-center">
+            <Sparkles className="w-4 h-4" />
           </div>
           <div>
-            <h2 className="font-funky font-black text-xl text-white flex items-center gap-2">
-              MEALZY FLAVOR TWIST ENGINE
-              <span className="text-[10px] bg-[#C084FC]/20 text-[#C084FC] px-2 py-0.5 rounded-full border border-[#C084FC]/40 font-bold">
-                LOCAL AI
-              </span>
+            <h2 className="font-funky font-black text-lg text-gray-900 dark:text-white">
+              RECOMMENDATIONS AND FLAVOR VARIATIONS
             </h2>
-            <p className="text-xs text-gray-400">
-              Heuristic intelligence based on your taste profile. Zero recurring API charges, runs 100% offline.
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              Heuristic suggestions based on your scheduled choices and perishable items.
             </p>
           </div>
         </div>
@@ -48,53 +45,45 @@ export default function AITwistsView({
           return (
             <div
               key={sugg.id}
-              className={`rounded-3xl p-5 border-2 flex flex-col justify-between transition-all ${
+              className={`rounded-3xl p-5 border flex flex-col justify-between transition-all bg-white dark:bg-[#12141B] ${
                 isRescue
-                  ? 'bg-[#1C1014] border-[#FF5C5C] shadow-[4px_4px_0px_#FF5C5C]'
+                  ? 'border-rose-300 dark:border-rose-900/60 shadow-sm'
                   : isTwist
-                  ? 'bg-[#12141B] border-[#D4FF00] shadow-[4px_4px_0px_#D4FF00]'
-                  : 'bg-[#12141B] border-[#262938] shadow-neo'
+                  ? 'border-gray-200 dark:border-[#262938] hover:border-black dark:hover:border-[#D4FF00] shadow-sm'
+                  : 'border-gray-200 dark:border-[#262938]'
               }`}
             >
               <div>
-                <div className="flex items-start justify-between gap-3 mb-3">
-                  <div className="flex items-center gap-2.5">
-                    <span className="text-3xl">{sugg.emoji}</span>
-                    <div>
-                      <span
-                        className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border"
-                        style={{
-                          backgroundColor: `${sugg.accentColor}22`,
-                          borderColor: `${sugg.accentColor}55`,
-                          color: sugg.accentColor,
-                        }}
-                      >
-                        {sugg.headline}
-                      </span>
-                      <h3 className="font-funky font-black text-base text-white mt-1">
-                        {sugg.title}
-                      </h3>
-                    </div>
-                  </div>
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-gray-100 dark:bg-[#181A24] text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700">
+                    {sugg.headline}
+                  </span>
+                  <span className="text-xs font-bold text-gray-400">
+                    {sugg.prepTime}
+                  </span>
                 </div>
 
-                <p className="text-xs text-gray-300 leading-relaxed mb-4">{sugg.reason}</p>
+                <h3 className="font-funky font-black text-base text-gray-900 dark:text-white mt-1 mb-2">
+                  {sugg.title}
+                </h3>
 
-                {/* Macro preview */}
-                <div className="flex items-center gap-3 text-xs font-bold text-gray-400 mb-4 bg-[#181A24] p-2.5 rounded-xl border border-gray-800">
-                  <span className="text-[#D4FF00]">{sugg.calories} kcal</span>
+                <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed mb-4">
+                  {sugg.reason}
+                </p>
+
+                {/* Macro Summary */}
+                <div className="flex items-center gap-3 text-xs font-bold text-gray-500 dark:text-gray-400 mb-4 bg-gray-50 dark:bg-[#181A24] p-2.5 rounded-xl border border-gray-100 dark:border-gray-800">
+                  <span className="text-gray-900 dark:text-[#D4FF00] font-black">{sugg.calories} kcal</span>
                   <span>•</span>
                   <span>{sugg.protein}g Protein</span>
-                  <span>•</span>
-                  <span>{sugg.prepTime}</span>
                 </div>
               </div>
 
               {/* Action Buttons */}
-              <div className="pt-3 border-t border-gray-800 flex items-center gap-2">
+              <div className="pt-3 border-t border-gray-100 dark:border-gray-800 flex items-center gap-2">
                 <button
                   onClick={() => onApplySuggestion(sugg, tomorrow.dateString, 'dinner')}
-                  className="flex-1 py-2.5 px-3 bg-[#D4FF00] hover:bg-[#c3ed00] text-black font-black text-xs rounded-xl shadow-sm transition-all flex items-center justify-center gap-1.5"
+                  className="flex-1 py-2 px-3 bg-gray-900 hover:bg-black text-white dark:bg-[#D4FF00] dark:hover:bg-[#c3ed00] dark:text-black font-black text-xs rounded-xl shadow-sm transition-all flex items-center justify-center gap-1.5"
                 >
                   <span>Add to Tomorrow Dinner</span>
                   <ArrowRight className="w-3.5 h-3.5" />
@@ -102,9 +91,9 @@ export default function AITwistsView({
 
                 <button
                   onClick={() => onApplySuggestion(sugg, rollingDays[0].dateString, 'lunch')}
-                  className="py-2.5 px-3 bg-[#262938] hover:bg-[#323648] text-white font-bold text-xs rounded-xl transition-all"
+                  className="py-2 px-3 bg-gray-100 dark:bg-[#262938] hover:bg-gray-200 dark:hover:bg-[#323648] text-gray-700 dark:text-white font-bold text-xs rounded-xl transition-all"
                 >
-                  Eat Today
+                  Schedule Today
                 </button>
               </div>
             </div>

@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Calendar, Snowflake, BookOpen, Sparkles } from 'lucide-react';
+import { Calendar, Layers, BookMarked, Sparkles } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export type ActiveTab = 'planner' | 'fridge' | 'vault' | 'twists';
@@ -22,13 +22,13 @@ interface TabItem {
 export default function BottomNav({ activeTab, onSelectTab, rottingCount = 0 }: BottomNavProps) {
   const tabs: TabItem[] = [
     { id: 'planner', label: 'Plan', icon: Calendar },
-    { id: 'fridge', label: 'Fridge Radar', icon: Snowflake, badge: rottingCount > 0 ? rottingCount : undefined },
-    { id: 'vault', label: 'Recipes', icon: BookOpen },
+    { id: 'fridge', label: 'Fridge Radar', icon: Layers, badge: rottingCount > 0 ? rottingCount : undefined },
+    { id: 'vault', label: 'Recipes', icon: BookMarked },
     { id: 'twists', label: 'AI Twists', icon: Sparkles },
   ];
 
   return (
-    <nav className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 px-3 py-2 bg-[#12141B]/90 backdrop-blur-2xl border-2 border-black rounded-full shadow-[5px_5px_0px_#000000] flex items-center gap-1 sm:gap-2">
+    <nav className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 px-3 py-2 bg-white/95 dark:bg-[#12141B]/90 backdrop-blur-2xl border border-gray-200 dark:border-black rounded-full shadow-lg dark:shadow-[5px_5px_0px_#000000] flex items-center gap-1 sm:gap-2 transition-colors">
       {tabs.map((tab) => {
         const Icon = tab.icon;
         const isActive = activeTab === tab.id;
@@ -42,7 +42,7 @@ export default function BottomNav({ activeTab, onSelectTab, rottingCount = 0 }: 
             {isActive && (
               <motion.div
                 layoutId="activeTabPill"
-                className="absolute inset-0 bg-[#D4FF00] rounded-full border-2 border-black shadow-sm"
+                className="absolute inset-0 bg-lime-400 dark:bg-[#D4FF00] rounded-full border border-black shadow-sm"
                 transition={{ type: 'spring', stiffness: 450, damping: 30 }}
               />
             )}
@@ -50,15 +50,23 @@ export default function BottomNav({ activeTab, onSelectTab, rottingCount = 0 }: 
             <div className="relative z-10 flex items-center gap-1.5">
               <Icon
                 className={`w-4 h-4 transition-colors ${
-                  isActive ? 'text-black' : 'text-gray-400 group-hover:text-white'
+                  isActive
+                    ? 'text-black'
+                    : 'text-gray-500 dark:text-gray-400 group-hover:text-black dark:group-hover:text-white'
                 }`}
               />
-              <span className={`${isActive ? 'text-black font-extrabold' : 'text-gray-400'}`}>
+              <span
+                className={`${
+                  isActive
+                    ? 'text-black font-extrabold'
+                    : 'text-gray-600 dark:text-gray-400'
+                }`}
+              >
                 {tab.label}
               </span>
 
               {tab.badge && (
-                <span className="w-4 h-4 rounded-full bg-[#FF5C5C] text-white text-[9px] font-black flex items-center justify-center animate-bounce">
+                <span className="w-4 h-4 rounded-full bg-red-500 text-white text-[9px] font-black flex items-center justify-center">
                   {tab.badge}
                 </span>
               )}

@@ -15,7 +15,6 @@ export interface MealItem {
   carbs: number;
   fat: number;
   prepTimeMinutes: number;
-  imageUrl?: string;
   recipeUrl?: string;
   ingredients: Ingredient[];
   tags: string[];
@@ -25,7 +24,6 @@ export interface MealItem {
   totalPortionsCooked?: number;
   portionsRemaining?: number;
   notes?: string;
-  customEmoji?: string;
   accentColor?: string;
   dateScheduled?: string; // YYYY-MM-DD
 }
@@ -54,7 +52,6 @@ export interface FridgePantryItem {
   portionsLeft: number;
   originalMealTitle: string;
   category: string;
-  customEmoji?: string;
   accentColor?: string;
 }
 
@@ -83,7 +80,6 @@ export interface AISuggestion {
   calories: number;
   protein: number;
   prepTime: string;
-  emoji: string;
   accentColor: string;
   suggestedMeal: Partial<MealItem>;
 }
