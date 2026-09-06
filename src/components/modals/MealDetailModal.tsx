@@ -90,7 +90,7 @@ export default function MealDetailModal({
         </div>
 
         {/* Modal Body */}
-        <div className="p-6 overflow-y-auto space-y-5 flex-1">
+        <div className="p-6 overflow-y-auto scrollbar-none space-y-5 flex-1">
           {/* Metadata Chips */}
           <div className="flex items-center gap-2 flex-wrap">
             <div className="px-3 py-1 rounded-full bg-[#FAF8F5] dark:bg-[#1E202A] text-xs font-black text-gray-700 dark:text-gray-300 border-2 border-black dark:border-gray-700 flex items-center gap-1.5 shadow-neo-sm">

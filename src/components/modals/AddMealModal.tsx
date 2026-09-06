@@ -413,7 +413,7 @@ export default function AddMealModal({
           })}
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4 flex-1 overflow-y-auto pr-1">
+        <form onSubmit={handleSubmit} className="space-y-4 flex-1 overflow-y-auto scrollbar-none pr-1">
           {/* Rediscover Past Meals for this slot */}
           {rediscoverMeals.length > 0 && (
             <div className="p-3 bg-[#FAF8F5] dark:bg-[#1E202A] rounded-2xl border-2 border-black dark:border-gray-700 shadow-neo-sm">
@@ -476,7 +476,7 @@ export default function AddMealModal({
                   initial={{ opacity: 0, y: -4 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -4 }}
-                  className="absolute left-0 right-0 top-full mt-1.5 bg-white dark:bg-[#1E202A] border-2 border-black dark:border-gray-700 rounded-2xl shadow-neo-lg z-20 max-h-56 overflow-y-auto p-1.5 space-y-1"
+                  className="absolute left-0 right-0 top-full mt-1.5 bg-white dark:bg-[#1E202A] border-2 border-black dark:border-gray-700 rounded-2xl shadow-neo-lg z-20 max-h-56 overflow-y-auto scrollbar-none p-1.5 space-y-1"
                 >
                   <div className="px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-gray-400 flex items-center justify-between">
                     <span>Suggestions for {selectedSlot}</span>

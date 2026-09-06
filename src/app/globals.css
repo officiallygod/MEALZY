@@ -90,7 +90,7 @@ body {
   animation-play-state: paused;
 }
 
-/* Hide scrollbars for clean horizontal strips */
+/* Hide scrollbars utility */
 .scrollbar-none::-webkit-scrollbar {
   display: none;
 }
@@ -99,6 +99,29 @@ body {
   scrollbar-width: none;
 }
 
+/* Universal sleek custom scrollbars matching dark/light themes */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(140, 140, 140, 0.3);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(140, 140, 140, 0.5);
+}
+html.dark ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.18);
+}
+html.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.35);
+}
+
 * {
   box-sizing: border-box;
 }
+

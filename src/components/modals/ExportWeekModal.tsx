@@ -255,7 +255,7 @@ export default function ExportWeekModal({
         </div>
 
         {/* Live Preview Container */}
-        <div className="flex-1 overflow-y-auto bg-[#FAF8F5] dark:bg-[#101217] rounded-2xl border-2 border-black dark:border-gray-800 p-4 flex items-center justify-center min-h-[260px] relative shadow-inner">
+        <div className="flex-1 overflow-y-auto scrollbar-none bg-[#FAF8F5] dark:bg-[#101217] rounded-2xl border-2 border-black dark:border-gray-800 p-4 flex items-center justify-center min-h-[260px] relative shadow-inner">
           {isGenerating ? (
             <div className="flex flex-col items-center justify-center gap-2 text-gray-500">
               <Loader2 className="w-6 h-6 animate-spin text-[#FF5500]" />

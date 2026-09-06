@@ -140,7 +140,7 @@ export default function CookMealModal({
         </div>
 
         {/* Scrollable Modal Content */}
-        <div className="overflow-y-auto pr-1 space-y-5 flex-1">
+        <div className="overflow-y-auto scrollbar-none pr-1 space-y-5 flex-1">
           {/* Portion Multiplier Selector */}
           <div>
             <label className="block text-xs font-black uppercase text-gray-600 dark:text-gray-400 mb-2">

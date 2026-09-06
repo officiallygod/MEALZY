@@ -10,12 +10,10 @@ export const APP_CONFIG = {
   appName: 'MEALZY',
   appUrl: process.env.NEXT_PUBLIC_APP_URL || 'https://officiallygod.github.io/MEALZY',
 
-  // 🔑 PASTE YOUR GOOGLE OAUTH CLIENT ID HERE:
-  // (e.g. '1234567890-abcdefg.apps.googleusercontent.com')
-  // This is a public client identifier, completely safe to bundle in frontend code.
+  // Google OAuth Client ID for zero-cost Drive AppData sync
   googleClientId:
     process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ||
-    'YOUR_GOOGLE_CLIENT_ID_HERE',
+    '348698469561-l9ijflms2f1a16ommrlnqs4hni917fpa.apps.googleusercontent.com',
 
   // Optional Supabase project credentials
   supabase: {

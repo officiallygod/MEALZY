@@ -1,14 +1,9 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { X, Lock, Mail, User, CheckCircle2, Download, Upload, ExternalLink, ChevronDown, ChevronUp } from 'lucide-react';
-import {
-  downloadLocalBackupFile,
-  uploadAndRestoreBackup,
-  saveGoogleClientId,
-  syncToGoogleDriveAppData,
-} from '@/lib/sync/google-drive';
+import React, { useState } from 'react';
+import { motion } from 'framer-motion';
+import { X, Lock, Mail, User, CheckCircle2 } from 'lucide-react';
+import { syncToGoogleDriveAppData } from '@/lib/sync/google-drive';
 import { getActiveGoogleClientId } from '@/config/app-config';
 
 interface AuthModalProps {
@@ -24,14 +19,6 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: AuthModal
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [statusMsg, setStatusMsg] = useState<{ text: string; type: 'success' | 'info' | 'error' } | null>(null);
-  const [showDevPanel, setShowDevPanel] = useState(false);
-  const [devClientId, setDevClientId] = useState('');
-
-  useEffect(() => {
-    if (isOpen) {
-      setDevClientId(getActiveGoogleClientId());
-    }
-  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -47,87 +34,58 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: AuthModal
     onClose();
   };
 
-  const handleSaveDevKey = () => {
-    saveGoogleClientId(devClientId);
-    setStatusMsg({
-      text: 'Saved Google Client ID! All users on this browser can now 1-tap sign in.',
-      type: 'success',
-    });
-    setTimeout(() => setStatusMsg(null), 4000);
-  };
-
   const handleGoogleSignIn = () => {
-    const activeClientId = getActiveGoogleClientId() || devClientId;
+    const activeClientId = getActiveGoogleClientId();
 
-    if (!activeClientId) {
-      setStatusMsg({
-        text: 'Developer notice: Please set your Google Client ID in src/config/app-config.ts or below so your users can 1-tap sign in!',
-        type: 'info',
-      });
-      setShowDevPanel(true);
-      return;
-    }
-
-    if (typeof window !== 'undefined' && (window as any).google?.accounts?.oauth2) {
-      const client = (window as any).google.accounts.oauth2.initTokenClient({
-        client_id: activeClientId,
-        scope: 'https://www.googleapis.com/auth/drive.appdata',
-        callback: async (tokenResponse: any) => {
-          if (tokenResponse?.access_token) {
-            const ok = await syncToGoogleDriveAppData(tokenResponse.access_token);
-            if (ok) {
-              onLoginSuccess('Google Account');
-              onClose();
-            } else {
-              setStatusMsg({ text: 'Google Drive sync failed. Check authorized origins.', type: 'error' });
+    if (typeof window !== 'undefined' && (window as any).google?.accounts?.oauth2 && activeClientId) {
+      try {
+        const client = (window as any).google.accounts.oauth2.initTokenClient({
+          client_id: activeClientId,
+          scope: 'https://www.googleapis.com/auth/drive.appdata',
+          callback: async (tokenResponse: any) => {
+            if (tokenResponse?.access_token) {
+              const ok = await syncToGoogleDriveAppData(tokenResponse.access_token);
+              if (ok) {
+                onLoginSuccess('Google Account');
+                onClose();
+              } else {
+                setStatusMsg({ text: 'Google Drive sync failed. Check authorized origins.', type: 'error' });
+              }
             }
-          }
-        },
-      });
-      client.requestAccessToken();
+          },
+        });
+        client.requestAccessToken();
+      } catch (err) {
+        console.error('Google Sign-In error:', err);
+        onLoginSuccess('Google Account');
+        onClose();
+      }
     } else {
       onLoginSuccess('Google Account');
       onClose();
     }
   };
 
-  const handleBackupDownload = async () => {
-    await downloadLocalBackupFile();
-    setStatusMsg({ text: 'Downloaded mealzy_backup.json!', type: 'success' });
-    setTimeout(() => setStatusMsg(null), 3000);
-  };
-
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    try {
-      await uploadAndRestoreBackup(file);
-      setStatusMsg({ text: 'Backup restored! Reloading meals...', type: 'success' });
-      setTimeout(() => window.location.reload(), 1000);
-    } catch {
-      setStatusMsg({ text: 'Error reading backup JSON.', type: 'error' });
-    }
-  };
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md overflow-y-auto scrollbar-none">
       <motion.div
-        initial={{ opacity: 0, scale: 0.92, y: 20 }}
+        initial={{ opacity: 0, scale: 0.94, y: 15 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.92, y: 20 }}
+        exit={{ opacity: 0, scale: 0.94, y: 15 }}
         transition={{ type: 'spring', damping: 25, stiffness: 350 }}
-        className="relative w-full max-w-md bg-white dark:bg-[#16171E] border-2 border-black dark:border-gray-700 rounded-3xl p-6 shadow-neo-xl text-gray-900 dark:text-white max-h-[92vh] overflow-y-auto"
+        className="relative w-full max-w-md bg-white dark:bg-[#16171E] border-2 border-black dark:border-gray-700 rounded-3xl p-6 sm:p-7 shadow-neo-xl text-gray-900 dark:text-white max-h-[92vh] overflow-y-auto scrollbar-none"
       >
         {/* Close Button */}
         <button
           onClick={onClose}
+          aria-label="Close"
           className="absolute top-5 right-5 w-8 h-8 rounded-xl bg-[#FAF8F5] dark:bg-[#20222E] border-2 border-black dark:border-gray-700 flex items-center justify-center text-gray-700 dark:text-gray-300 hover:text-black dark:hover:text-white shadow-neo-sm active:translate-x-0.5 active:translate-y-0.5 transition-all"
         >
           <X className="w-4 h-4 stroke-[2.5]" />
         </button>
 
         {/* Header */}
-        <div className="text-center mb-6">
+        <div className="text-center mb-5">
           <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-[#FFE600] border-2 border-black text-black font-black text-xl mb-3 shadow-neo">
             M
           </div>
@@ -155,7 +113,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: AuthModal
           </div>
         )}
 
-        {/* PRIMARY ACTION: 1-TAP GOOGLE LOGIN FOR VISITORS */}
+        {/* PRIMARY ACTION: 1-TAP GOOGLE LOGIN */}
         <button
           type="button"
           onClick={handleGoogleSignIn}
@@ -193,6 +151,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: AuthModal
         {/* Tab Switcher for Email */}
         <div className="flex bg-[#FAF8F5] dark:bg-[#20222E] p-1.5 rounded-2xl mb-4 border-2 border-black dark:border-gray-700 shadow-neo-sm">
           <button
+            type="button"
             onClick={() => setTab('login')}
             className={`flex-1 py-1.5 text-xs font-black rounded-xl transition-all ${
               tab === 'login' ? 'bg-[#FFE600] text-black border-2 border-black shadow-neo-sm' : 'text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white'
@@ -201,6 +160,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: AuthModal
             Log In
           </button>
           <button
+            type="button"
             onClick={() => setTab('register')}
             className={`flex-1 py-1.5 text-xs font-black rounded-xl transition-all ${
               tab === 'register' ? 'bg-[#FFE600] text-black border-2 border-black shadow-neo-sm' : 'text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white'
@@ -277,75 +237,6 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: AuthModal
           >
             Continue as Guest (100% Offline) →
           </button>
-        </div>
-
-        {/* COLLAPSIBLE DEVELOPER SETUP */}
-        <div className="mt-5 pt-3 border-t-2 border-black/10 dark:border-gray-800">
-          <button
-            type="button"
-            onClick={() => setShowDevPanel(!showDevPanel)}
-            className="w-full flex items-center justify-between text-[11px] font-black text-gray-500 hover:text-black dark:hover:text-white uppercase"
-          >
-            <span>Developer &amp; Cloud Sync Keys</span>
-            {showDevPanel ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-          </button>
-
-          <AnimatePresence>
-            {showDevPanel && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                className="mt-3 p-3.5 rounded-2xl bg-[#FAF8F5] dark:bg-[#20222E] border-2 border-black dark:border-gray-700 space-y-3 text-xs overflow-hidden shadow-neo-sm"
-              >
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-gray-900 dark:text-white font-black text-[11px]">Google OAuth Client ID:</span>
-                    <a
-                      href="https://console.cloud.google.com/apis/credentials"
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-[10px] text-[#00E5FF] font-bold hover:underline flex items-center gap-1"
-                    >
-                      <span>Google Console</span>
-                      <ExternalLink className="w-3 h-3" />
-                    </a>
-                  </div>
-                  <input
-                    type="text"
-                    value={devClientId}
-                    onChange={(e) => setDevClientId(e.target.value)}
-                    placeholder="xxxx-yyyy.apps.googleusercontent.com"
-                    className="w-full bg-white dark:bg-[#16171E] border-2 border-black dark:border-gray-700 rounded-xl px-2.5 py-1.5 text-[11px] text-gray-900 dark:text-white focus:outline-none"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleSaveDevKey}
-                    className="mt-2 w-full py-1.5 bg-[#FFE600] text-black font-black text-xs rounded-xl border-2 border-black shadow-neo-sm transition-all"
-                  >
-                    Save Key
-                  </button>
-                </div>
-
-                {/* Local Backup Download/Restore */}
-                <div className="pt-2 border-t border-black/10 dark:border-gray-800 flex gap-2">
-                  <button
-                    type="button"
-                    onClick={handleBackupDownload}
-                    className="flex-1 py-1.5 px-2 bg-white dark:bg-[#16171E] hover:bg-gray-100 dark:hover:bg-[#222432] text-gray-900 dark:text-white font-black rounded-xl border-2 border-black text-[10px] flex items-center justify-center gap-1 shadow-neo-sm"
-                  >
-                    <Download className="w-3 h-3" />
-                    <span>Download JSON</span>
-                  </button>
-                  <label className="flex-1 py-1.5 px-2 bg-white dark:bg-[#16171E] hover:bg-gray-100 dark:hover:bg-[#222432] text-gray-900 dark:text-white font-black rounded-xl border-2 border-black text-[10px] flex items-center justify-center gap-1 shadow-neo-sm cursor-pointer">
-                    <Upload className="w-3 h-3" />
-                    <span>Restore JSON</span>
-                    <input type="file" accept=".json" onChange={handleFileUpload} className="hidden" />
-                  </label>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
         </div>
       </motion.div>
     </div>
