@@ -493,6 +493,8 @@ export default function Home() {
         onClose={() => setIsAddMealOpen(false)}
         targetDate={addMealDate}
         targetSlot={addMealSlot}
+        allMeals={meals}
+        rollingDays={rollingDays}
         onAddMeal={handleAddMealConfirm}
       />
 

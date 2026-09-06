@@ -518,3 +518,155 @@ export async function searchOpenFoodFactsFallback(query: string): Promise<Partia
     return [];
   }
 }
+
+// Rough estimation based on closest matching food or sensible slot benchmarks
+export function estimateDishNutrition(
+  queryTitle: string,
+  slot?: MealType
+): {
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  prepTimeMinutes: number;
+  matchedFoodTitle?: string;
+  accentColor: string;
+} {
+  const clean = queryTitle.trim().toLowerCase();
+
+  // Try to find closest food in open-source database by word matching
+  if (clean.length > 0) {
+    const words = clean.split(/\s+/).filter((w) => w.length > 2);
+    for (const dish of OPEN_SOURCE_DISHES) {
+      const dishTitleLower = dish.title.toLowerCase();
+      // Exact substring match
+      if (dishTitleLower.includes(clean) || clean.includes(dishTitleLower)) {
+        return {
+          calories: dish.calories,
+          protein: dish.protein,
+          carbs: dish.carbs,
+          fat: dish.fat,
+          prepTimeMinutes: dish.prepTimeMinutes,
+          matchedFoodTitle: dish.title,
+          accentColor: dish.accentColor,
+        };
+      }
+      // Word match
+      if (words.some((w) => dishTitleLower.includes(w) || dish.tags.some((t) => t.includes(w)))) {
+        return {
+          calories: dish.calories,
+          protein: dish.protein,
+          carbs: dish.carbs,
+          fat: dish.fat,
+          prepTimeMinutes: dish.prepTimeMinutes,
+          matchedFoodTitle: dish.title,
+          accentColor: dish.accentColor,
+        };
+      }
+    }
+  }
+
+  // Fallback estimation benchmarks by slot
+  switch (slot) {
+    case 'breakfast':
+      return {
+        calories: 420,
+        protein: 22,
+        carbs: 48,
+        fat: 16,
+        prepTimeMinutes: 12,
+        accentColor: '#FFE600',
+      };
+    case 'lunch':
+      return {
+        calories: 540,
+        protein: 34,
+        carbs: 56,
+        fat: 18,
+        prepTimeMinutes: 15,
+        accentColor: '#00E5FF',
+      };
+    case 'dinner':
+      return {
+        calories: 640,
+        protein: 44,
+        carbs: 58,
+        fat: 22,
+        prepTimeMinutes: 20,
+        accentColor: '#FF5500',
+      };
+    case 'snack':
+      return {
+        calories: 210,
+        protein: 12,
+        carbs: 24,
+        fat: 8,
+        prepTimeMinutes: 5,
+        accentColor: '#D4FF00',
+      };
+    default:
+      return {
+        calories: 500,
+        protein: 28,
+        carbs: 50,
+        fat: 18,
+        prepTimeMinutes: 15,
+        accentColor: '#10B981',
+      };
+  }
+}
+
+// Find older meals the user previously made for this slot that they haven't had recently
+export interface RediscoverMeal {
+  title: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  prepTimeMinutes: number;
+  recipeUrl?: string;
+  tags: string[];
+  accentColor?: string;
+  lastDateScheduled: string;
+  daysSinceLastEaten: number;
+}
+
+export function getRediscoverMeals(
+  allMeals: { title: string; mealType: MealType; dateScheduled?: string; calories: number; protein: number; carbs: number; fat: number; prepTimeMinutes?: number; recipeUrl?: string; tags?: string[]; accentColor?: string }[],
+  currentSlot: MealType,
+  targetDate: string
+): RediscoverMeal[] {
+  const targetTime = new Date(targetDate).getTime();
+  const mealMap = new Map<string, RediscoverMeal>();
+
+  for (const m of allMeals) {
+    if (m.mealType !== currentSlot || !m.dateScheduled) continue;
+    const cleanTitle = m.title.replace(/^leftover:\s*/i, '').trim();
+    const mealTime = new Date(m.dateScheduled).getTime();
+    const daysDiff = Math.round((targetTime - mealTime) / (1000 * 60 * 60 * 24));
+
+    if (daysDiff >= 2) {
+      const existing = mealMap.get(cleanTitle.toLowerCase());
+      if (!existing || daysDiff < existing.daysSinceLastEaten) {
+        mealMap.set(cleanTitle.toLowerCase(), {
+          title: cleanTitle,
+          calories: m.calories,
+          protein: m.protein,
+          carbs: m.carbs,
+          fat: m.fat,
+          prepTimeMinutes: m.prepTimeMinutes || 15,
+          recipeUrl: m.recipeUrl,
+          tags: m.tags || [],
+          accentColor: m.accentColor,
+          lastDateScheduled: m.dateScheduled,
+          daysSinceLastEaten: daysDiff,
+        });
+      }
+    }
+  }
+
+  return Array.from(mealMap.values())
+    .sort((a, b) => b.daysSinceLastEaten - a.daysSinceLastEaten)
+    .slice(0, 4);
+}
+

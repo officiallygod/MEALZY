@@ -2,21 +2,28 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Search, Sparkles, Plus, Clock, Check } from 'lucide-react';
+import { X, Search, Sparkles, Plus, Clock, Link as LinkIcon, RotateCcw, ChevronDown, ChevronUp, Check } from 'lucide-react';
 import { MealItem, MealType } from '@/types/meal';
 import { getMealAccent, getMealInitials } from '@/lib/curated-foods';
 import {
   searchDishCatalog,
   getTwistForDishTitle,
+  estimateDishNutrition,
+  getRediscoverMeals,
   searchOpenFoodFactsFallback,
   OpenSourceDish,
+  RediscoverMeal,
 } from '@/lib/dish-database';
+import { db } from '@/lib/db';
+import confetti from 'canvas-confetti';
 
 interface AddMealModalProps {
   isOpen: boolean;
   onClose: () => void;
   targetDate: string;
   targetSlot: MealType;
+  allMeals?: MealItem[];
+  rollingDays?: { dateString: string; dayName: string; dayNumber: number }[];
   onAddMeal: (meal: Omit<MealItem, 'id'>) => void;
 }
 
@@ -25,23 +32,35 @@ export default function AddMealModal({
   onClose,
   targetDate,
   targetSlot,
+  allMeals = [],
+  rollingDays = [],
   onAddMeal,
 }: AddMealModalProps) {
   const [selectedSlot, setSelectedSlot] = useState<MealType>(targetSlot || 'lunch');
   const [dishTitle, setDishTitle] = useState('');
+  const [recipeUrl, setRecipeUrl] = useState('');
+
+  // Nutrition values (estimated automatically behind the scenes)
   const [calories, setCalories] = useState('500');
   const [protein, setProtein] = useState('30');
   const [carbs, setCarbs] = useState('50');
   const [fat, setFat] = useState('16');
   const [prepTime, setPrepTime] = useState('15');
-  const [tags, setTags] = useState<string[]>(['planned']);
-  const [accentColor, setAccentColor] = useState('#10B981');
+  const [isCustomNutrition, setIsCustomNutrition] = useState(false);
+  const [showMacroSettings, setShowMacroSettings] = useState(false);
+  const [matchedFoodName, setMatchedFoodName] = useState<string | null>(null);
 
-  // Typeahead search state
+  // Divide across days (Batch prep)
+  const [divideDays, setDivideDays] = useState<number>(1);
+
+  // Typeahead suggestions
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [localSuggestions, setLocalSuggestions] = useState<OpenSourceDish[]>([]);
   const [onlineSuggestions, setOnlineSuggestions] = useState<Partial<OpenSourceDish>[]>([]);
   const [isSearchingOnline, setIsSearchingOnline] = useState(false);
+
+  // Older meals previously made for this slot that haven't been had recently
+  const [rediscoverMeals, setRediscoverMeals] = useState<RediscoverMeal[]>([]);
 
   // Contextual Twist
   const [activeTwist, setActiveTwist] = useState<OpenSourceDish['twist'] | null>(null);
@@ -50,35 +69,63 @@ export default function AddMealModal({
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Reset or initialize when opened
+  // Initialize or reset when opened
   useEffect(() => {
     if (isOpen) {
       setSelectedSlot(targetSlot || 'lunch');
       setDishTitle('');
-      setCalories('500');
-      setProtein('30');
-      setCarbs('50');
-      setFat('16');
-      setPrepTime('15');
-      setTags(['planned']);
+      setRecipeUrl('');
+      setDivideDays(1);
+      setIsCustomNutrition(false);
+      setShowMacroSettings(false);
       setActiveTwist(null);
       setIsTwistApplied(false);
       setLocalSuggestions(searchDishCatalog('', targetSlot || 'lunch'));
       setShowSuggestions(false);
-    }
-  }, [isOpen, targetSlot]);
 
-  // Update suggestions whenever user types or slot changes
+      // Estimate initial benchmarks for slot
+      const initialEstimate = estimateDishNutrition('', targetSlot || 'lunch');
+      setCalories(String(initialEstimate.calories));
+      setProtein(String(initialEstimate.protein));
+      setCarbs(String(initialEstimate.carbs));
+      setFat(String(initialEstimate.fat));
+      setPrepTime(String(initialEstimate.prepTimeMinutes));
+      setMatchedFoodName(null);
+
+      // Load older meals previously enjoyed for this slot
+      const past = getRediscoverMeals(allMeals, targetSlot || 'lunch', targetDate);
+      setRediscoverMeals(past);
+    }
+  }, [isOpen, targetSlot, targetDate, allMeals]);
+
+  // Update rediscover meals when slot changes
+  useEffect(() => {
+    const past = getRediscoverMeals(allMeals, selectedSlot, targetDate);
+    setRediscoverMeals(past);
+  }, [selectedSlot, allMeals, targetDate]);
+
+  // Automatic rough estimation and typeahead filtering whenever title changes
   useEffect(() => {
     const matches = searchDishCatalog(dishTitle, selectedSlot);
     setLocalSuggestions(matches);
 
-    // Check if there is an automatic twist for this dish
+    // Contextual twist check
     const twist = getTwistForDishTitle(dishTitle);
     setActiveTwist(twist || null);
     setIsTwistApplied(false);
 
-    // Debounced online fallback if query >= 3 characters and few local matches
+    // Rough estimation behind the scenes if user hasn't manually overridden numbers
+    if (!isCustomNutrition && dishTitle.trim().length > 0) {
+      const estimate = estimateDishNutrition(dishTitle, selectedSlot);
+      setCalories(String(estimate.calories));
+      setProtein(String(estimate.protein));
+      setCarbs(String(estimate.carbs));
+      setFat(String(estimate.fat));
+      setPrepTime(String(estimate.prepTimeMinutes));
+      setMatchedFoodName(estimate.matchedFoodTitle || null);
+    }
+
+    // Debounced online fallback if query is 3+ characters and few local matches
     if (dishTitle.trim().length >= 3 && matches.length < 3) {
       setIsSearchingOnline(true);
       const timer = setTimeout(async () => {
@@ -91,7 +138,7 @@ export default function AddMealModal({
       setOnlineSuggestions([]);
       setIsSearchingOnline(false);
     }
-  }, [dishTitle, selectedSlot]);
+  }, [dishTitle, selectedSlot, isCustomNutrition]);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -119,8 +166,8 @@ export default function AddMealModal({
     setCarbs(String(dish.carbs || 45));
     setFat(String(dish.fat || 15));
     setPrepTime(String(dish.prepTimeMinutes || 15));
-    setAccentColor(dish.accentColor || getMealAccent(dish.title));
-    setTags(dish.tags || ['planned']);
+    setIsCustomNutrition(true);
+    setMatchedFoodName(dish.title);
 
     if (dish.twist) {
       setActiveTwist(dish.twist);
@@ -131,6 +178,19 @@ export default function AddMealModal({
     setShowSuggestions(false);
   };
 
+  const handleSelectRediscoverMeal = (past: RediscoverMeal) => {
+    setDishTitle(past.title);
+    setCalories(String(past.calories));
+    setProtein(String(past.protein));
+    setCarbs(String(past.carbs));
+    setFat(String(past.fat));
+    setPrepTime(String(past.prepTimeMinutes));
+    if (past.recipeUrl) setRecipeUrl(past.recipeUrl);
+    setIsCustomNutrition(true);
+    setMatchedFoodName(`Your past meal (${past.daysSinceLastEaten}d ago)`);
+    setShowSuggestions(false);
+  };
+
   const handleToggleApplyTwist = () => {
     if (!activeTwist) return;
 
@@ -138,40 +198,104 @@ export default function AddMealModal({
       setDishTitle(activeTwist.title);
       setCalories((prev) => String(Number(prev) + activeTwist.caloriesDelta));
       setProtein((prev) => String(Number(prev) + activeTwist.proteinDelta));
-      setTags((prev) => [...prev.filter((t) => t !== 'twist-applied'), 'twist-applied']);
       setIsTwistApplied(true);
     } else {
       const original = dishTitle.replace(activeTwist.title, '').trim() || activeTwist.title;
       setCalories((prev) => String(Math.max(100, Number(prev) - activeTwist.caloriesDelta)));
       setProtein((prev) => String(Math.max(0, Number(prev) - activeTwist.proteinDelta)));
-      setTags((prev) => prev.filter((t) => t !== 'twist-applied'));
       setIsTwistApplied(false);
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!dishTitle.trim()) return;
 
-    onAddMeal({
+    const sourceMealId = `meal-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+    const calNum = Number(calories) || 480;
+    const pNum = Number(protein) || 28;
+    const cNum = Number(carbs) || 50;
+    const fNum = Number(fat) || 16;
+    const prepNum = Number(prepTime) || 15;
+    const accent = getMealAccent(dishTitle);
+
+    // 1. Add primary meal
+    await db.meals.add({
+      id: sourceMealId,
       title: dishTitle.trim(),
       mealType: selectedSlot,
-      calories: Number(calories) || 450,
-      protein: Number(protein) || 25,
-      carbs: Number(carbs) || 45,
-      fat: Number(fat) || 15,
-      prepTimeMinutes: Number(prepTime) || 15,
-      accentColor: accentColor || getMealAccent(dishTitle),
-      ingredients: [{ name: dishTitle, amount: '1 portion' }],
-      tags: tags.length > 0 ? tags : ['planned'],
+      calories: calNum,
+      protein: pNum,
+      carbs: cNum,
+      fat: fNum,
+      prepTimeMinutes: prepNum,
+      recipeUrl: recipeUrl.trim() || undefined,
+      accentColor: accent,
+      ingredients: [{ name: dishTitle.trim(), amount: '1 portion' }],
+      tags: isTwistApplied ? ['planned', 'twist-applied'] : ['planned'],
       dateScheduled: targetDate,
+      totalPortionsCooked: divideDays,
+      portionsRemaining: divideDays - 1,
     });
+
+    // 2. If divided across multiple days: create leftover meals for subsequent rolling days
+    if (divideDays > 1 && rollingDays.length > 1) {
+      const targetIndex = rollingDays.findIndex((d) => d.dateString === targetDate);
+      const startIndex = targetIndex >= 0 ? targetIndex + 1 : 1;
+
+      const leftoverMeals: MealItem[] = [];
+      for (let i = 1; i < divideDays; i++) {
+        const nextDay = rollingDays[startIndex + i - 1] || rollingDays[rollingDays.length - 1];
+        leftoverMeals.push({
+          id: `leftover-${sourceMealId}-${i}`,
+          title: `Leftover: ${dishTitle.trim()}`,
+          mealType: selectedSlot,
+          calories: calNum,
+          protein: pNum,
+          carbs: cNum,
+          fat: fNum,
+          prepTimeMinutes: 3,
+          recipeUrl: recipeUrl.trim() || undefined,
+          accentColor: accent,
+          ingredients: [{ name: dishTitle.trim(), amount: '1 portion' }],
+          tags: ['leftover', 'divided-portion'],
+          dateScheduled: nextDay.dateString,
+          isLeftover: true,
+          sourceMealId: sourceMealId,
+          notes: `Portion #${i + 1} of ${divideDays} batch prepared on ${targetDate}`,
+        });
+      }
+
+      if (leftoverMeals.length > 0) {
+        await db.meals.bulkAdd(leftoverMeals);
+      }
+
+      // Add to fridge batch inventory
+      await db.fridge.put({
+        id: `fridge-batch-${sourceMealId}`,
+        name: dishTitle.trim(),
+        originalMealTitle: dishTitle.trim(),
+        cookedAt: new Date().toISOString(),
+        daysInFridge: 0,
+        status: 'fresh',
+        portionsLeft: divideDays - 1,
+        category: selectedSlot,
+        accentColor: accent,
+      });
+
+      confetti({
+        particleCount: 50,
+        spread: 60,
+        origin: { y: 0.6 },
+        colors: ['#FF5500', '#D4FF00', '#00E5FF'],
+      });
+    }
 
     onClose();
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm">
       <motion.div
         initial={{ opacity: 0, scale: 0.94, y: 15 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -195,7 +319,7 @@ export default function AddMealModal({
             </span>
           </div>
           <h2 className="font-funky font-black text-2xl text-gray-900 dark:text-white mt-1.5">
-            SCHEDULE DISH
+            ADD TO PLAN
           </h2>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 font-bold">
             Planning for <span className="font-black text-gray-900 dark:text-white">{targetDate}</span>
@@ -221,15 +345,40 @@ export default function AddMealModal({
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4 flex-1 overflow-y-auto pr-1">
-          {/* Dish Name with Live Open-Source Typeahead */}
+          {/* Rediscover Past Meals for this slot */}
+          {rediscoverMeals.length > 0 && (
+            <div className="p-3 bg-[#FAF8F5] dark:bg-[#1E202A] rounded-2xl border-2 border-black dark:border-gray-700 shadow-neo-sm">
+              <span className="text-[10px] font-black uppercase tracking-wider text-gray-600 dark:text-gray-400 flex items-center gap-1.5 mb-2">
+                <RotateCcw className="w-3 h-3 text-orange-500" />
+                <span>Previously Made for {selectedSlot} (Tap to repeat):</span>
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {rediscoverMeals.map((past, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => handleSelectRediscoverMeal(past)}
+                    className="px-2.5 py-1 rounded-xl bg-white dark:bg-[#262938] hover:bg-[#FFE600] hover:text-black dark:hover:bg-[#D4FF00] dark:hover:text-black border border-black dark:border-gray-700 text-xs font-bold transition-all shadow-neo-sm flex items-center gap-1"
+                  >
+                    <span>{past.title}</span>
+                    <span className="text-[9px] opacity-70">({past.daysSinceLastEaten}d ago)</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Dish Name with Live Open-Source Typeahead & Rough Estimation */}
           <div className="relative">
             <div className="flex items-center justify-between mb-1">
               <label className="block text-[11px] font-black uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                Dish Name
+                Meal Title
               </label>
-              <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500">
-                Type to see open-source ideas
-              </span>
+              {matchedFoodName && (
+                <span className="text-[10px] font-bold text-emerald-600 dark:text-[#D4FF00]">
+                  Rough estimate: ~{calories} kcal • {protein}g P
+                </span>
+              )}
             </div>
 
             <div className="relative">
@@ -242,14 +391,15 @@ export default function AddMealModal({
                 onFocus={() => setShowSuggestions(true)}
                 onChange={(e) => {
                   setDishTitle(e.target.value);
+                  setIsCustomNutrition(false);
                   setShowSuggestions(true);
                 }}
-                placeholder="e.g. Miso Glazed Salmon, Avocado Toast, Pesto Rigatoni..."
-                className="w-full bg-gray-50 dark:bg-[#181A24] border border-gray-200 dark:border-gray-700 focus:border-black dark:focus:border-[#D4FF00] rounded-xl pl-9 pr-4 py-2.5 text-xs text-gray-900 dark:text-white focus:outline-none transition-colors"
+                placeholder="e.g. Grandma's Secret Lentil Curry, Salmon Bowl..."
+                className="w-full bg-[#FAF8F5] dark:bg-[#20222E] border-2 border-black dark:border-gray-700 rounded-xl pl-9 pr-4 py-2.5 text-xs text-gray-900 dark:text-white focus:outline-none shadow-neo-sm"
               />
             </div>
 
-            {/* Typeahead Suggestions Dropdown */}
+            {/* Live Autocomplete Dropdown */}
             <AnimatePresence>
               {showSuggestions && (
                 <motion.div
@@ -257,10 +407,10 @@ export default function AddMealModal({
                   initial={{ opacity: 0, y: -4 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -4 }}
-                  className="absolute left-0 right-0 top-full mt-1.5 bg-white dark:bg-[#181A24] border border-gray-200 dark:border-gray-700 rounded-2xl shadow-xl z-20 max-h-56 overflow-y-auto p-1.5 space-y-1"
+                  className="absolute left-0 right-0 top-full mt-1.5 bg-white dark:bg-[#1E202A] border-2 border-black dark:border-gray-700 rounded-2xl shadow-neo-lg z-20 max-h-56 overflow-y-auto p-1.5 space-y-1"
                 >
-                  <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 flex items-center justify-between">
-                    <span>Popular Dishes for {selectedSlot}</span>
+                  <div className="px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-gray-400 flex items-center justify-between">
+                    <span>Suggestions for {selectedSlot}</span>
                     {isSearchingOnline && <span>Searching database...</span>}
                   </div>
 
@@ -273,11 +423,11 @@ export default function AddMealModal({
                           e.preventDefault();
                           handleSelectDish(dish);
                         }}
-                        className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-[#222533] cursor-pointer flex items-center justify-between gap-2.5 transition-colors group"
+                        className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-[#282b3a] cursor-pointer flex items-center justify-between gap-2.5 transition-colors border border-transparent hover:border-black"
                       >
                         <div className="flex items-center gap-2.5 min-w-0">
                           <div
-                            className="w-7 h-7 rounded-lg flex items-center justify-center font-black text-[10px] text-white flex-shrink-0"
+                            className="w-7 h-7 rounded-lg flex items-center justify-center font-black text-[10px] text-white flex-shrink-0 border border-black"
                             style={{ backgroundColor: dish.accentColor }}
                           >
                             {initials}
@@ -286,8 +436,8 @@ export default function AddMealModal({
                             <h4 className="font-bold text-xs text-gray-900 dark:text-white truncate">
                               {dish.title}
                             </h4>
-                            <div className="flex items-center gap-1.5 text-[10px] text-gray-500 dark:text-gray-400">
-                              <span className="font-bold text-gray-900 dark:text-[#D4FF00]">
+                            <div className="flex items-center gap-1.5 text-[10px] text-gray-500 dark:text-gray-400 font-bold">
+                              <span className="text-gray-900 dark:text-[#D4FF00] font-black">
                                 {dish.calories} kcal
                               </span>
                               <span>•</span>
@@ -299,15 +449,14 @@ export default function AddMealModal({
                         </div>
 
                         {dish.twist && (
-                          <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-lime-100 dark:bg-[#D4FF00]/20 text-lime-700 dark:text-[#D4FF00] border border-lime-300 dark:border-[#D4FF00]/40 flex-shrink-0">
-                            Twist available
+                          <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-[#D4FF00] text-black border border-black flex-shrink-0">
+                            Twist ready
                           </span>
                         )}
                       </div>
                     );
                   })}
 
-                  {/* Online Fallback Matches */}
                   {onlineSuggestions.map((dish, idx) => (
                     <div
                       key={`online-${idx}`}
@@ -315,14 +464,14 @@ export default function AddMealModal({
                         e.preventDefault();
                         handleSelectDish(dish);
                       }}
-                      className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-[#222533] cursor-pointer flex items-center justify-between gap-2.5 transition-colors border-t border-gray-100 dark:border-gray-800"
+                      className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-[#282b3a] cursor-pointer flex items-center justify-between gap-2.5 transition-colors border-t border-gray-200 dark:border-gray-800"
                     >
                       <div className="min-w-0">
                         <h4 className="font-bold text-xs text-gray-900 dark:text-white truncate">
                           {dish.title}
                         </h4>
-                        <p className="text-[10px] text-gray-400">
-                          {dish.calories} kcal • {dish.protein}g Protein • Open-source data
+                        <p className="text-[10px] text-gray-500 font-bold">
+                          {dish.calories} kcal • {dish.protein}g Protein • Open data
                         </p>
                       </div>
                       <Plus className="w-3.5 h-3.5 text-gray-400" />
@@ -333,17 +482,69 @@ export default function AddMealModal({
             </AnimatePresence>
           </div>
 
-          {/* Contextual Twist Recommendation Card */}
+          {/* Reference Link Option (Directly in Custom Meal Form) */}
+          <div>
+            <label className="block text-[11px] font-black uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">
+              Recipe / Reference Link (Optional)
+            </label>
+            <div className="relative">
+              <LinkIcon className="absolute left-3.5 top-2.5 w-4 h-4 text-gray-400" />
+              <input
+                type="url"
+                value={recipeUrl}
+                onChange={(e) => setRecipeUrl(e.target.value)}
+                placeholder="https://... (e.g. TikTok, food blog, YouTube link)"
+                className="w-full bg-[#FAF8F5] dark:bg-[#20222E] border-2 border-black dark:border-gray-700 rounded-xl pl-9 pr-4 py-2 text-xs text-gray-900 dark:text-white focus:outline-none shadow-neo-sm"
+              />
+            </div>
+          </div>
+
+          {/* Divide Throughout Many Days (Batch Cooking Multiplier) */}
+          <div className="p-3.5 bg-[#FAF8F5] dark:bg-[#1E202A] rounded-2xl border-2 border-black dark:border-gray-700 shadow-neo-sm">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[11px] font-black uppercase tracking-wider text-gray-800 dark:text-gray-200">
+                Divide Across Days (Cook once, eat multiple times)
+              </span>
+              <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400">
+                {divideDays === 1 ? '1 Day' : `Batch: ${divideDays} Days`}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-4 gap-2">
+              {[1, 2, 3, 4].map((d) => (
+                <button
+                  key={d}
+                  type="button"
+                  onClick={() => setDivideDays(d)}
+                  className={`py-1.5 px-2 rounded-xl text-xs font-black transition-all border-2 border-black ${
+                    divideDays === d
+                      ? 'bg-[#FFE600] text-black shadow-neo-sm'
+                      : 'bg-white dark:bg-[#262938] text-gray-700 dark:text-gray-300 hover:bg-gray-100'
+                  }`}
+                >
+                  {d === 1 ? 'Single (1x)' : `${d} Days`}
+                </button>
+              ))}
+            </div>
+
+            {divideDays > 1 && (
+              <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-2 font-bold leading-tight">
+                Will auto-schedule portion for {targetDate} + next {divideDays - 1} rolling days and log remaining to fridge.
+              </p>
+            )}
+          </div>
+
+          {/* Contextual Twist Recommendation */}
           <AnimatePresence>
             {activeTwist && (
               <motion.div
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
-                className="bg-lime-50/80 dark:bg-[#181A24] border border-lime-300 dark:border-[#D4FF00]/30 rounded-2xl p-3.5"
+                className="bg-[#FAF8F5] dark:bg-[#1E202A] border-2 border-black dark:border-gray-700 rounded-2xl p-3.5 shadow-neo-sm border-l-[6px] border-l-[#D4FF00]"
               >
                 <div className="flex items-center justify-between gap-2 mb-1">
-                  <div className="flex items-center gap-1.5 text-lime-800 dark:text-[#D4FF00] font-black text-xs">
+                  <div className="flex items-center gap-1.5 text-black dark:text-[#D4FF00] font-black text-xs">
                     <Sparkles className="w-3.5 h-3.5" />
                     <span>Flavor Twist Idea</span>
                   </div>
@@ -355,17 +556,17 @@ export default function AddMealModal({
                 <h5 className="font-bold text-xs text-gray-900 dark:text-white">
                   {activeTwist.title}
                 </h5>
-                <p className="text-[11px] text-gray-600 dark:text-gray-300 mt-0.5 leading-relaxed">
+                <p className="text-[11px] text-gray-600 dark:text-gray-300 mt-0.5 leading-relaxed font-medium">
                   {activeTwist.description}
                 </p>
 
                 <button
                   type="button"
                   onClick={handleToggleApplyTwist}
-                  className={`mt-2.5 px-3 py-1.5 rounded-xl font-black text-[11px] transition-all flex items-center gap-1.5 ${
+                  className={`mt-2.5 px-3 py-1.5 rounded-xl font-black text-[11px] transition-all border-2 border-black shadow-neo-sm flex items-center gap-1.5 ${
                     isTwistApplied
-                      ? 'bg-emerald-600 text-white'
-                      : 'bg-lime-400 dark:bg-[#D4FF00] hover:bg-lime-300 dark:hover:bg-[#c3ed00] text-black shadow-sm'
+                      ? 'bg-emerald-500 text-white'
+                      : 'bg-[#D4FF00] hover:bg-[#c3ed00] text-black'
                   }`}
                 >
                   {isTwistApplied ? (
@@ -384,67 +585,94 @@ export default function AddMealModal({
             )}
           </AnimatePresence>
 
-          {/* Macro & Nutrition Targets */}
-          <div>
-            <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1.5">
-              Nutrition & Timing (Auto-filled from selection)
-            </label>
-            <div className="grid grid-cols-4 gap-2">
-              <div className="bg-gray-50 dark:bg-[#181A24] border border-gray-200 dark:border-gray-800 rounded-xl p-2">
-                <span className="block text-[9px] font-bold text-gray-400 uppercase">Calories</span>
-                <input
-                  type="number"
-                  value={calories}
-                  onChange={(e) => setCalories(e.target.value)}
-                  className="w-full bg-transparent text-xs font-black text-gray-900 dark:text-[#D4FF00] focus:outline-none"
-                />
-              </div>
+          {/* Collapsible Macro Adjustment (Rough Estimation Active by Default) */}
+          <div className="pt-1">
+            <button
+              type="button"
+              onClick={() => setShowMacroSettings(!showMacroSettings)}
+              className="w-full flex items-center justify-between text-xs font-black uppercase text-gray-600 dark:text-gray-400 hover:text-black dark:hover:text-white py-1"
+            >
+              <span>
+                Calories &amp; Macros ({calories} kcal • {protein}g P) — {isCustomNutrition ? 'Custom' : 'Auto-Estimated'}
+              </span>
+              {showMacroSettings ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+            </button>
 
-              <div className="bg-gray-50 dark:bg-[#181A24] border border-gray-200 dark:border-gray-800 rounded-xl p-2">
-                <span className="block text-[9px] font-bold text-gray-400 uppercase">Protein (g)</span>
-                <input
-                  type="number"
-                  value={protein}
-                  onChange={(e) => setProtein(e.target.value)}
-                  className="w-full bg-transparent text-xs font-black text-rose-600 dark:text-rose-400 focus:outline-none"
-                />
-              </div>
+            {showMacroSettings && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="grid grid-cols-4 gap-2 pt-2"
+              >
+                <div className="bg-[#FAF8F5] dark:bg-[#1E202A] border-2 border-black dark:border-gray-700 rounded-xl p-2 shadow-neo-sm">
+                  <span className="block text-[9px] font-black text-gray-500 uppercase">Calories</span>
+                  <input
+                    type="number"
+                    value={calories}
+                    onChange={(e) => {
+                      setCalories(e.target.value);
+                      setIsCustomNutrition(true);
+                    }}
+                    className="w-full bg-transparent text-xs font-black text-gray-900 dark:text-[#D4FF00] focus:outline-none"
+                  />
+                </div>
 
-              <div className="bg-gray-50 dark:bg-[#181A24] border border-gray-200 dark:border-gray-800 rounded-xl p-2">
-                <span className="block text-[9px] font-bold text-gray-400 uppercase">Carbs (g)</span>
-                <input
-                  type="number"
-                  value={carbs}
-                  onChange={(e) => setCarbs(e.target.value)}
-                  className="w-full bg-transparent text-xs font-black text-emerald-600 dark:text-emerald-400 focus:outline-none"
-                />
-              </div>
+                <div className="bg-[#FAF8F5] dark:bg-[#1E202A] border-2 border-black dark:border-gray-700 rounded-xl p-2 shadow-neo-sm">
+                  <span className="block text-[9px] font-black text-gray-500 uppercase">Protein (g)</span>
+                  <input
+                    type="number"
+                    value={protein}
+                    onChange={(e) => {
+                      setProtein(e.target.value);
+                      setIsCustomNutrition(true);
+                    }}
+                    className="w-full bg-transparent text-xs font-black text-rose-600 dark:text-rose-400 focus:outline-none"
+                  />
+                </div>
 
-              <div className="bg-gray-50 dark:bg-[#181A24] border border-gray-200 dark:border-gray-800 rounded-xl p-2">
-                <span className="block text-[9px] font-bold text-gray-400 uppercase">Fats (g)</span>
-                <input
-                  type="number"
-                  value={fat}
-                  onChange={(e) => setFat(e.target.value)}
-                  className="w-full bg-transparent text-xs font-black text-purple-600 dark:text-purple-400 focus:outline-none"
-                />
-              </div>
-            </div>
+                <div className="bg-[#FAF8F5] dark:bg-[#1E202A] border-2 border-black dark:border-gray-700 rounded-xl p-2 shadow-neo-sm">
+                  <span className="block text-[9px] font-black text-gray-500 uppercase">Carbs (g)</span>
+                  <input
+                    type="number"
+                    value={carbs}
+                    onChange={(e) => {
+                      setCarbs(e.target.value);
+                      setIsCustomNutrition(true);
+                    }}
+                    className="w-full bg-transparent text-xs font-black text-sky-600 dark:text-sky-400 focus:outline-none"
+                  />
+                </div>
+
+                <div className="bg-[#FAF8F5] dark:bg-[#1E202A] border-2 border-black dark:border-gray-700 rounded-xl p-2 shadow-neo-sm">
+                  <span className="block text-[9px] font-black text-gray-500 uppercase">Fats (g)</span>
+                  <input
+                    type="number"
+                    value={fat}
+                    onChange={(e) => {
+                      setFat(e.target.value);
+                      setIsCustomNutrition(true);
+                    }}
+                    className="w-full bg-transparent text-xs font-black text-purple-600 dark:text-purple-400 focus:outline-none"
+                  />
+                </div>
+              </motion.div>
+            )}
           </div>
 
           {/* Prep Time */}
-          <div className="flex items-center gap-3 bg-gray-50 dark:bg-[#181A24] border border-gray-200 dark:border-gray-800 rounded-xl p-2.5">
+          <div className="flex items-center gap-3 bg-[#FAF8F5] dark:bg-[#1E202A] border-2 border-black dark:border-gray-700 rounded-xl p-2.5 shadow-neo-sm">
             <Clock className="w-4 h-4 text-gray-400" />
             <div className="flex-1 flex items-center justify-between">
-              <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Preparation Time</span>
+              <span className="text-xs font-black text-gray-700 dark:text-gray-300 uppercase">Preparation Time</span>
               <div className="flex items-center gap-1">
                 <input
                   type="number"
                   value={prepTime}
                   onChange={(e) => setPrepTime(e.target.value)}
-                  className="w-12 bg-white dark:bg-[#12141B] border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-0.5 text-xs text-right font-black text-gray-900 dark:text-white"
+                  className="w-12 bg-white dark:bg-[#16171E] border-2 border-black dark:border-gray-700 rounded-lg px-2 py-0.5 text-xs text-right font-black text-gray-900 dark:text-white"
                 />
-                <span className="text-xs text-gray-400">mins</span>
+                <span className="text-xs text-gray-500 font-bold">mins</span>
               </div>
             </div>
           </div>
@@ -452,9 +680,9 @@ export default function AddMealModal({
           {/* Action Button: Neon Orange like Get In Touch from Portfolio */}
           <button
             type="submit"
-            className="w-full py-3 bg-[#FF5500] hover:bg-[#ff681a] text-white font-black text-xs uppercase tracking-wider rounded-2xl border-2 border-black shadow-neo hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-neo-lg active:translate-x-0.5 active:translate-y-0.5 transition-all flex items-center justify-center gap-2 mt-3"
+            className="w-full py-3.5 bg-[#FF5500] hover:bg-[#ff681a] text-white font-black text-xs uppercase tracking-wider rounded-2xl border-2 border-black shadow-neo hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-neo-lg active:translate-x-0.5 active:translate-y-0.5 transition-all flex items-center justify-center gap-2 mt-3"
           >
-            <span>PLAN DISH FOR {selectedSlot.toUpperCase()}</span>
+            <span>SAVE TO {selectedSlot.toUpperCase()} {divideDays > 1 ? `(${divideDays} DAYS)` : ''}</span>
           </button>
         </form>
       </motion.div>
