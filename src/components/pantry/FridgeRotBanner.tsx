@@ -10,6 +10,7 @@ interface FridgeRotBannerProps {
   onConsumeItemToday: (item: FridgePantryItem, mealType: 'lunch' | 'dinner') => void;
   onMarkFinishedEarly: (itemId: string, mealTitle: string) => void;
   onDeleteItem: (itemId: string) => void;
+  onlyRotting?: boolean;
 }
 
 export default function FridgeRotBanner({
@@ -17,11 +18,13 @@ export default function FridgeRotBanner({
   onConsumeItemToday,
   onMarkFinishedEarly,
   onDeleteItem,
+  onlyRotting = false,
 }: FridgeRotBannerProps) {
   const rottingItems = items.filter((i) => i.status === 'rotting' || i.daysInFridge >= 3);
   const freshItems = items.filter((i) => i.status !== 'rotting' && i.daysInFridge < 3);
 
   if (items.length === 0) return null;
+  if (onlyRotting && rottingItems.length === 0) return null;
 
   return (
     <div className="space-y-3 mb-6">
@@ -93,7 +96,7 @@ export default function FridgeRotBanner({
       </AnimatePresence>
 
       {/* FRESH REFRIGERATOR BATCHES (CLEAN COMPACT STRIP) */}
-      {freshItems.length > 0 && (
+      {!onlyRotting && freshItems.length > 0 && (
         <div className="bg-white dark:bg-[#12141B] border border-gray-200 dark:border-gray-800 rounded-2xl p-3 transition-colors">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">

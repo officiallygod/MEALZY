@@ -7,6 +7,7 @@ import { MealItem, MealType, FridgePantryItem, AISuggestion } from '@/types/meal
 import Header from '@/components/navigation/Header';
 import BottomNav, { ActiveTab } from '@/components/navigation/BottomNav';
 import RollingWeekSelector from '@/components/planner/RollingWeekSelector';
+import DailyNutritionMonitor from '@/components/planner/DailyNutritionMonitor';
 import KanbanBentoBoard from '@/components/planner/KanbanBentoBoard';
 import FridgeRotBanner from '@/components/pantry/FridgeRotBanner';
 import RecipeVault from '@/components/recipes/RecipeVault';
@@ -16,6 +17,7 @@ import MealDetailModal from '@/components/modals/MealDetailModal';
 import CookMealModal from '@/components/modals/CookMealModal';
 import AuthModal from '@/components/common/AuthModal';
 import { generateSmartSuggestions } from '@/lib/ai-engine';
+import { CURATED_FOODS } from '@/lib/curated-foods';
 import confetti from 'canvas-confetti';
 import { RotateCcw, CheckCircle2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -101,11 +103,53 @@ export default function Home() {
   // AI Smart Suggestions
   const smartSuggestions = generateSmartSuggestions(meals, fridgeItems);
 
+  // Selected day object and its meals
+  const selectedDayObj = rollingDays.find((d) => d.dateString === selectedDate) || rollingDays[0];
+  const selectedDayMeals = meals.filter((m) => m.dateScheduled === selectedDate);
+
   // Handlers
   const handleQuickAdd = (dateString: string, slot: MealType) => {
     setAddMealDate(dateString);
     setAddMealSlot(slot);
     setIsAddMealOpen(true);
+  };
+
+  const handleAutoFillDay = async (targetDate: string) => {
+    const dayMeals = meals.filter((m) => m.dateScheduled === targetDate);
+    const existingSlots = new Set(dayMeals.map((m) => m.mealType));
+    const slots: MealType[] = ['breakfast', 'lunch', 'dinner', 'snack'];
+    const missingSlots = slots.filter((s) => !existingSlots.has(s));
+
+    if (missingSlots.length === 0) return;
+
+    const newMeals: MealItem[] = [];
+    for (const slot of missingSlots) {
+      const candidates = CURATED_FOODS.filter((f) => f.category === slot);
+      const chosen = candidates[Math.floor(Math.random() * candidates.length)] || CURATED_FOODS[0];
+      newMeals.push({
+        id: `meal-autofill-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+        title: chosen.title,
+        mealType: slot,
+        calories: chosen.calories,
+        protein: chosen.protein,
+        carbs: chosen.carbs,
+        fat: chosen.fat,
+        prepTimeMinutes: chosen.prepTimeMinutes,
+        ingredients: chosen.defaultIngredients,
+        tags: chosen.tags,
+        dateScheduled: targetDate,
+        accentColor: chosen.accentColor,
+      });
+    }
+
+    await db.meals.bulkAdd(newMeals);
+
+    confetti({
+      particleCount: 50,
+      spread: 60,
+      origin: { y: 0.6 },
+      colors: ['#D4FF00', '#10B981', '#06B6D4', '#A855F7'],
+    });
   };
 
   const handleAddMealConfirm = async (newMeal: Omit<MealItem, 'id'>) => {
@@ -333,9 +377,24 @@ export default function Home() {
               dayMealCounts={dayMealCounts}
             />
 
-            {/* Compact Fridge Rot / Perishable Notification */}
+            {/* Daily Nutrition & Engagement Monitor */}
+            <DailyNutritionMonitor
+              dayName={selectedDayObj.dayName}
+              dayDateFormatted={selectedDayObj.fullDateFormatted}
+              isToday={selectedDayObj.isToday}
+              meals={selectedDayMeals}
+              calorieTarget={calorieTarget}
+              proteinTarget={userPreferences?.proteinTarget || 140}
+              carbsTarget={userPreferences?.carbsTarget || 240}
+              fatTarget={userPreferences?.fatTarget || 65}
+              onAutoFillDay={() => handleAutoFillDay(selectedDate)}
+              onQuickAddMeal={(slot) => handleQuickAdd(selectedDate, slot)}
+            />
+
+            {/* Compact Fridge Rot / Perishable Priority Notification (only urgent items) */}
             <FridgeRotBanner
               items={fridgeItems}
+              onlyRotting={true}
               onConsumeItemToday={handleConsumeFridgeItem}
               onMarkFinishedEarly={handleMarkGoneEarly}
               onDeleteItem={(id) => db.fridge.delete(id)}
