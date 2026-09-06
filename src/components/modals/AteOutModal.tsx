@@ -12,6 +12,11 @@ import {
   RotateCcw,
   ChevronDown,
   ChevronUp,
+  Sun,
+  Utensils,
+  Moon,
+  Coffee,
+  Sparkles,
 } from 'lucide-react';
 import { MealItem, MealType } from '@/types/meal';
 
@@ -47,6 +52,7 @@ interface AteOutModalProps {
     fullDateFormatted: string;
     isToday: boolean;
   }[];
+  allMeals?: MealItem[];
   calorieTarget?: number;
   onUpdateCalorieTarget?: (newTarget: number) => void;
   onConfirmAteOut: (data: AteOutConfirmData) => void;
@@ -58,12 +64,16 @@ export default function AteOutModal({
   targetMeal,
   targetMeals,
   targetDate,
-  targetSlot,
+  targetSlot = 'dinner',
   rollingDays,
+  allMeals,
   calorieTarget = 2200,
   onUpdateCalorieTarget,
   onConfirmAteOut,
 }: AteOutModalProps) {
+  // Meal slot selection: user chooses which meal was or will be eaten out
+  const [selectedSlot, setSelectedSlot] = useState<MealType>(targetSlot);
+
   // Main Hero: Leftover toggle & config
   const [hasLeftover, setHasLeftover] = useState<boolean>(false);
   const [leftoverPortions, setLeftoverPortions] = useState<number>(1);
@@ -71,7 +81,7 @@ export default function AteOutModal({
 
   // Tomorrow by default
   const tomorrow = rollingDays[1]?.dateString || rollingDays[0]?.dateString || targetDate;
-  const defaultLeftoverSlot: MealType = targetSlot === 'dinner' ? 'lunch' : 'dinner';
+  const defaultLeftoverSlot: MealType = selectedSlot === 'dinner' ? 'lunch' : 'dinner';
   const [leftoverDate, setLeftoverDate] = useState<string>(tomorrow);
   const [leftoverSlot, setLeftoverSlot] = useState<MealType>(defaultLeftoverSlot);
   const [showAdvancedLeftoverDate, setShowAdvancedLeftoverDate] = useState<boolean>(false);
@@ -79,7 +89,7 @@ export default function AteOutModal({
   // Original planned meal action (simplified 1-click default: push_tomorrow)
   const [originalMealAction, setOriginalMealAction] = useState<'push_tomorrow' | 'save_fridge' | 'replace'>('push_tomorrow');
   const [originalMealPushDate, setOriginalMealPushDate] = useState<string>(tomorrow);
-  const [originalMealPushSlot, setOriginalMealPushSlot] = useState<MealType>(targetSlot);
+  const [originalMealPushSlot, setOriginalMealPushSlot] = useState<MealType>(selectedSlot);
   const [showAdvancedPushPicker, setShowAdvancedPushPicker] = useState<boolean>(false);
 
   // Subtle optional calorie tracking
@@ -88,29 +98,43 @@ export default function AteOutModal({
   const [caloriePreset, setCaloriePreset] = useState<number>(750);
   const [customCalories, setCustomCalories] = useState<string>('750');
 
+  // Planned meals for the currently selected slot on targetDate
   const effectiveMeals = (targetMeals && targetMeals.length > 0) ? targetMeals : (targetMeal ? [targetMeal] : []);
+  const activePlannedMeals = allMeals
+    ? allMeals.filter((m) => m.dateScheduled === targetDate && m.mealType === selectedSlot)
+    : (selectedSlot === targetSlot ? effectiveMeals : []);
 
   useEffect(() => {
     if (isOpen) {
+      const initialSlot = targetSlot || 'dinner';
+      setSelectedSlot(initialSlot);
       setHasLeftover(false);
       setLeftoverPortions(1);
       setLeftoverDestination('schedule');
       setLeftoverDate(tomorrow);
-      setLeftoverSlot(defaultLeftoverSlot);
+      setLeftoverSlot(initialSlot === 'dinner' ? 'lunch' : 'dinner');
       setShowAdvancedLeftoverDate(false);
 
       setOriginalMealAction('push_tomorrow');
       setOriginalMealPushDate(tomorrow);
-      setOriginalMealPushSlot(targetSlot);
+      setOriginalMealPushSlot(initialSlot);
       setShowAdvancedPushPicker(false);
 
       setTrackCalories(false);
-      const slotCap = targetSlot.charAt(0).toUpperCase() + targetSlot.slice(1);
+      const slotCap = initialSlot.charAt(0).toUpperCase() + initialSlot.slice(1);
       setDishTitle(`Ate Out (${slotCap})`);
       setCaloriePreset(750);
       setCustomCalories('750');
     }
-  }, [isOpen, targetMeal, targetMeals, targetDate, targetSlot, tomorrow, defaultLeftoverSlot]);
+  }, [isOpen, targetMeal, targetMeals, targetDate, targetSlot, tomorrow]);
+
+  // When selectedSlot changes, update default push slot and title
+  const handleSlotChange = (slot: MealType) => {
+    setSelectedSlot(slot);
+    setOriginalMealPushSlot(slot);
+    const slotCap = slot.charAt(0).toUpperCase() + slot.slice(1);
+    setDishTitle(`Ate Out (${slotCap})`);
+  };
 
   if (!isOpen) return null;
 
@@ -123,11 +147,11 @@ export default function AteOutModal({
 
     const finalTitle = trackCalories && dishTitle.trim()
       ? dishTitle.trim()
-      : `Ate Out (${targetSlot.charAt(0).toUpperCase() + targetSlot.slice(1)})`;
+      : `Ate Out (${selectedSlot.charAt(0).toUpperCase() + selectedSlot.slice(1)})`;
 
     onConfirmAteOut({
       dateScheduled: targetDate,
-      mealType: targetSlot,
+      mealType: selectedSlot,
       title: finalTitle,
       calories: finalCalories,
       hasLeftover,
@@ -135,11 +159,11 @@ export default function AteOutModal({
       leftoverDestination,
       leftoverScheduleDate: leftoverDate,
       leftoverScheduleSlot: leftoverSlot,
-      originalMealAction: effectiveMeals.length > 0 ? originalMealAction : undefined,
-      originalMealPushDate: effectiveMeals.length > 0 && originalMealAction === 'push_tomorrow' ? originalMealPushDate : undefined,
-      originalMealPushSlot: effectiveMeals.length > 0 && originalMealAction === 'push_tomorrow' ? originalMealPushSlot : undefined,
-      originalMeal: effectiveMeals[0],
-      originalMeals: effectiveMeals,
+      originalMealAction: activePlannedMeals.length > 0 ? originalMealAction : undefined,
+      originalMealPushDate: activePlannedMeals.length > 0 && originalMealAction === 'push_tomorrow' ? originalMealPushDate : undefined,
+      originalMealPushSlot: activePlannedMeals.length > 0 && originalMealAction === 'push_tomorrow' ? originalMealPushSlot : undefined,
+      originalMeal: activePlannedMeals[0],
+      originalMeals: activePlannedMeals,
     });
 
     onClose();
@@ -177,6 +201,69 @@ export default function AteOutModal({
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* ========================================================================= */}
+          {/* 0. WHICH MEAL WAS EATEN OUT?                                             */}
+          {/* ========================================================================= */}
+          <div className="p-4 sm:p-5 rounded-3xl bg-[#FAF8F5] dark:bg-[#1E202A] border-2 border-black dark:border-gray-700 shadow-neo space-y-3">
+            <div className="flex items-start gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-[#00E5FF] text-black border-2 border-black flex items-center justify-center shadow-neo-sm flex-shrink-0 mt-0.5">
+                <Utensils className="w-4 h-4 stroke-[2.5]" />
+              </div>
+              <div>
+                <h3 className="font-funky font-black text-sm sm:text-base text-gray-900 dark:text-white leading-tight">
+                  Which meal was eaten out or will be eaten out?
+                </h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mt-0.5">
+                  Choose the meal slot to update for this day
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+              {[
+                { type: 'breakfast', label: 'Breakfast', icon: Sun, bg: 'bg-[#FFE600]', text: 'text-black' },
+                { type: 'lunch', label: 'Lunch', icon: Utensils, bg: 'bg-[#00E5FF]', text: 'text-black' },
+                { type: 'dinner', label: 'Dinner', icon: Moon, bg: 'bg-[#FF5500]', text: 'text-white' },
+                { type: 'snack', label: 'Snacks', icon: Coffee, bg: 'bg-[#D4FF00]', text: 'text-black' },
+              ].map((slotOpt) => {
+                const isSelected = selectedSlot === slotOpt.type;
+                const SlotIcon = slotOpt.icon;
+                const plannedCount = (allMeals || []).filter(
+                  (m) => m.dateScheduled === targetDate && m.mealType === slotOpt.type
+                ).length;
+
+                return (
+                  <button
+                    key={slotOpt.type}
+                    type="button"
+                    onClick={() => handleSlotChange(slotOpt.type as MealType)}
+                    className={`py-2.5 px-2 rounded-2xl border-2 font-black text-xs flex flex-col items-center justify-center gap-1.5 transition-all active:scale-95 cursor-pointer ${
+                      isSelected
+                        ? 'bg-black text-white dark:bg-[#FFE600] dark:text-black border-black shadow-neo'
+                        : 'bg-white dark:bg-[#16171E] border-black/20 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-black'
+                    }`}
+                  >
+                    <div className={`w-6 h-6 rounded-lg ${slotOpt.bg} ${slotOpt.text} border border-black flex items-center justify-center shadow-neo-sm`}>
+                      <SlotIcon className="w-3.5 h-3.5 stroke-[2.5]" />
+                    </div>
+                    <span>{slotOpt.label}</span>
+                    {plannedCount > 0 ? (
+                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md ${
+                        isSelected
+                          ? 'bg-white/20 text-white dark:bg-black/20 dark:text-black'
+                          : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300'
+                      }`}>
+                        {plannedCount} planned
+                      </span>
+                    ) : (
+                      <span className="text-[9px] opacity-40 font-bold">empty</span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           {/* ========================================================================= */}
           {/* 1. MAIN HERO QUESTION: DO YOU HAVE LEFTOVERS?                             */}
           {/* ========================================================================= */}
@@ -351,19 +438,19 @@ export default function AteOutModal({
           {/* ========================================================================= */}
           {/* 2. SIMPLE PLANNED MEAL HANDLING (NO CRAMPING)                             */}
           {/* ========================================================================= */}
-          {effectiveMeals.length > 0 && (
+          {activePlannedMeals.length > 0 && (
             <div className="p-4 rounded-3xl bg-[#FAF8F5] dark:bg-[#1E202A] border-2 border-black dark:border-gray-700 shadow-neo space-y-2.5">
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-black uppercase text-gray-500 dark:text-gray-400 tracking-wider">
-                  Originally Scheduled:
+                  Originally Scheduled ({selectedSlot}):
                 </span>
                 <span className="font-funky font-black text-xs text-gray-900 dark:text-[#D4FF00] truncate max-w-[200px]">
-                  {effectiveMeals.map((m) => m.title).join(', ')}
+                  {activePlannedMeals.map((m) => m.title).join(', ')}
                 </span>
               </div>
 
               <p className="text-xs font-bold text-gray-800 dark:text-gray-200">
-                What should happen to {effectiveMeals.length > 1 ? 'these planned dishes' : `"${effectiveMeals[0].title}"`}?
+                What should happen to {activePlannedMeals.length > 1 ? 'these planned dishes' : `"${activePlannedMeals[0].title}"`}?
               </p>
 
               <div className="grid grid-cols-3 gap-2">
@@ -458,6 +545,15 @@ export default function AteOutModal({
                   )}
                 </div>
               )}
+            </div>
+          )}
+
+          {activePlannedMeals.length === 0 && (
+            <div className="p-3.5 rounded-2xl bg-white dark:bg-[#1E202A] border-2 border-dashed border-black/20 dark:border-gray-700 flex items-center gap-2.5 text-xs font-bold text-gray-600 dark:text-gray-300">
+              <Sparkles className="w-4 h-4 text-[#00E5FF] flex-shrink-0" />
+              <span>
+                No meals were scheduled for <strong className="text-black dark:text-white capitalize">{selectedSlot}</strong>. Logging your meal smoothly.
+              </span>
             </div>
           )}
 

@@ -14,6 +14,7 @@ import {
   CalendarDays,
   ArrowLeftRight,
   ChevronDown,
+  ArrowRight,
 } from 'lucide-react';
 import { MealItem, MealType } from '@/types/meal';
 import { getMealAccent, getMealInitials, cleanMealTitle } from '@/lib/curated-foods';
@@ -150,6 +151,36 @@ export default function KanbanBentoBoard({
     return false;
   });
 
+  // Slot-level minimization for any meal in day bento
+  const [minimizedSlots, setMinimizedSlots] = useState<Record<MealType, boolean>>({
+    breakfast: false,
+    lunch: false,
+    dinner: false,
+    snack: false,
+  });
+
+  const toggleSlotMinimized = (type: MealType) => {
+    setMinimizedSlots((prev) => ({
+      ...prev,
+      [type]: !prev[type],
+    }));
+  };
+
+  // Card-level minimization for any individual meal
+  const [minimizedMealIds, setMinimizedMealIds] = useState<Set<string>>(new Set());
+
+  const toggleMealMinimized = (mealId: string) => {
+    setMinimizedMealIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(mealId)) {
+        next.delete(mealId);
+      } else {
+        next.add(mealId);
+      }
+      return next;
+    });
+  };
+
   // Keep snacks minimization in sync when cloud sync restores preferences from other devices
   useEffect(() => {
     const handleSyncApplied = () => {
@@ -273,6 +304,7 @@ export default function KanbanBentoBoard({
 
     const zoneKey = `${activeDayObj.dateString}_${slot.type}`;
     const isHovered = activeDropZone === zoneKey;
+    const isSlotMinimized = minimizedSlots[slot.type];
 
     return (
       <div
@@ -280,72 +312,136 @@ export default function KanbanBentoBoard({
         onDragOver={(e) => handleDragOver(e, zoneKey)}
         onDragLeave={handleDragLeave}
         onDrop={(e) => handleDrop(e, activeDayObj.dateString, slot.type)}
-        className={`min-h-[300px] rounded-3xl p-4 transition-colors flex flex-col justify-between border-2 relative shadow-neo-lg ${slot.bgLight} ${slot.bgDark} ${slot.borderColor} ${
-          isHovered ? 'ring-4 ring-[#D4FF00]/40 scale-[1.01]' : ''
-        }`}
+        className={`rounded-3xl p-4 transition-all flex flex-col justify-between border-2 relative shadow-neo-lg ${slot.bgLight} ${slot.bgDark} ${slot.borderColor} ${
+          isSlotMinimized ? 'min-h-0' : 'min-h-[300px]'
+        } ${isHovered ? 'ring-4 ring-[#D4FF00]/40 scale-[1.01]' : ''}`}
       >
         <div>
           {/* Slot Header with Distinct Pill & Actions */}
-          <div className="flex items-center justify-between pb-3 mb-3 border-b-2 border-black/10 dark:border-white/10">
-            <div className="flex items-center gap-2">
+          <div className={`flex items-center justify-between ${isSlotMinimized ? 'pb-0 mb-0' : 'pb-3 mb-3 border-b-2 border-black/10 dark:border-white/10'}`}>
+            <div className="flex items-center gap-2 min-w-0">
               <div className={`w-8 h-8 rounded-xl ${slot.headerPillBg} border-2 border-black flex items-center justify-center shadow-neo-sm flex-shrink-0`}>
                 <SlotIcon className={`w-4 h-4 ${slot.headerPillText}`} />
               </div>
-              <span className="text-xs font-black uppercase tracking-wider text-gray-900 dark:text-white">
-                {slot.title}
-              </span>
+              <div className="flex items-center gap-2 min-w-0 truncate">
+                <span className="text-xs font-black uppercase tracking-wider text-gray-900 dark:text-white">
+                  {slot.title}
+                </span>
+                {isSlotMinimized && (
+                  <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400 truncate">
+                    {slotMeals.length > 0 ? `(${slotMeals.length} • ${slotMeals.reduce((s, m) => s + (m.calories || 0), 0)} kcal)` : '(Empty)'}
+                  </span>
+                )}
+              </div>
             </div>
 
-            <div className="flex items-center gap-1.5">
-              {/* If slot is snacks, show minimize button */}
-              {slot.type === 'snack' && (
-                <button
-                  type="button"
-                  onClick={() => toggleSnacksMinimized(true)}
-                  className="px-2 py-1 rounded-xl bg-white dark:bg-[#20222E] hover:bg-[#FFE600] hover:text-black dark:hover:bg-[#D4FF00] dark:hover:text-black border border-black dark:border-gray-700 shadow-neo-sm text-[10px] font-black transition-colors"
-                  title="Minimize Snacks to side tab"
-                >
-                  Minimize
-                </button>
-              )}
-
-              {/* Slot-level Ate Out action when meals are scheduled */}
-              {slotMeals.length > 0 && onAteOutSlot && (
-                <button
-                  type="button"
-                  onClick={() => onAteOutSlot(activeDayObj.dateString, slot.type, slotMeals)}
-                  className="px-2 sm:px-2.5 py-1 rounded-xl bg-[#00E5FF] hover:bg-[#00cbe2] text-black font-black text-[10px] uppercase border border-black shadow-neo-sm active:scale-95 transition-colors flex items-center gap-1 flex-shrink-0"
-                  title={`Ate out instead of ${slot.title}? Move or save planned meals.`}
-                >
-                  <Utensils className="w-3.5 h-3.5 stroke-[2.5]" />
-                  <span>Ate Out?</span>
-                </button>
-              )}
-
+            <div className="flex items-center gap-1.5 flex-shrink-0">
               <button
                 type="button"
                 onClick={() => onQuickAddMeal(activeDayObj.dateString, slot.type)}
-                className="w-7 h-7 rounded-xl bg-[#FAF8F5] dark:bg-[#20222E] hover:bg-[#FFE600] hover:text-black dark:hover:bg-[#D4FF00] dark:hover:text-black text-gray-700 dark:text-gray-300 border-2 border-black dark:border-gray-700 flex items-center justify-center shadow-neo-sm active:scale-95 transition-colors text-xs"
+                className="w-7 h-7 rounded-xl bg-[#FAF8F5] dark:bg-[#20222E] hover:bg-[#FFE600] hover:text-black dark:hover:bg-[#D4FF00] dark:hover:text-black text-gray-700 dark:text-gray-300 border-2 border-black dark:border-gray-700 flex items-center justify-center shadow-neo-sm active:scale-95 transition-colors text-xs cursor-pointer"
                 title={`Add to ${slot.title}`}
               >
                 <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
               </button>
+
+              <button
+                type="button"
+                onClick={() => toggleSlotMinimized(slot.type)}
+                className="w-7 h-7 rounded-xl bg-white dark:bg-[#20222E] hover:bg-[#FFE600] hover:text-black dark:hover:bg-[#D4FF00] dark:hover:text-black text-gray-800 dark:text-gray-200 border-2 border-black dark:border-gray-700 flex items-center justify-center shadow-neo-sm active:scale-95 transition-all text-xs cursor-pointer"
+                title={isSlotMinimized ? `Maximize ${slot.title}` : `Minimize ${slot.title}`}
+              >
+                {isSlotMinimized ? (
+                  <ChevronRight className="w-4 h-4 stroke-[2.5]" />
+                ) : (
+                  <ChevronDown className="w-4 h-4 stroke-[2.5]" />
+                )}
+              </button>
             </div>
           </div>
 
-                    {/* Non-shifting Drop Target Indicator */}
-                    {isHovered && draggedMealId && (
-                      <div className="pointer-events-none mb-3 py-2 text-center text-xs font-black text-black dark:text-[#D4FF00] border-2 border-dashed border-[#D4FF00] rounded-xl bg-[#D4FF00]/15">
-                        ✦ Drop in {slot.title}
-                      </div>
-                    )}
+          {!isSlotMinimized && (
+            <div>
+              {/* Non-shifting Drop Target Indicator */}
+              {isHovered && draggedMealId && (
+                <div className="pointer-events-none mb-3 py-2 text-center text-xs font-black text-black dark:text-[#D4FF00] border-2 border-dashed border-[#D4FF00] rounded-xl bg-[#D4FF00]/15">
+                  ✦ Drop in {slot.title}
+                </div>
+              )}
 
-                    {/* Scheduled Meals styled like the portfolio cards */}
-                    <div className="space-y-3">
-                      <AnimatePresence>
-                        {slotMeals.map((meal) => {
-                          const initials = getMealInitials(meal.title);
-                          const accent = meal.accentColor || getMealAccent(meal.title);
+              {/* Scheduled Meals styled like the portfolio cards */}
+              <div className="space-y-3">
+                <AnimatePresence>
+                  {slotMeals.map((meal) => {
+                    const initials = getMealInitials(meal.title);
+                    const accent = meal.accentColor || getMealAccent(meal.title);
+                    const isMealMinimized = minimizedMealIds.has(meal.id);
+
+                    if (isMealMinimized) {
+                      return (
+                        <motion.div
+                          key={meal.id}
+                          layout
+                          initial={{ opacity: 0, y: 5 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, scale: 0.95 }}
+                          className={`p-2.5 rounded-2xl bg-white dark:bg-[#1E202B] border-2 border-black dark:border-gray-700 shadow-neo-sm border-l-[6px] ${slot.stripeColor} flex items-center justify-between gap-2`}
+                        >
+                          <div
+                            onClick={() => onSelectMeal(meal)}
+                            className="flex items-center gap-2 min-w-0 cursor-pointer flex-1"
+                            title="Click to view details"
+                          >
+                            <div
+                              className="w-6 h-6 rounded-lg flex items-center justify-center font-black text-[10px] text-white flex-shrink-0 border border-black shadow-neo-sm"
+                              style={{ backgroundColor: accent }}
+                            >
+                              {initials}
+                            </div>
+                            <span className="font-funky font-black text-xs text-gray-900 dark:text-white truncate">
+                              {cleanMealTitle(meal.title)}
+                            </span>
+                            {meal.calories && meal.calories > 0 ? (
+                              <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400 flex-shrink-0">
+                                {meal.calories} kcal
+                              </span>
+                            ) : null}
+                          </div>
+
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            {!meal.isLeftover && (
+                              <button
+                                onClick={() => onCookMeal(meal)}
+                                className="px-1.5 py-0.5 rounded-md bg-[#D4FF00] hover:bg-[#c3ed00] text-black font-black text-[9px] border border-black shadow-neo-sm active:scale-95 transition-colors cursor-pointer"
+                              >
+                                Cook
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleMealMinimized(meal.id);
+                              }}
+                              className="w-6 h-6 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-[#FFE600] hover:text-black dark:hover:bg-[#D4FF00] dark:hover:text-black border border-black flex items-center justify-center transition-colors cursor-pointer"
+                              title="Maximize meal"
+                            >
+                              <ChevronRight className="w-3.5 h-3.5 stroke-[2.5]" />
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onDeleteMeal(meal.id);
+                              }}
+                              className="w-6 h-6 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-rose-500 hover:text-white border border-black flex items-center justify-center transition-colors cursor-pointer text-gray-400 hover:text-white"
+                              title="Remove from plan"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          </div>
+                        </motion.div>
+                      );
+                    }
 
                           return (
                             <motion.div
@@ -459,15 +555,26 @@ export default function KanbanBentoBoard({
 
                                 <div className="flex items-center gap-1">
                                   <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      toggleMealMinimized(meal.id);
+                                    }}
+                                    className="p-1 text-gray-500 hover:text-black dark:hover:text-white hover:bg-black/10 dark:hover:bg-white/10 rounded-md transition-colors cursor-pointer"
+                                    title="Minimize meal"
+                                  >
+                                    <ChevronDown className="w-4 h-4 stroke-[2.5]" />
+                                  </button>
+                                  <button
                                     onClick={() => onSelectMeal(meal)}
-                                    className="p-1 text-gray-400 hover:text-black dark:hover:text-white"
+                                    className="p-1 text-gray-400 hover:text-black dark:hover:text-white cursor-pointer"
                                     title="View full details"
                                   >
-                                    <ChevronRight className="w-3.5 h-3.5" />
+                                    <ArrowRight className="w-3.5 h-3.5" />
                                   </button>
                                   <button
                                     onClick={() => onDeleteMeal(meal.id)}
-                                    className="p-1 text-gray-400 hover:text-red-500"
+                                    className="p-1 text-gray-400 hover:text-red-500 cursor-pointer"
                                     title="Remove from plan"
                                   >
                                     <Trash2 className="w-3.5 h-3.5" />
@@ -571,34 +678,22 @@ export default function KanbanBentoBoard({
 
                       {/* Empty Slot Call-To-Action (Dashed Neo-Brutalist Box) */}
                       {slotMeals.length === 0 && !isHovered && (
-                        <div className="space-y-2">
-                          <button
-                            type="button"
-                            onClick={() => onQuickAddMeal(activeDayObj.dateString, slot.type)}
-                            className="w-full py-5 text-center text-xs font-black text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white rounded-2xl border-2 border-dashed border-black/20 dark:border-white/20 hover:border-black dark:hover:border-white transition-colors flex flex-col items-center justify-center gap-1.5 bg-white/60 dark:bg-black/20 hover:bg-white dark:hover:bg-black/40"
-                          >
-                            <Plus className="w-4 h-4 stroke-[2.5]" />
-                            <span>Plan {slot.title}</span>
-                          </button>
-
-                          {onAteOut && (
-                            <button
-                              type="button"
-                              onClick={() => onAteOut(undefined, activeDayObj.dateString, slot.type)}
-                              className="w-full py-2 px-3 text-center text-[10px] font-black text-gray-700 dark:text-gray-300 hover:text-black dark:hover:text-black rounded-xl border border-black/30 dark:border-gray-700 hover:border-black bg-white dark:bg-[#1E202B] hover:bg-[#00E5FF] dark:hover:bg-[#00E5FF] transition-colors flex items-center justify-center gap-1.5 shadow-neo-sm active:scale-95"
-                              title="Ate out or had something else for this slot?"
-                            >
-                              <Utensils className="w-3 h-3" />
-                              <span>Ate Out / Other?</span>
-                            </button>
-                          )}
-                        </div>
+                        <button
+                          type="button"
+                          onClick={() => onQuickAddMeal(activeDayObj.dateString, slot.type)}
+                          className="w-full py-5 text-center text-xs font-black text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white rounded-2xl border-2 border-dashed border-black/20 dark:border-white/20 hover:border-black dark:hover:border-white transition-colors flex flex-col items-center justify-center gap-1.5 bg-white/60 dark:bg-black/20 hover:bg-white dark:hover:bg-black/40"
+                        >
+                          <Plus className="w-4 h-4 stroke-[2.5]" />
+                          <span>Plan {slot.title}</span>
+                        </button>
                       )}
                     </div>
                   </div>
-                </div>
-    );
-  };
+                )}
+              </div>
+            </div>
+          );
+        };
 
   return (
     <div className="w-full">
@@ -616,20 +711,20 @@ export default function KanbanBentoBoard({
                 </div>
                 <div>
                   <h4 className="text-xs font-black text-gray-900 dark:text-white uppercase tracking-wider">
-                    Snacks Layout Preference
+                    Tip: Customize Your Snacks Column
                   </h4>
-                  <p className="text-[11px] text-gray-600 dark:text-gray-300 font-bold">
-                    Want Snacks minimized into a vertical tab next to Dinner to give meals more room? (You can toggle this anytime!)
+                  <p className="text-[11px] text-gray-600 dark:text-gray-300 font-medium">
+                    You can collapse snacks into a slim side tab next to Dinner to give Breakfast, Lunch, and Dinner extra space!
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-2 self-end sm:self-auto flex-shrink-0">
+              <div className="flex items-center gap-2 self-end sm:self-center flex-shrink-0">
                 <button
                   type="button"
                   onClick={() => handleSetSnacksPreference(true)}
-                  className="px-3 py-1.5 bg-[#D4FF00] hover:bg-[#c3ed00] text-black font-black text-xs rounded-xl border-2 border-black shadow-neo-sm active:scale-95 transition-colors"
+                  className="px-3 py-1.5 bg-[#D4FF00] hover:bg-[#c2eb00] text-black font-black text-xs rounded-xl border-2 border-black shadow-neo-sm active:scale-95 transition-colors"
                 >
-                  ✦ Minimize Snacks (Recommended)
+                  Collapse Snacks Tab
                 </button>
                 <button
                   type="button"
@@ -646,7 +741,7 @@ export default function KanbanBentoBoard({
           {isSnacksMinimized ? (
             <div className="flex flex-col lg:flex-row gap-4 w-full items-stretch">
               {/* 3 Main Bento Columns: Breakfast, Lunch, Dinner */}
-              <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4 min-w-0">
+              <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4 min-w-0 items-start">
                 {MEAL_SLOTS.filter((s) => s.type !== 'snack').map(renderSlotColumn)}
               </div>
 
@@ -688,7 +783,7 @@ export default function KanbanBentoBoard({
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 w-full">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 w-full items-start">
               {MEAL_SLOTS.map(renderSlotColumn)}
             </div>
           )}

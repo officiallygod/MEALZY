@@ -12,6 +12,10 @@ export class MealzyDatabase extends Dexie {
     this.version(1).stores({
       meals: 'id, mealType, dateScheduled, sourceMealId, isLeftover',
       fridge: 'id, status, daysInFridge',
+    });
+    this.version(2).stores({
+      meals: 'id, mealType, dateScheduled, sourceMealId, isLeftover',
+      fridge: 'id, status, daysInFridge',
       preferences: 'id',
     });
   }

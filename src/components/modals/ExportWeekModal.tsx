@@ -98,23 +98,30 @@ export default function ExportWeekModal({
 
   if (!isOpen) return null;
 
-  const startDay = days[0];
-  const endDay = days[days.length - 1];
+  const plannedDays = days.filter((day) =>
+    meals.some((m) => m.dateScheduled === day.dateString)
+  );
+  const activeDays = plannedDays.length > 0 ? plannedDays : days;
+  const startDay = activeDays[0];
+  const endDay = activeDays[activeDays.length - 1];
 
-  // Save to Photos (Native Share sheet on iOS/Android or direct download fallback)
+  // Save to Photos (Native Share sheet on Phone/Mobile or direct download fallback)
   const handleSaveToPhone = async () => {
     if (!imageBlob || !imageUrl) return;
 
-    const fileName = `mealzy-week-plan-${startDay?.dateString || 'current'}.png`;
+    const fileName = `mealzy-plan-${startDay?.dateString || 'current'}.png`;
 
     // Try Web Share API for native "Save Image" option on mobile
     if (canNativeShare) {
       try {
         const file = new File([imageBlob], fileName, { type: 'image/png' });
+        const shareText = activeDays.length === 1
+          ? `My meal plan for ${startDay?.dayName} ${startDay?.dayNumber}`
+          : `My meal plan from ${startDay?.dayName} ${startDay?.dayNumber} to ${endDay?.dayName} ${endDay?.dayNumber}`;
         await navigator.share({
           files: [file],
           title: 'Mealzy Weekly Plan',
-          text: `My meal plan from ${startDay?.dayName} ${startDay?.dayNumber} to ${endDay?.dayName} ${endDay?.dayNumber}`,
+          text: shareText,
         });
 
         confetti({
@@ -185,15 +192,28 @@ export default function ExportWeekModal({
             <span className="rotate-[-2deg] bg-[#FFE600] text-black font-black text-[10px] uppercase px-2.5 py-0.5 rounded border border-black shadow-neo-sm">
               ✦ MOBILE EXPORT
             </span>
+            {plannedDays.length > 0 && plannedDays.length < days.length && (
+              <span className="bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-300 font-black text-[10px] uppercase px-2 py-0.5 rounded-full border border-emerald-500">
+                {plannedDays.length} of {days.length} days (empty days hidden)
+              </span>
+            )}
           </div>
           <h3 className="font-funky font-black text-xl text-gray-900 dark:text-white">
             SAVE WEEK PLAN IMAGE
           </h3>
           <p className="text-xs text-gray-500 dark:text-gray-400 font-bold">
-            Current 7 rolling days from Today:{' '}
-            <span className="text-black dark:text-white font-black">
-              {startDay?.dayName} ({startDay?.dayNumber}) to {endDay?.dayName} ({endDay?.dayNumber})
-            </span>
+            {plannedDays.length > 0 && plannedDays.length < days.length ? (
+              <>
+                Exporting <span className="text-black dark:text-white font-black">{plannedDays.length} planned {plannedDays.length === 1 ? 'day' : 'days'}</span> ({startDay?.dayName} {startDay?.dayNumber}{endDay && endDay !== startDay ? ` to ${endDay?.dayName} ${endDay?.dayNumber}` : ''})
+              </>
+            ) : (
+              <>
+                Current 7 rolling days from Today:{' '}
+                <span className="text-black dark:text-white font-black">
+                  {startDay?.dayName} ({startDay?.dayNumber}) to {endDay?.dayName} ({endDay?.dayNumber})
+                </span>
+              </>
+            )}
           </p>
         </div>
 

@@ -16,6 +16,7 @@ import MealDetailModal from '@/components/modals/MealDetailModal';
 import CookMealModal from '@/components/modals/CookMealModal';
 import AddFridgeItemModal from '@/components/modals/AddFridgeItemModal';
 import AuthModal from '@/components/common/AuthModal';
+import ErrorBoundary from '@/components/common/ErrorBoundary';
 import ExportWeekModal from '@/components/modals/ExportWeekModal';
 import AteOutModal, { AteOutConfirmData } from '@/components/modals/AteOutModal';
 import AutoFillSuggestionModal from '@/components/modals/AutoFillSuggestionModal';
@@ -909,6 +910,13 @@ export default function Home() {
               onUpdateCalorieTarget={handleUpdateCalorieTarget}
               onAutoFillDay={() => handleAutoFillClick(selectedDate)}
               onQuickAddMeal={(slot) => handleQuickAdd(selectedDate, slot)}
+              onAteOut={() =>
+                setAteOutTarget({
+                  dateString: selectedDate,
+                  mealType: 'dinner',
+                  meals: selectedDayMeals,
+                })
+              }
             />
 
             {/* Compact Fridge Rot / Perishable Priority Notification (only urgent unassigned > 7 days) */}
@@ -1046,6 +1054,7 @@ export default function Home() {
         targetMeals={ateOutTarget?.meals}
         targetDate={ateOutTarget?.dateString || rollingDays[0].dateString}
         targetSlot={ateOutTarget?.mealType || 'dinner'}
+        allMeals={meals}
         rollingDays={rollingDays}
         calorieTarget={calorieTarget}
         onUpdateCalorieTarget={handleUpdateCalorieTarget}
@@ -1076,17 +1085,19 @@ export default function Home() {
         onAddItem={handleAddFridgeItem}
       />
 
-      <AuthModal
-        isOpen={isAuthOpen}
-        onClose={() => setIsAuthOpen(false)}
-        userEmail={userEmail}
-        userName={userName}
-        userAvatar={userAvatar}
-        onLoginSuccess={handleLoginSuccess}
-        onLogout={handleLogout}
-        calorieTarget={calorieTarget}
-        onUpdateCalorieTarget={handleUpdateCalorieTarget}
-      />
+      <ErrorBoundary fallbackTitle="Profile Settings" onReset={() => setIsAuthOpen(false)}>
+        <AuthModal
+          isOpen={isAuthOpen}
+          onClose={() => setIsAuthOpen(false)}
+          userEmail={userEmail}
+          userName={userName}
+          userAvatar={userAvatar}
+          onLoginSuccess={handleLoginSuccess}
+          onLogout={handleLogout}
+          calorieTarget={calorieTarget}
+          onUpdateCalorieTarget={handleUpdateCalorieTarget}
+        />
+      </ErrorBoundary>
 
       <ExportWeekModal
         isOpen={isExportWeekOpen}

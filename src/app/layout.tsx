@@ -50,7 +50,7 @@ export default function RootLayout({
             __html: `(function(){try{var t=localStorage.getItem('mealzy_theme');if(!t){t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';}if(t==='light'){document.documentElement.classList.remove('dark');document.documentElement.classList.add('light');}else{document.documentElement.classList.remove('light');document.documentElement.classList.add('dark');}}catch(e){}})();`,
           }}
         />
-        <script src="https://accounts.google.com/gsi/client" async defer></script>
+        <script id="google-gsi-client" src="https://accounts.google.com/gsi/client" async defer></script>
       </head>
       <body className={`font-sans bg-[#FAF8F5] dark:bg-[#0A0B0E] text-gray-900 dark:text-white min-h-screen antialiased selection:bg-[#D4FF00] selection:text-black transition-colors ${plusJakartaSans.className}`}>
         {children}

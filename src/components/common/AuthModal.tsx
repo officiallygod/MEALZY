@@ -64,7 +64,9 @@ export default function AuthModal({
   useEffect(() => {
     if (!isOpen) return;
 
-    const existingScript = document.getElementById('google-gsi-client');
+    const existingScript =
+      document.getElementById('google-gsi-client') ||
+      document.querySelector('script[src*="accounts.google.com/gsi/client"]');
     if (!existingScript && !(window as any).google?.accounts) {
       const script = document.createElement('script');
       script.id = 'google-gsi-client';
@@ -251,13 +253,18 @@ export default function AuthModal({
   }, [calorieTarget]);
 
   useEffect(() => {
-    if (isOpen) {
-      db.preferences?.get('user-default-settings').then((prefs) => {
-        if (prefs) {
-          if (prefs.calorieTarget) setCurrentTarget(prefs.calorieTarget);
-          if (prefs.dietPreference) setCurrentDiet(prefs.dietPreference);
-        }
-      });
+    if (isOpen && typeof window !== 'undefined' && db?.preferences) {
+      db.preferences
+        .get('user-default-settings')
+        .then((prefs) => {
+          if (prefs) {
+            if (prefs.calorieTarget) setCurrentTarget(prefs.calorieTarget);
+            if (prefs.dietPreference) setCurrentDiet(prefs.dietPreference);
+          }
+        })
+        .catch((err) => {
+          console.warn('Could not read user preferences from db:', err);
+        });
     }
   }, [isOpen]);
 
@@ -266,41 +273,51 @@ export default function AuthModal({
     setCurrentTarget(clamped);
     if (onUpdateCalorieTarget) {
       onUpdateCalorieTarget(clamped);
-    } else {
-      const existing = (await db.preferences?.get('user-default-settings')) || {
-        id: 'user-default-settings',
-        proteinTarget: 140,
-        carbsTarget: 240,
-        fatTarget: 65,
-        dietPreference: 'balanced',
-        theme: 'dark',
-      };
-      await db.preferences?.put({
-        ...existing,
-        id: 'user-default-settings',
-        calorieTarget: clamped,
-      });
-      scheduleBackgroundDriveSync(1000);
+    } else if (typeof window !== 'undefined' && db?.preferences) {
+      try {
+        const existing = (await db.preferences.get('user-default-settings')) || {
+          id: 'user-default-settings',
+          proteinTarget: 140,
+          carbsTarget: 240,
+          fatTarget: 65,
+          dietPreference: 'balanced',
+          theme: 'dark',
+        };
+        await db.preferences.put({
+          ...existing,
+          id: 'user-default-settings',
+          calorieTarget: clamped,
+        });
+        scheduleBackgroundDriveSync(1000);
+      } catch (err) {
+        console.warn('Could not update calorie target in db:', err);
+      }
     }
   };
 
   const handleUpdateDiet = async (diet: string) => {
     setCurrentDiet(diet);
-    const existing = (await db.preferences?.get('user-default-settings')) || {
-      id: 'user-default-settings',
-      calorieTarget: currentTarget,
-      proteinTarget: 140,
-      carbsTarget: 240,
-      fatTarget: 65,
-      dietPreference: 'balanced',
-      theme: 'dark',
-    };
-    await db.preferences?.put({
-      ...existing,
-      id: 'user-default-settings',
-      dietPreference: diet as any,
-    });
-    scheduleBackgroundDriveSync(1000);
+    if (typeof window !== 'undefined' && db?.preferences) {
+      try {
+        const existing = (await db.preferences.get('user-default-settings')) || {
+          id: 'user-default-settings',
+          calorieTarget: currentTarget,
+          proteinTarget: 140,
+          carbsTarget: 240,
+          fatTarget: 65,
+          dietPreference: 'balanced',
+          theme: 'dark',
+        };
+        await db.preferences.put({
+          ...existing,
+          id: 'user-default-settings',
+          dietPreference: diet as any,
+        });
+        scheduleBackgroundDriveSync(1000);
+      } catch (err) {
+        console.warn('Could not update diet preference in db:', err);
+      }
+    }
   };
 
   return (
@@ -368,7 +385,7 @@ export default function AuthModal({
                 {userAvatar ? (
                   <img src={userAvatar} alt={userName || 'Chef'} className="w-full h-full object-cover" />
                 ) : (
-                  <span>{userName ? userName[0].toUpperCase() : userEmail[0].toUpperCase()}</span>
+                  <span>{(userName || userEmail || 'Chef').trim().charAt(0).toUpperCase() || 'C'}</span>
                 )}
               </div>
 

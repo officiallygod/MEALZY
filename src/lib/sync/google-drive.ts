@@ -37,7 +37,14 @@ export function saveGoogleClientId(clientId: string): void {
 export async function exportLocalDataToPayload(): Promise<MealzyBackupPayload> {
   const meals = await db.meals.toArray();
   const fridge = await db.fridge.toArray();
-  const dbPrefs = await db.preferences.get('user-default-settings');
+  let dbPrefs: any = undefined;
+  if (db?.preferences) {
+    try {
+      dbPrefs = await db.preferences.get('user-default-settings');
+    } catch (prefErr) {
+      console.warn('Could not read user preferences for backup:', prefErr);
+    }
+  }
 
   let clientSettings: ClientPreferences | undefined = undefined;
   if (typeof window !== 'undefined') {
@@ -77,13 +84,15 @@ export async function restoreDataFromPayload(payload: MealzyBackupPayload): Prom
 
   isSyncInProgress = true;
   try {
-    await db.transaction('rw', db.meals, db.fridge, db.preferences, async () => {
+    const tablesToLock: any[] = [db.meals, db.fridge];
+    if (db?.preferences) tablesToLock.push(db.preferences);
+    await db.transaction('rw', tablesToLock, async () => {
       await db.meals.clear();
       await db.fridge.clear();
 
       if (payload.meals?.length) await db.meals.bulkAdd(payload.meals);
       if (payload.fridge?.length) await db.fridge.bulkAdd(payload.fridge);
-      if (payload.preferences && Object.keys(payload.preferences).length > 0) {
+      if (db?.preferences && payload.preferences && Object.keys(payload.preferences).length > 0) {
         await db.preferences.put({
           id: 'user-default-settings',
           ...payload.preferences,

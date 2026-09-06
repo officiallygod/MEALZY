@@ -90,11 +90,39 @@ export async function generateWeekPlanImage({
   layout = 'phone',
   theme = 'cream',
 }: GeneratorOptions): Promise<{ dataUrl: string; blob: Blob }> {
-  // 1. Determine canvas resolution based on layout
-  // Phone layout: 1080 x 1920 (Standard 9:16 mobile wallpaper)
-  // Grid layout: 1200 x 1500 (Clean bento card)
+  // Filter out days that are completely empty (0 meals scheduled)
+  const plannedDays = days.filter((day) =>
+    meals.some((m) => m.dateScheduled === day.dateString)
+  );
+  // Fallback to all days only if all days are empty so that an empty schedule can still be rendered
+  const exportDays = plannedDays.length > 0 ? plannedDays : days;
+  const count = exportDays.length;
+
+  // 1. Determine canvas resolution based on layout and active days
   const width = layout === 'phone' ? 1080 : 1200;
-  const height = layout === 'phone' ? 1920 : 1500;
+  let height: number;
+
+  if (layout === 'phone') {
+    if (count === 7) {
+      height = 1920;
+    } else {
+      const startY = 175;
+      const cardHeight = 225;
+      const gapY = 14;
+      const footerHeight = 60;
+      const bottomPadding = 30;
+      height = Math.max(750, startY + count * (cardHeight + gapY) + bottomPadding + footerHeight);
+    }
+  } else {
+    // Bento Grid Layout
+    const startY = 175;
+    const cardHeight = 270;
+    const gapY = 25;
+    const numRows = Math.ceil(count / 2);
+    const footerHeight = 60;
+    const bottomPadding = 35;
+    height = Math.max(650, startY + numRows * cardHeight + Math.max(0, numRows - 1) * gapY + bottomPadding + footerHeight);
+  }
 
   const canvas = document.createElement('canvas');
   canvas.width = width;
@@ -127,16 +155,19 @@ export async function generateWeekPlanImage({
   ctx.fillStyle = '#FFFFFF';
   ctx.font = '900 16px "Inter", -apple-system, sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText(
-    '✦ 7-DAY ROLLING TIMELINE ✦ ZERO FOOD SPOILAGE ✦ NEO-BENTO PLANNING ✦ MACROS TRACKED ✦',
-    width / 2,
-    33
-  );
+  const tickerText =
+    exportDays.length === 7
+      ? '✦ 7-DAY ROLLING TIMELINE ✦ ZERO FOOD SPOILAGE ✦ NEO-BENTO PLANNING ✦ MACROS TRACKED ✦'
+      : `✦ ${exportDays.length}-DAY MEAL PLAN ✦ ZERO FOOD SPOILAGE ✦ NEO-BENTO PLANNING ✦ MACROS TRACKED ✦`;
+  ctx.fillText(tickerText, width / 2, 33);
 
   // 4. Main App Branding Header
-  const startDay = days[0];
-  const endDay = days[days.length - 1];
-  const dateRangeText = `${startDay.dayName.toUpperCase()} ${startDay.dayNumber} TO ${endDay.dayName.toUpperCase()} ${endDay.dayNumber}`;
+  const startDay = exportDays[0];
+  const endDay = exportDays[exportDays.length - 1];
+  const dateRangeText =
+    exportDays.length === 1
+      ? `${startDay.dayName.toUpperCase()} ${startDay.dayNumber}`
+      : `${startDay.dayName.toUpperCase()} ${startDay.dayNumber} TO ${endDay.dayName.toUpperCase()} ${endDay.dayNumber}`;
 
   // Logo: Iconic Neo-Brutalist brand emblem badge + MEALZY
   ctx.fillStyle = shadowColor;
@@ -198,7 +229,8 @@ export async function generateWeekPlanImage({
   ctx.fillStyle = '#000000';
   ctx.font = '900 13px "Inter", -apple-system, sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText('✦ 7-DAY BENTO PLAN', 105, 21);
+  const bentoBadgeText = exportDays.length === 7 ? '✦ 7-DAY BENTO PLAN' : `✦ ${exportDays.length}-DAY BENTO PLAN`;
+  ctx.fillText(bentoBadgeText, 105, 21);
   ctx.restore();
 
   // Target Calorie Badge (Right Side)
@@ -220,14 +252,16 @@ export async function generateWeekPlanImage({
 
   // 5. Draw Days
   if (layout === 'phone') {
-    // 7 Days stacked vertically in phone mode
     const startY = 175;
-    const availableHeight = height - startY - 110;
-    const cardHeight = Math.floor(availableHeight / 7) - 10;
+    const cardHeight = count === 7 ? 223 : 225;
+    const gapY = count === 7 ? 12 : 14;
     const cardWidth = width - 120;
+    const availableHeight = height - startY - 60 - 30;
+    const totalCardsHeight = count * cardHeight + (count - 1) * gapY;
+    const actualStartY = startY + Math.max(0, Math.floor((availableHeight - totalCardsHeight) / 2));
 
-    days.forEach((day, index) => {
-      const y = startY + index * (cardHeight + 10);
+    exportDays.forEach((day, index) => {
+      const y = actualStartY + index * (cardHeight + gapY);
       const dayMeals = meals.filter((m) => m.dateScheduled === day.dateString);
       const dayCals = dayMeals.reduce((sum, m) => sum + (m.calories || 0), 0);
       const dayProtein = dayMeals.reduce((sum, m) => sum + (m.protein || 0), 0);
@@ -380,21 +414,20 @@ export async function generateWeekPlanImage({
       });
     });
   } else {
-    // Bento Grid Layout (1200 x 1500)
-    // 7 days distributed across cards
+    // Bento Grid Layout
     const startY = 175;
     const cardWidth = 515;
     const cardHeight = 270;
     const gapX = 30;
     const gapY = 25;
 
-    days.forEach((day, index) => {
+    exportDays.forEach((day, index) => {
       // 2 columns
       const col = index % 2;
       const row = Math.floor(index / 2);
-      // For the 7th card, span across or center
-      const isLastOdd = index === 6;
-      const x = isLastOdd ? (width - cardWidth) / 2 : 70 + col * (cardWidth + gapX);
+      // For the last card if odd, center it horizontally
+      const isLastOdd = index === count - 1 && count % 2 === 1;
+      const x = isLastOdd ? Math.floor((width - cardWidth) / 2) : 70 + col * (cardWidth + gapX);
       const y = startY + row * (cardHeight + gapY);
 
       const dayMeals = meals.filter((m) => m.dateScheduled === day.dateString);

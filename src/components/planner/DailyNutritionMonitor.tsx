@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Flame, ShieldCheck, Sparkles, TrendingUp, ChevronDown, ChevronUp, Zap, Target } from 'lucide-react';
+import { Flame, ShieldCheck, Sparkles, TrendingUp, ChevronDown, ChevronUp, Zap, Target, Utensils } from 'lucide-react';
 import { MealItem } from '@/types/meal';
 
 interface DailyNutritionMonitorProps {
@@ -17,6 +17,7 @@ interface DailyNutritionMonitorProps {
   onUpdateCalorieTarget?: (newTarget: number) => void;
   onAutoFillDay?: () => void;
   onQuickAddMeal: (slot: 'breakfast' | 'lunch' | 'dinner' | 'snack') => void;
+  onAteOut?: () => void;
 }
 
 export default function DailyNutritionMonitor({
@@ -31,6 +32,7 @@ export default function DailyNutritionMonitor({
   onUpdateCalorieTarget,
   onAutoFillDay,
   onQuickAddMeal,
+  onAteOut,
 }: DailyNutritionMonitorProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -130,9 +132,21 @@ export default function DailyNutritionMonitor({
             </button>
           )}
 
+          {onAteOut && (
+            <button
+              type="button"
+              onClick={onAteOut}
+              className="px-3 py-1.5 bg-[#00E5FF] hover:bg-[#00cbe2] text-black font-black text-[11px] uppercase rounded-xl border border-black shadow-neo-sm active:translate-x-0.5 active:translate-y-0.5 transition-all flex items-center gap-1.5 leading-none cursor-pointer"
+              title="Ate out or plans changed for today? Reschedule meals."
+            >
+              <Utensils className="w-3.5 h-3.5 stroke-[2.5]" />
+              <span>Ate Out?</span>
+            </button>
+          )}
+
           <button
             onClick={() => setIsExpanded(!isExpanded)}
-            className="px-3 py-1.5 bg-[#FAF8F5] dark:bg-[#20222D] hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 font-black text-[11px] rounded-xl border border-black shadow-neo-sm active:translate-x-0.5 active:translate-y-0.5 transition-all flex items-center gap-1.5 leading-none"
+            className="px-3 py-1.5 bg-[#FAF8F5] dark:bg-[#20222D] hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 font-black text-[11px] rounded-xl border border-black shadow-neo-sm active:translate-x-0.5 active:translate-y-0.5 transition-all flex items-center gap-1.5 leading-none cursor-pointer"
             title={isExpanded ? 'Collapse macro details' : 'Expand full macro target bars'}
           >
             <span>{isExpanded ? 'Compact' : 'Stats'}</span>
