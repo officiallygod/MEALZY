@@ -15,10 +15,12 @@ import {
   ArrowLeftRight,
   ChevronDown,
   ArrowRight,
+  Copy,
 } from 'lucide-react';
 import { MealItem, MealType } from '@/types/meal';
 import { getMealAccent, getMealInitials, cleanMealTitle } from '@/lib/curated-foods';
 import { scheduleBackgroundDriveSync } from '@/lib/sync/google-drive';
+import { db } from '@/lib/db';
 
 interface KanbanBentoBoardProps {
   days: {
@@ -37,6 +39,7 @@ interface KanbanBentoBoardProps {
   onCookMeal: (meal: MealItem) => void;
   onMarkGoneEarly: (mealId: string, mealTitle: string) => void;
   onDeleteMeal: (mealId: string) => void;
+  onDuplicateMeal?: (meal: MealItem) => void;
   onAteOut?: (meal?: MealItem, dateString?: string, mealType?: MealType) => void;
   onAteOutSlot?: (dateString: string, mealType: MealType, meals: MealItem[]) => void;
   onFocusDay?: (dateString: string) => void;
@@ -105,6 +108,138 @@ const MEAL_SLOTS: {
   },
 ];
 
+// Interactive Quick Actions Nav Menu on Hovering Plus Icon in front of food item
+function MealActionNavMenu({
+  meal,
+  dayDateString,
+  slotType,
+  onMoveClick,
+  onDeleteClick,
+  onAddClick,
+  onDuplicateClick,
+}: {
+  meal: MealItem;
+  dayDateString: string;
+  slotType: MealType;
+  onMoveClick: (meal: MealItem) => void;
+  onDeleteClick: (mealId: string) => void;
+  onAddClick: (dateString: string, slotType: MealType) => void;
+  onDuplicateClick: (meal: MealItem) => void;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleOutside = () => {
+      setIsOpen(false);
+    };
+    window.addEventListener('click', handleOutside);
+    window.addEventListener('touchstart', handleOutside);
+    return () => {
+      window.removeEventListener('click', handleOutside);
+      window.removeEventListener('touchstart', handleOutside);
+    };
+  }, [isOpen]);
+
+  return (
+    <div
+      className="relative inline-flex items-center flex-shrink-0 z-30"
+      onMouseEnter={() => setIsOpen(true)}
+      onMouseLeave={() => setIsOpen(false)}
+      onClick={(e) => e.stopPropagation()}
+    >
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          setIsOpen((prev) => !prev);
+        }}
+        className={`w-5 h-5 rounded-md border border-black flex items-center justify-center transition-all shadow-neo-sm cursor-pointer ${
+          isOpen
+            ? 'bg-black text-white dark:bg-[#D4FF00] dark:text-black scale-105'
+            : 'bg-[#FFE600] text-black hover:scale-110'
+        }`}
+        title="Actions: Move, Delete, Add, Duplicate"
+        aria-label="Actions: Move, Delete, Add, Duplicate"
+      >
+        <Plus className={`w-3 h-3 stroke-[3] transition-transform duration-200 ${isOpen ? 'rotate-45' : ''}`} />
+      </button>
+
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.85, y: 4 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.85, y: 4 }}
+            transition={{ type: 'spring', damping: 22, stiffness: 350 }}
+            className="absolute left-0 sm:left-full top-full sm:top-1/2 mt-1 sm:mt-0 sm:ml-1.5 sm:-translate-y-1/2 flex items-center gap-1 bg-white dark:bg-[#16171E] border-2 border-black dark:border-gray-700 rounded-xl p-1 shadow-neo z-50 whitespace-nowrap"
+          >
+            {/* Move */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsOpen(false);
+                onMoveClick(meal);
+              }}
+              className="flex items-center gap-1 px-1.5 py-1 rounded-lg bg-[#FAF8F5] dark:bg-[#20222E] hover:bg-[#FFE600] hover:text-black dark:hover:bg-[#FFE600] dark:hover:text-black text-gray-800 dark:text-gray-200 border border-black text-[9px] font-black uppercase transition-all shadow-neo-sm active:scale-95 cursor-pointer"
+              title="Move to another slot or day"
+            >
+              <ArrowLeftRight className="w-2.5 h-2.5 stroke-[2.5]" />
+              <span>Move</span>
+            </button>
+
+            {/* Delete */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsOpen(false);
+                onDeleteClick(meal.id);
+              }}
+              className="flex items-center gap-1 px-1.5 py-1 rounded-lg bg-[#FAF8F5] dark:bg-[#20222E] hover:bg-rose-500 hover:text-white border border-black text-[9px] font-black uppercase transition-all shadow-neo-sm active:scale-95 text-rose-600 hover:text-white cursor-pointer"
+              title="Remove meal"
+            >
+              <Trash2 className="w-2.5 h-2.5" />
+              <span>Delete</span>
+            </button>
+
+            {/* Add */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsOpen(false);
+                onAddClick(dayDateString, slotType);
+              }}
+              className="flex items-center gap-1 px-1.5 py-1 rounded-lg bg-[#00E5FF] hover:bg-[#00cbe2] text-black border border-black text-[9px] font-black uppercase transition-all shadow-neo-sm active:scale-95 cursor-pointer"
+              title="Add dish to this slot"
+            >
+              <Plus className="w-2.5 h-2.5 stroke-[3]" />
+              <span>Add</span>
+            </button>
+
+            {/* Duplicate */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsOpen(false);
+                onDuplicateClick(meal);
+              }}
+              className="flex items-center gap-1 px-1.5 py-1 rounded-lg bg-[#D4FF00] hover:bg-[#c3ed00] text-black border border-black text-[9px] font-black uppercase transition-all shadow-neo-sm active:scale-95 cursor-pointer"
+              title="Duplicate dish right next to original"
+            >
+              <Copy className="w-2.5 h-2.5" />
+              <span>Duplicate</span>
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 function KanbanBentoBoard({
   days,
   selectedDate,
@@ -116,11 +251,25 @@ function KanbanBentoBoard({
   onCookMeal,
   onMarkGoneEarly,
   onDeleteMeal,
+  onDuplicateMeal,
   onAteOut,
   onAteOutSlot,
   onFocusDay,
   onTriggerToast,
 }: KanbanBentoBoardProps) {
+  const handleDuplicateInternal = (meal: MealItem) => {
+    if (onDuplicateMeal) {
+      onDuplicateMeal(meal);
+    } else {
+      const id = `meal-dup-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+      db.meals.add({
+        ...meal,
+        id,
+      });
+      scheduleBackgroundDriveSync(1000);
+    }
+  };
+
   const [draggedMealId, setDraggedMealId] = useState<string | null>(null);
   const [activeDropZone, setActiveDropZone] = useState<string | null>(null);
   const [movingMealId, setMovingMealId] = useState<string | null>(null);
@@ -287,26 +436,8 @@ function KanbanBentoBoard({
       (m) => m.dateScheduled === activeDayObj.dateString && m.mealType === slot.type
     );
 
-    // Consolidate duplicate dishes in the same slot into a single card with portion count
-    const slotMeals: MealItem[] = [];
-    const seenTitles = new Map<string, MealItem>();
-
-    for (const m of rawSlotMeals) {
-      const clean = cleanMealTitle(m.title).toLowerCase();
-      if (seenTitles.has(clean)) {
-        const existing = seenTitles.get(clean)!;
-        existing.portions = (existing.portions || 1) + (m.portions || 1);
-        existing.isLeftover = existing.isLeftover || m.isLeftover;
-      } else {
-        const copy: MealItem = {
-          ...m,
-          title: cleanMealTitle(m.title),
-          portions: m.portions || 1,
-        };
-        seenTitles.set(clean, copy);
-        slotMeals.push(copy);
-      }
-    }
+    // Keep every duplicate dish separate so duplicates appear right next to the original dish
+    const slotMeals: MealItem[] = rawSlotMeals;
 
     const zoneKey = `${activeDayObj.dateString}_${slot.type}`;
     const isHovered = activeDropZone === zoneKey;
@@ -398,6 +529,19 @@ function KanbanBentoBoard({
                             className="flex items-center gap-2 min-w-0 cursor-pointer flex-1"
                             title="Click to view details"
                           >
+                            <MealActionNavMenu
+                              meal={meal}
+                              dayDateString={activeDayObj.dateString}
+                              slotType={slot.type}
+                              onMoveClick={(m) => {
+                                setMovingMealId(m.id);
+                                setMoveTargetDate(m.dateScheduled || activeDayObj.dateString);
+                                setShowMoveDayPicker(false);
+                              }}
+                              onDeleteClick={onDeleteMeal}
+                              onAddClick={onQuickAddMeal}
+                              onDuplicateClick={handleDuplicateInternal}
+                            />
                             <div
                               className="w-6 h-6 rounded-lg flex items-center justify-center font-black text-[10px] text-white flex-shrink-0 border border-black shadow-neo-sm"
                               style={{ backgroundColor: accent }}
@@ -466,14 +610,30 @@ function KanbanBentoBoard({
                                 onClick={() => onSelectMeal(meal)}
                                 className="cursor-pointer"
                               >
-                                <div className="flex items-start gap-3">
-                                  {/* Initials Badge */}
-                                  <div
-                                    className="w-9 h-9 rounded-xl flex items-center justify-center font-black text-xs text-white flex-shrink-0 border-2 border-black shadow-neo-sm"
-                                    style={{ backgroundColor: accent }}
-                                  >
-                                    {initials}
-                                  </div>
+                                  <div className="flex items-start gap-2.5">
+                                    <div className="pt-0.5">
+                                      <MealActionNavMenu
+                                        meal={meal}
+                                        dayDateString={activeDayObj.dateString}
+                                        slotType={slot.type}
+                                        onMoveClick={(m) => {
+                                          setMovingMealId(m.id);
+                                          setMoveTargetDate(m.dateScheduled || activeDayObj.dateString);
+                                          setShowMoveDayPicker(false);
+                                        }}
+                                        onDeleteClick={onDeleteMeal}
+                                        onAddClick={onQuickAddMeal}
+                                        onDuplicateClick={handleDuplicateInternal}
+                                      />
+                                    </div>
+
+                                    {/* Initials Badge */}
+                                    <div
+                                      className="w-9 h-9 rounded-xl flex items-center justify-center font-black text-xs text-white flex-shrink-0 border-2 border-black shadow-neo-sm"
+                                      style={{ backgroundColor: accent }}
+                                    >
+                                      {initials}
+                                    </div>
 
                                   <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-1.5 flex-wrap">
@@ -556,6 +716,15 @@ function KanbanBentoBoard({
                                   >
                                     <ArrowLeftRight className="w-2.5 h-2.5 stroke-[2.5]" />
                                     <span>Move</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDuplicateInternal(meal)}
+                                    className="px-2 py-1 rounded-lg bg-[#D4FF00] hover:bg-[#c3ed00] text-black font-black border border-black shadow-neo-sm active:scale-95 transition-colors flex items-center gap-1 cursor-pointer"
+                                    title="Duplicate meal right next to original"
+                                  >
+                                    <Copy className="w-2.5 h-2.5" />
+                                    <span>Copy</span>
                                   </button>
                                 </div>
 
@@ -859,35 +1028,23 @@ function KanbanBentoBoard({
                       {MEAL_SLOTS.map((slot) => {
                         const SlotIcon = slot.icon;
                         const rawSlotMeals = dayMeals.filter((m) => m.mealType === slot.type);
-
-                        // Deduplicate / consolidate duplicate dishes in this slot
-                        const slotMeals: MealItem[] = [];
-                        const seenTitles = new Map<string, MealItem>();
-                        for (const m of rawSlotMeals) {
-                          const clean = cleanMealTitle(m.title).toLowerCase();
-                          if (seenTitles.has(clean)) {
-                            const existing = seenTitles.get(clean)!;
-                            existing.portions = (existing.portions || 1) + (m.portions || 1);
-                            existing.isLeftover = existing.isLeftover || m.isLeftover;
-                          } else {
-                            const copy: MealItem = {
-                              ...m,
-                              title: cleanMealTitle(m.title),
-                              portions: m.portions || 1,
-                            };
-                            seenTitles.set(clean, copy);
-                            slotMeals.push(copy);
-                          }
-                        }
-
+                        // Do not deduplicate/consolidate - show each duplicated dish right next to the original
+                        const slotMeals: MealItem[] = rawSlotMeals;
                         const slotCalories = slotMeals.reduce((acc, m) => acc + (m.calories || 0), 0);
                         const hasMeals = slotMeals.length > 0;
+                        const zoneKey = `${day.dateString}_${slot.type}`;
+                        const isHovered = activeDropZone === zoneKey;
 
                         if (hasMeals) {
                           return (
                             <div
                               key={slot.type}
-                              className={`rounded-2xl p-2.5 border border-black/20 dark:border-gray-800 ${slot.bgLight} ${slot.bgDark} space-y-1.5 transition-colors`}
+                              onDragOver={(e) => handleDragOver(e, zoneKey)}
+                              onDragLeave={handleDragLeave}
+                              onDrop={(e) => handleDrop(e, day.dateString, slot.type)}
+                              className={`rounded-2xl p-2.5 border border-black/20 dark:border-gray-800 ${slot.bgLight} ${slot.bgDark} space-y-1.5 transition-all ${
+                                isHovered ? 'ring-2 ring-[#D4FF00] bg-[#D4FF00]/15 scale-[1.01]' : ''
+                              }`}
                             >
                               {/* Slot Sub-header */}
                               <div className="flex items-center justify-between">
@@ -914,37 +1071,133 @@ function KanbanBentoBoard({
                                 </button>
                               </div>
 
-                              {/* Slot Meals */}
+                              {/* Slot Meals (Draggable with Action Nav Menu in front of food item) */}
                               <div className="space-y-1">
                                 {slotMeals.map((meal) => (
-                                  <div
-                                    key={meal.id}
-                                    onClick={() => onSelectMeal(meal)}
-                                    className={`p-2 rounded-xl bg-white dark:bg-[#1E202B] hover:bg-white dark:hover:bg-[#252836] border-2 border-black/60 dark:border-gray-700 cursor-pointer flex items-center justify-between gap-2 transition-colors group shadow-neo-sm border-l-[4px] ${slot.stripeColor}`}
-                                  >
-                                    <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                                      <span className="font-bold text-xs text-gray-900 dark:text-white truncate group-hover:underline">
-                                        {cleanMealTitle(meal.title)}
-                                      </span>
-                                      {meal.isLeftover && (
-                                        <span className="px-1 py-0.2 rounded text-[8px] font-black bg-purple-100 text-purple-800 border border-purple-400 flex-shrink-0">
-                                          LEFT
+                                  <div key={meal.id} className="space-y-1">
+                                    <div
+                                      draggable
+                                      onDragStart={(e) => handleDragStart(e, meal.id)}
+                                      onDragEnd={handleDragEnd}
+                                      className={`p-2 rounded-xl bg-white dark:bg-[#1E202B] hover:bg-white dark:hover:bg-[#252836] border-2 border-black/60 dark:border-gray-700 flex items-center justify-between gap-2 transition-all group shadow-neo-sm border-l-[4px] ${slot.stripeColor} cursor-grab active:cursor-grabbing relative ${
+                                        draggedMealId === meal.id ? 'opacity-30 border-dashed scale-[0.98]' : 'opacity-100'
+                                      }`}
+                                    >
+                                      <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                                        {/* Plus icon in front of the food item with animated hover nav menu */}
+                                        <MealActionNavMenu
+                                          meal={meal}
+                                          dayDateString={day.dateString}
+                                          slotType={slot.type}
+                                          onMoveClick={(m) => {
+                                            setMovingMealId(m.id);
+                                            setMoveTargetDate(m.dateScheduled || day.dateString);
+                                            setShowMoveDayPicker(false);
+                                          }}
+                                          onDeleteClick={onDeleteMeal}
+                                          onAddClick={onQuickAddMeal}
+                                          onDuplicateClick={handleDuplicateInternal}
+                                        />
+
+                                        <div
+                                          onClick={() => onSelectMeal(meal)}
+                                          className="flex items-center gap-1.5 min-w-0 flex-1 cursor-pointer"
+                                        >
+                                          <span className="font-bold text-xs text-gray-900 dark:text-white truncate group-hover:underline">
+                                            {cleanMealTitle(meal.title)}
+                                          </span>
+                                          {meal.isLeftover && (
+                                            <span className="px-1 py-0.2 rounded text-[8px] font-black bg-purple-100 text-purple-800 border border-purple-400 flex-shrink-0">
+                                              LEFT
+                                            </span>
+                                          )}
+                                          {meal.portions && meal.portions > 1 && (
+                                            <span className="px-1 py-0.2 rounded text-[8px] font-black bg-amber-100 text-amber-900 border border-amber-400 flex-shrink-0">
+                                              {meal.portions}x
+                                            </span>
+                                          )}
+                                        </div>
+                                      </div>
+
+                                      {meal.calories && meal.calories > 0 ? (
+                                        <span
+                                          onClick={() => onSelectMeal(meal)}
+                                          className="text-[10px] font-black text-gray-600 dark:text-gray-400 flex-shrink-0 cursor-pointer"
+                                        >
+                                          {meal.calories} kcal
                                         </span>
-                                      )}
-                                      {meal.portions && meal.portions > 1 && (
-                                        <span className="px-1 py-0.2 rounded text-[8px] font-black bg-amber-100 text-amber-900 border border-amber-400 flex-shrink-0">
-                                          {meal.portions}x
+                                      ) : (
+                                        <span
+                                          onClick={() => onSelectMeal(meal)}
+                                          className="px-1 py-0.2 rounded text-[8px] font-black bg-gray-100 dark:bg-gray-800 text-gray-500 border border-black/20 flex-shrink-0 cursor-pointer"
+                                        >
+                                          No Cals
                                         </span>
                                       )}
                                     </div>
-                                    {meal.calories && meal.calories > 0 ? (
-                                      <span className="text-[10px] font-black text-gray-600 dark:text-gray-400 flex-shrink-0">
-                                        {meal.calories} kcal
-                                      </span>
-                                    ) : (
-                                      <span className="px-1 py-0.2 rounded text-[8px] font-black bg-gray-100 dark:bg-gray-800 text-gray-500 border border-black/20 flex-shrink-0">
-                                        No Cals
-                                      </span>
+
+                                    {/* 1-Tap Quick Move Selector in 7-Day View */}
+                                    {movingMealId === meal.id && (
+                                      <div className="p-2 rounded-xl bg-white dark:bg-[#16171E] border-2 border-black dark:border-gray-700 shadow-neo-sm space-y-1.5 text-[10px]">
+                                        <div className="flex items-center justify-between font-black uppercase text-gray-500">
+                                          <div className="flex items-center gap-1">
+                                            <span>Target:</span>
+                                            <button
+                                              type="button"
+                                              onClick={() => setShowMoveDayPicker(!showMoveDayPicker)}
+                                              className="px-1.5 py-0.5 rounded border border-black bg-[#FFE600] text-black font-black text-[9px] shadow-neo-sm flex items-center gap-0.5"
+                                            >
+                                              <span>{getTargetDayLabel(moveTargetDate || day.dateString)}</span>
+                                              <ChevronDown className="w-2.5 h-2.5" />
+                                            </button>
+                                          </div>
+                                          <button
+                                            type="button"
+                                            onClick={() => setMovingMealId(null)}
+                                            className="text-gray-400 hover:text-black dark:hover:text-white"
+                                          >
+                                            ✕
+                                          </button>
+                                        </div>
+
+                                        {showMoveDayPicker && (
+                                          <div className="flex items-center gap-1 overflow-x-auto pb-1 scrollbar-none">
+                                            {days.map((d, idx) => (
+                                              <button
+                                                key={d.dateString}
+                                                type="button"
+                                                onClick={() => {
+                                                  setMoveTargetDate(d.dateString);
+                                                  setShowMoveDayPicker(false);
+                                                }}
+                                                className={`px-1.5 py-0.5 rounded text-[8px] font-black uppercase border ${
+                                                  d.dateString === (moveTargetDate || day.dateString)
+                                                    ? 'bg-black text-white dark:bg-[#D4FF00] dark:text-black'
+                                                    : 'bg-white dark:bg-[#1E202B] text-gray-700 dark:text-gray-300'
+                                                }`}
+                                              >
+                                                {idx === 0 ? 'Today' : idx === 1 ? 'Tmrw' : d.dayName.slice(0, 3)}
+                                              </button>
+                                            ))}
+                                          </div>
+                                        )}
+
+                                        <div className="grid grid-cols-4 gap-1 pt-1">
+                                          {MEAL_SLOTS.map((targetSlot) => (
+                                            <button
+                                              key={targetSlot.type}
+                                              type="button"
+                                              onClick={() => {
+                                                onMoveMealSlot(meal.id, moveTargetDate || day.dateString, targetSlot.type);
+                                                setMovingMealId(null);
+                                              }}
+                                              className="py-1 px-1 rounded-lg border border-black bg-[#FAF8F5] dark:bg-[#20222E] hover:bg-[#00E5FF] hover:text-black font-black text-[8px] uppercase flex items-center justify-center shadow-neo-sm"
+                                            >
+                                              {targetSlot.title.slice(0, 4)}
+                                            </button>
+                                          ))}
+                                        </div>
+                                      </div>
                                     )}
                                   </div>
                                 ))}
@@ -953,12 +1206,17 @@ function KanbanBentoBoard({
                           );
                         }
 
-                        // Compact empty slot row
+                        // Compact empty slot row with Drop zone
                         return (
                           <button
                             key={slot.type}
+                            onDragOver={(e) => handleDragOver(e, zoneKey)}
+                            onDragLeave={handleDragLeave}
+                            onDrop={(e) => handleDrop(e, day.dateString, slot.type)}
                             onClick={() => onQuickAddMeal(day.dateString, slot.type)}
-                            className="w-full py-1.5 px-2.5 rounded-xl border border-dashed border-black/20 dark:border-gray-800 hover:border-black dark:hover:border-gray-500 bg-transparent hover:bg-black/5 dark:hover:bg-white/5 text-[10px] font-bold text-gray-400 hover:text-black dark:hover:text-white flex items-center justify-between transition-colors group"
+                            className={`w-full py-1.5 px-2.5 rounded-xl border border-dashed border-black/20 dark:border-gray-800 hover:border-black dark:hover:border-gray-500 bg-transparent hover:bg-black/5 dark:hover:bg-white/5 text-[10px] font-bold text-gray-400 hover:text-black dark:hover:text-white flex items-center justify-between transition-all group ${
+                              isHovered ? 'border-[#D4FF00] bg-[#D4FF00]/15 ring-2 ring-[#D4FF00]' : ''
+                            }`}
                             title={`Plan ${slot.title}`}
                           >
                             <span className="flex items-center gap-1.5">

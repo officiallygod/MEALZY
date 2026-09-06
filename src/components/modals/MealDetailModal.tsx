@@ -15,6 +15,7 @@ import {
   Sun,
   Moon,
   Coffee,
+  Copy,
 } from 'lucide-react';
 import { MealItem, MealType } from '@/types/meal';
 import { getMealAccent, getMealInitials, cleanMealTitle } from '@/lib/curated-foods';
@@ -37,6 +38,7 @@ interface MealDetailModalProps {
   onAteOutClick?: (meal: MealItem) => void;
   onMarkGoneEarly: (mealId: string, mealTitle: string) => void;
   onDeleteMeal: (mealId: string) => void;
+  onDuplicateMeal?: (meal: MealItem) => void;
   onMoveMealSlot?: (mealId: string, targetDate: string, targetType: MealType) => void;
   rollingDays?: {
     dateString: string;
@@ -55,6 +57,7 @@ export default function MealDetailModal({
   onAteOutClick,
   onMarkGoneEarly,
   onDeleteMeal,
+  onDuplicateMeal,
   onMoveMealSlot,
   rollingDays,
 }: MealDetailModalProps) {
@@ -373,6 +376,29 @@ export default function MealDetailModal({
                   <span>ATE OUT?</span>
                 </button>
               )}
+
+              {/* Duplicate Meal Action */}
+              <button
+                type="button"
+                onClick={async () => {
+                  onClose();
+                  if (onDuplicateMeal) {
+                    onDuplicateMeal(meal);
+                  } else {
+                    const id = `meal-dup-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+                    await db.meals.add({
+                      ...meal,
+                      id,
+                    });
+                    confetti({ particleCount: 40, spread: 60, origin: { y: 0.6 } });
+                  }
+                }}
+                className="flex-1 py-2.5 px-3 bg-[#D4FF00] hover:bg-[#c3ed00] text-black font-black text-xs uppercase rounded-xl border-2 border-black shadow-neo active:scale-95 transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer"
+                title="Duplicate this meal right next to the original"
+              >
+                <Copy className="w-3.5 h-3.5 flex-shrink-0" />
+                <span>DUPLICATE</span>
+              </button>
 
               {onMoveMealSlot && (
                 <button

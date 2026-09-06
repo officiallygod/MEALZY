@@ -434,25 +434,47 @@ export default function Home() {
     });
   };
 
+  const handleDuplicateMeal = useCallback(async (meal: MealItem) => {
+    const id = `meal-dup-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+    const newMeal: MealItem = {
+      ...meal,
+      id,
+      dateScheduled: meal.dateScheduled,
+      mealType: meal.mealType,
+    };
+    await db.meals.add(newMeal);
+    scheduleBackgroundDriveSync(1000);
+
+    confetti({
+      particleCount: 35,
+      spread: 50,
+      origin: { y: 0.6 },
+      colors: ['#D4FF00', '#00E5FF', '#FF5500'],
+    });
+
+    setUndoAction({
+      id: `dup-${Date.now()}`,
+      badge: '👯',
+      message: `Duplicated "${cleanMealTitle(meal.title)}"`,
+      funSubtext: 'Added right next to the original dish! 🍱',
+      onUndo: async () => {
+        await db.meals.delete(id);
+      },
+    });
+  }, []);
+
   const handleDeleteMeal = async (mealId: string) => {
     const m = await db.meals.get(mealId);
     if (m) {
-      const clean = cleanMealTitle(m.title).toLowerCase();
-      const dupes = await db.meals
-        .where('dateScheduled')
-        .equals(m.dateScheduled || '')
-        .and((other) => other.mealType === m.mealType && cleanMealTitle(other.title).toLowerCase() === clean)
-        .toArray();
-      for (const d of dupes) {
-        await db.meals.delete(d.id);
-      }
+      await db.meals.delete(mealId);
+      scheduleBackgroundDriveSync(1000);
       setUndoAction({
         id: `delete-${Date.now()}`,
         badge: '🗑️',
-        message: `Removed "${m.title}"`,
+        message: `Removed "${cleanMealTitle(m.title)}"`,
         funSubtext: 'Cleared off the board. Room made for new flavors! 🚀',
         onUndo: async () => {
-          await db.meals.bulkAdd(dupes);
+          await db.meals.add(m);
         },
       });
     } else {
@@ -874,7 +896,7 @@ export default function Home() {
       </div>
 
       {/* Main Container */}
-      <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-8 pt-6 pb-28 w-full">
+      <main className="flex-1 max-w-7xl mx-auto px-3 sm:px-8 pt-4 sm:pt-6 pb-36 sm:pb-28 w-full">
         {/* Early Item Completion Notice */}
         <AnimatePresence>
           {quickGoneBadge.show && (
@@ -969,6 +991,7 @@ export default function Home() {
               onCookMeal={(meal) => setMealToCook(meal)}
               onMarkGoneEarly={handleMarkGoneEarly}
               onDeleteMeal={handleDeleteMeal}
+              onDuplicateMeal={handleDuplicateMeal}
               onAteOutSlot={(dateString, mealType, slotMeals) =>
                 setAteOutTarget({
                   meals: slotMeals,
@@ -1071,6 +1094,7 @@ export default function Home() {
         }
         onMarkGoneEarly={handleMarkGoneEarly}
         onDeleteMeal={handleDeleteMeal}
+        onDuplicateMeal={handleDuplicateMeal}
         onMoveMealSlot={handleMoveMealSlot}
         rollingDays={rollingDays}
       />

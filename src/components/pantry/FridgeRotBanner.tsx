@@ -111,45 +111,47 @@ export default function FridgeRotBanner({
               {rottingItems.map((item) => (
                 <div
                   key={item.id}
-                  className="bg-rose-50/70 dark:bg-[#201820] border-2 border-black dark:border-rose-900/60 rounded-2xl p-3.5 flex items-center justify-between gap-3 shadow-neo-sm"
+                  className="bg-rose-50/70 dark:bg-[#201820] border-2 border-black dark:border-rose-900/60 rounded-2xl p-3 sm:p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 shadow-neo-sm"
                 >
-                  <div className="min-w-0">
-                    <h5 className="font-funky font-black text-xs text-gray-900 dark:text-white truncate">
+                  <div className="min-w-0 flex-1">
+                    <h5 className="font-funky font-black text-xs sm:text-sm text-gray-900 dark:text-white truncate">
                       {cleanMealTitle(item.name)}
                     </h5>
-                    <div className="flex items-center gap-2 text-[10px] text-gray-600 dark:text-gray-400 mt-1 font-bold">
+                    <div className="flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs text-gray-600 dark:text-gray-400 mt-1 font-bold flex-wrap">
                       <span className="text-rose-600 dark:text-rose-400 font-black flex items-center gap-1">
-                        <Clock className="w-3 h-3" /> {item.daysInFridge}d in fridge (&gt; 7 days)
+                        <Clock className="w-3 h-3 flex-shrink-0" /> {item.daysInFridge}d in fridge (&gt; 7 days)
                       </span>
                       <span>•</span>
-                      <span>{item.portionsLeft} portion remaining</span>
+                      <span>{item.portionsLeft} portion{item.portionsLeft > 1 ? 's' : ''} remaining</span>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 flex-shrink-0">
+                  <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap justify-end sm:justify-start pt-2 sm:pt-0 border-t sm:border-t-0 border-rose-200/80 dark:border-rose-900/40 w-full sm:w-auto flex-shrink-0">
                     {pickerItemId === item.id ? (
-                      <div className="flex items-center gap-1 bg-white dark:bg-[#16171E] p-1 rounded-xl border-2 border-black dark:border-gray-700 shadow-neo-sm">
+                      <div className="flex items-center gap-1 bg-white dark:bg-[#16171E] p-1 rounded-xl border-2 border-black dark:border-gray-700 shadow-neo-sm flex-wrap w-full sm:w-auto justify-between sm:justify-start">
                         <span className="text-[9px] font-black uppercase text-gray-500 px-1">For:</span>
-                        {(['breakfast', 'lunch', 'dinner', 'snack'] as MealType[]).map((slot) => (
-                          <button
-                            key={slot}
-                            onClick={() => {
-                              onConsumeItemToday(item, slot);
-                              setPickerItemId(null);
-                            }}
-                            className={`px-1.5 py-0.5 text-[9px] font-black uppercase rounded border border-black ${
-                              slot === 'breakfast'
-                                ? 'bg-[#FFE600] text-black'
-                                : slot === 'lunch'
-                                ? 'bg-[#00E5FF] text-black'
-                                : slot === 'dinner'
-                                ? 'bg-[#FF5500] text-white'
-                                : 'bg-[#D4FF00] text-black'
-                            }`}
-                          >
-                            {slot === 'breakfast' ? 'Bfast' : slot}
-                          </button>
-                        ))}
+                        <div className="flex items-center gap-1 flex-wrap">
+                          {(['breakfast', 'lunch', 'dinner', 'snack'] as MealType[]).map((slot) => (
+                            <button
+                              key={slot}
+                              onClick={() => {
+                                onConsumeItemToday(item, slot);
+                                setPickerItemId(null);
+                              }}
+                              className={`px-1.5 py-0.5 text-[9px] font-black uppercase rounded border border-black ${
+                                slot === 'breakfast'
+                                  ? 'bg-[#FFE600] text-black'
+                                  : slot === 'lunch'
+                                  ? 'bg-[#00E5FF] text-black'
+                                  : slot === 'dinner'
+                                  ? 'bg-[#FF5500] text-white'
+                                  : 'bg-[#D4FF00] text-black'
+                              }`}
+                            >
+                              {slot === 'breakfast' ? 'Bfast' : slot}
+                            </button>
+                          ))}
+                        </div>
                         <button
                           onClick={() => setPickerItemId(null)}
                           className="px-1 text-gray-400 hover:text-black dark:hover:text-white text-xs font-black"
@@ -161,20 +163,20 @@ export default function FridgeRotBanner({
                       <>
                         <button
                           onClick={() => setPickerItemId(item.id)}
-                          className="px-3 py-1.5 bg-[#D4FF00] hover:bg-[#c3ed00] text-black font-black rounded-xl text-[11px] border-2 border-black shadow-neo-sm active:translate-x-0.5 active:translate-y-0.5 transition-all"
+                          className="flex-1 sm:flex-initial px-3 py-1.5 bg-[#D4FF00] hover:bg-[#c3ed00] text-black font-black rounded-xl text-[11px] border-2 border-black shadow-neo-sm active:translate-x-0.5 active:translate-y-0.5 transition-all text-center"
                         >
                           Eat Today
                         </button>
                         <button
                           onClick={() => onMarkFinishedEarly(item.id, item.name)}
-                          className="px-2.5 py-1.5 bg-[#FFE600] hover:bg-yellow-400 text-black font-black rounded-xl text-[11px] border-2 border-black shadow-neo-sm active:translate-x-0.5 active:translate-y-0.5 transition-all"
+                          className="flex-1 sm:flex-initial px-2.5 py-1.5 bg-[#FFE600] hover:bg-yellow-400 text-black font-black rounded-xl text-[11px] border-2 border-black shadow-neo-sm active:translate-x-0.5 active:translate-y-0.5 transition-all text-center"
                           title="Item was finished earlier? Mark completed."
                         >
                           Gone?
                         </button>
                         <button
                           onClick={() => onDeleteItem(item.id)}
-                          className="p-1.5 bg-gray-100 dark:bg-[#2A2B36] hover:bg-rose-100 text-gray-500 hover:text-rose-600 rounded-xl border border-black/20 transition-colors"
+                          className="p-1.5 bg-gray-100 dark:bg-[#2A2B36] hover:bg-rose-100 text-gray-500 hover:text-rose-600 rounded-xl border border-black/20 transition-colors flex-shrink-0"
                           title="Discard item"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -225,48 +227,50 @@ export default function FridgeRotBanner({
               return (
                 <div
                   key={item.id}
-                  className="bg-[#FAF8F5] dark:bg-[#1E202A] border-2 border-black dark:border-gray-700 rounded-2xl p-3.5 flex items-center justify-between gap-3 shadow-neo-sm"
+                  className="bg-[#FAF8F5] dark:bg-[#1E202A] border-2 border-black dark:border-gray-700 rounded-2xl p-3 sm:p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 shadow-neo-sm"
                 >
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5 flex-wrap">
-                      <h6 className="font-funky font-bold text-xs text-gray-900 dark:text-white truncate">
+                      <h6 className="font-funky font-bold text-xs sm:text-sm text-gray-900 dark:text-white truncate">
                         {cleanMealTitle(item.name)}
                       </h6>
                       {assigned && (
-                        <span className="px-1.5 py-0.2 rounded text-[9px] font-black bg-emerald-100 text-emerald-800 border border-emerald-400 flex items-center gap-0.5">
+                        <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-emerald-100 text-emerald-800 border border-emerald-400 flex items-center gap-0.5">
                           <CalendarCheck className="w-2.5 h-2.5" /> Scheduled
                         </span>
                       )}
                     </div>
-                    <p className="text-[10px] text-gray-500 dark:text-gray-400 font-bold mt-0.5">
+                    <p className="text-[10px] sm:text-[11px] text-gray-500 dark:text-gray-400 font-bold mt-0.5">
                       {item.daysInFridge}d old • {item.portionsLeft} portion(s) left
                     </p>
                   </div>
 
-                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                  <div className="flex items-center gap-1.5 flex-shrink-0 justify-end sm:justify-start pt-2 sm:pt-0 border-t sm:border-t-0 border-black/10 dark:border-gray-700/50 w-full sm:w-auto">
                     {pickerItemId === item.id ? (
-                      <div className="flex items-center gap-1 bg-white dark:bg-[#16171E] p-1 rounded-xl border-2 border-black dark:border-gray-700 shadow-neo-sm">
+                      <div className="flex items-center gap-1 bg-white dark:bg-[#16171E] p-1 rounded-xl border-2 border-black dark:border-gray-700 shadow-neo-sm flex-wrap w-full sm:w-auto justify-between sm:justify-start">
                         <span className="text-[9px] font-black uppercase text-gray-500 px-1">For:</span>
-                        {(['breakfast', 'lunch', 'dinner', 'snack'] as MealType[]).map((slot) => (
-                          <button
-                            key={slot}
-                            onClick={() => {
-                              onConsumeItemToday(item, slot);
-                              setPickerItemId(null);
-                            }}
-                            className={`px-1.5 py-0.5 text-[9px] font-black uppercase rounded border border-black ${
-                              slot === 'breakfast'
-                                ? 'bg-[#FFE600] text-black'
-                                : slot === 'lunch'
-                                ? 'bg-[#00E5FF] text-black'
-                                : slot === 'dinner'
-                                ? 'bg-[#FF5500] text-white'
-                                : 'bg-[#D4FF00] text-black'
-                            }`}
-                          >
-                            {slot === 'breakfast' ? 'Bfast' : slot}
-                          </button>
-                        ))}
+                        <div className="flex items-center gap-1 flex-wrap">
+                          {(['breakfast', 'lunch', 'dinner', 'snack'] as MealType[]).map((slot) => (
+                            <button
+                              key={slot}
+                              onClick={() => {
+                                onConsumeItemToday(item, slot);
+                                setPickerItemId(null);
+                              }}
+                              className={`px-1.5 py-0.5 text-[9px] font-black uppercase rounded border border-black ${
+                                slot === 'breakfast'
+                                  ? 'bg-[#FFE600] text-black'
+                                  : slot === 'lunch'
+                                  ? 'bg-[#00E5FF] text-black'
+                                  : slot === 'dinner'
+                                  ? 'bg-[#FF5500] text-white'
+                                  : 'bg-[#D4FF00] text-black'
+                              }`}
+                            >
+                              {slot === 'breakfast' ? 'Bfast' : slot}
+                            </button>
+                          ))}
+                        </div>
                         <button
                           onClick={() => setPickerItemId(null)}
                           className="px-1 text-gray-400 hover:text-black dark:hover:text-white text-xs font-black"
@@ -278,13 +282,13 @@ export default function FridgeRotBanner({
                       <>
                         <button
                           onClick={() => setPickerItemId(item.id)}
-                          className="px-2.5 py-1 bg-[#D4FF00] hover:bg-[#c3ed00] text-black font-black text-[10px] rounded-lg border border-black shadow-neo-sm transition-all"
+                          className="flex-1 sm:flex-initial px-2.5 py-1 bg-[#D4FF00] hover:bg-[#c3ed00] text-black font-black text-[10px] sm:text-[11px] rounded-lg border border-black shadow-neo-sm transition-all text-center"
                         >
                           Eat
                         </button>
                         <button
                           onClick={() => onMarkFinishedEarly(item.id, item.name)}
-                          className="px-2 py-1 bg-[#FFE600] hover:bg-yellow-400 text-black font-bold text-[10px] rounded-lg border border-black shadow-neo-sm"
+                          className="flex-1 sm:flex-initial px-2 py-1 bg-[#FFE600] hover:bg-yellow-400 text-black font-bold text-[10px] sm:text-[11px] rounded-lg border border-black shadow-neo-sm text-center"
                         >
                           Gone?
                         </button>
