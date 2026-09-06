@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, getRollingWeekDates, seedInitialDataIfEmpty } from '@/lib/db';
-import { MealItem, MealType, FridgePantryItem, AISuggestion } from '@/types/meal';
+import { MealItem, MealType, FridgePantryItem, AISuggestion, UserPreferences } from '@/types/meal';
 import Header from '@/components/navigation/Header';
 import Footer from '@/components/navigation/Footer';
 import BottomNav, { ActiveTab } from '@/components/navigation/BottomNav';
@@ -671,9 +671,27 @@ export default function Home() {
         : `${data.title} logged!`,
       show: true,
     });
+
     setTimeout(() => {
       setQuickGoneBadge({ title: '', show: false });
     }, 4500);
+  };
+
+  const handleUpdateCalorieTarget = async (newTarget: number) => {
+    const current: UserPreferences & { id: string } = (userPreferences as any) || {
+      id: 'user-default-settings',
+      calorieTarget: 2200,
+      proteinTarget: 140,
+      carbsTarget: 240,
+      fatTarget: 65,
+      dietPreference: 'balanced',
+      theme: theme || 'dark',
+    };
+    await db.preferences.put({
+      ...current,
+      id: 'user-default-settings',
+      calorieTarget: newTarget,
+    });
   };
 
   const handleApplySuggestion = async (
@@ -710,7 +728,7 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F7F4EE] dark:bg-[#0D0E12] text-gray-900 dark:text-white pb-0 transition-colors duration-200 relative overflow-x-hidden">
+    <div className="min-h-screen flex flex-col justify-between bg-[#F7F4EE] dark:bg-[#0D0E12] text-gray-900 dark:text-white pb-0 transition-colors duration-200 relative overflow-x-hidden">
       {/* Soft Ambient Background Glow (matching Allen Benny Portfolio) */}
       <div className="fixed top-0 right-0 w-[500px] h-[500px] bg-gradient-to-bl from-pink-500/10 via-orange-400/5 to-transparent rounded-full blur-3xl pointer-events-none -z-10" />
 
@@ -748,7 +766,7 @@ export default function Home() {
       </div>
 
       {/* Main Container */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-8 pt-6">
+      <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-8 pt-6 w-full">
         {/* Early Item Completion Notice */}
         <AnimatePresence>
           {quickGoneBadge.show && (
@@ -809,6 +827,7 @@ export default function Home() {
               proteinTarget={userPreferences?.proteinTarget || 140}
               carbsTarget={userPreferences?.carbsTarget || 240}
               fatTarget={userPreferences?.fatTarget || 65}
+              onUpdateCalorieTarget={handleUpdateCalorieTarget}
               onAutoFillDay={() => handleAutoFillClick(selectedDate)}
               onQuickAddMeal={(slot) => handleQuickAdd(selectedDate, slot)}
             />
@@ -936,6 +955,8 @@ export default function Home() {
         targetDate={ateOutTarget?.dateString || rollingDays[0].dateString}
         targetSlot={ateOutTarget?.mealType || 'dinner'}
         rollingDays={rollingDays}
+        calorieTarget={calorieTarget}
+        onUpdateCalorieTarget={handleUpdateCalorieTarget}
         onConfirmAteOut={handleConfirmAteOut}
       />
 

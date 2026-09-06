@@ -57,25 +57,33 @@ export default function Header({
             </svg>
           </div>
 
-          {/* Typography: Solid MEAL + Solid High-Contrast Electric Orange ZY */}
-          <div className="flex items-center tracking-tight">
-            <span className="font-funky font-black text-2xl sm:text-3xl text-gray-900 dark:text-white">
-              MEAL
-            </span>
-            <span className="font-funky font-black text-2xl sm:text-3xl text-[#FF5500] drop-shadow-[2px_2px_0px_#000000] tracking-tight">
-              ZY
-            </span>
-            <span className="text-[#D4FF00] text-xs font-black self-start -ml-0.5 -mt-1 select-none animate-pulse">
-              ✦
+          {/* Typography & Author Subtitle: High Visibility below Logo */}
+          <div className="flex flex-col">
+            <div className="flex items-center tracking-tight leading-none">
+              <span className="font-funky font-black text-2xl sm:text-3xl text-gray-900 dark:text-white">
+                MEAL
+              </span>
+              <span className="font-funky font-black text-2xl sm:text-3xl text-[#FF5500] drop-shadow-[2px_2px_0px_#000000] tracking-tight">
+                ZY
+              </span>
+              <span className="text-[#D4FF00] text-xs font-black self-start -ml-0.5 -mt-1 select-none animate-pulse">
+                ✦
+              </span>
+            </div>
+            <span className="text-[10px] font-bold text-gray-600 dark:text-gray-300 leading-tight mt-0.5 flex items-center gap-1 whitespace-nowrap">
+              Made with <span className="text-rose-500">❤️</span> by{' '}
+              <strong className="font-black text-black dark:text-[#FFE600] underline decoration-[#FF5500] decoration-2 underline-offset-1">
+                Allen Benny
+              </strong>
             </span>
           </div>
 
           {/* Rotated Neo-Brutalist Sticker Badges */}
-          <div className="hidden md:flex items-center gap-2">
-            <div className="rotate-[-3deg] bg-[#FFE600] text-black font-black text-[10px] uppercase px-2.5 py-0.5 rounded-full border-2 border-black shadow-neo-sm">
+          <div className="hidden lg:flex items-center gap-2 ml-1">
+            <div className="rotate-[-3deg] bg-[#FFE600] text-black font-black text-[10px] uppercase px-2 py-0.5 rounded-full border-2 border-black shadow-neo-sm">
               7-Day Bento
             </div>
-            <div className="rotate-[2deg] bg-[#D4FF00] text-black font-black text-[10px] uppercase px-2.5 py-0.5 rounded-full border-2 border-black shadow-neo-sm">
+            <div className="rotate-[2deg] bg-[#D4FF00] text-black font-black text-[10px] uppercase px-2 py-0.5 rounded-full border-2 border-black shadow-neo-sm">
               Zero Waste
             </div>
           </div>

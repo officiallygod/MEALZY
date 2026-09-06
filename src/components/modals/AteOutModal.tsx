@@ -1,17 +1,18 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   X,
-  Utensils,
-  ShoppingBag,
-  Sparkles,
   Package,
   CalendarDays,
   ArrowRight,
-  Clock,
+  Flame,
+  Minus,
+  Plus,
   RotateCcw,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { MealItem, MealType } from '@/types/meal';
 
@@ -47,22 +48,10 @@ interface AteOutModalProps {
     fullDateFormatted: string;
     isToday: boolean;
   }[];
+  calorieTarget?: number;
+  onUpdateCalorieTarget?: (newTarget: number) => void;
   onConfirmAteOut: (data: AteOutConfirmData) => void;
 }
-
-const EAT_OUT_TYPES = [
-  { id: 'restaurant', label: 'Restaurant / Dining Out', icon: Utensils, defaultTitle: 'Dining Out', defaultCals: 850 },
-  { id: 'takeout', label: 'Takeout / Delivery', icon: ShoppingBag, defaultTitle: 'Takeout', defaultCals: 780 },
-  { id: 'cooked_other', label: 'Cooked Something Else', icon: Sparkles, defaultTitle: 'Quick Home Meal', defaultCals: 600 },
-  { id: 'social', label: 'Social Event / Dinner', icon: Utensils, defaultTitle: 'Dinner with Friends', defaultCals: 900 },
-];
-
-const CALORIE_PRESETS = [
-  { label: 'Light', calories: 450, desc: '~450 kcal' },
-  { label: 'Standard', calories: 750, desc: '~750 kcal' },
-  { label: 'Hearty', calories: 1100, desc: '~1100 kcal' },
-  { label: 'Skip / Rough', calories: 0, desc: 'Skip' },
-];
 
 export default function AteOutModal({
   isOpen,
@@ -72,76 +61,87 @@ export default function AteOutModal({
   targetDate,
   targetSlot,
   rollingDays,
+  calorieTarget = 2200,
+  onUpdateCalorieTarget,
   onConfirmAteOut,
 }: AteOutModalProps) {
-  const [eatType, setEatType] = useState<string>('restaurant');
-  const [dishTitle, setDishTitle] = useState('');
-  const [caloriePreset, setCaloriePreset] = useState<number>(750);
-  const [customCalories, setCustomCalories] = useState('750');
-
-  // Leftover toggle and configuration
-  const [hasLeftover, setHasLeftover] = useState(false);
-  const [leftoverPortions, setLeftoverPortions] = useState(1);
+  // Main Hero: Leftover toggle & config
+  const [hasLeftover, setHasLeftover] = useState<boolean>(false);
+  const [leftoverPortions, setLeftoverPortions] = useState<number>(1);
   const [leftoverDestination, setLeftoverDestination] = useState<'schedule' | 'fridge'>('schedule');
 
-  // Tomorrow by default for leftover schedule
+  // Tomorrow by default
   const tomorrow = rollingDays[1]?.dateString || rollingDays[0]?.dateString || targetDate;
-  const [leftoverDate, setLeftoverDate] = useState(tomorrow);
-  // Default leftover slot: if dinner out -> lunch tomorrow! Otherwise dinner
   const defaultLeftoverSlot: MealType = targetSlot === 'dinner' ? 'lunch' : 'dinner';
+  const [leftoverDate, setLeftoverDate] = useState<string>(tomorrow);
   const [leftoverSlot, setLeftoverSlot] = useState<MealType>(defaultLeftoverSlot);
+  const [showAdvancedLeftoverDate, setShowAdvancedLeftoverDate] = useState<boolean>(false);
 
-  // Original planned meal disposition
+  // Original planned meal action (simplified 1-click default: push_tomorrow)
   const [originalMealAction, setOriginalMealAction] = useState<'push_tomorrow' | 'save_fridge' | 'replace'>('push_tomorrow');
-  const [originalMealPushDate, setOriginalMealPushDate] = useState(tomorrow);
+  const [originalMealPushDate, setOriginalMealPushDate] = useState<string>(tomorrow);
   const [originalMealPushSlot, setOriginalMealPushSlot] = useState<MealType>(targetSlot);
+  const [showAdvancedPushPicker, setShowAdvancedPushPicker] = useState<boolean>(false);
+
+  // Subtle optional calorie tracking
+  const [trackCalories, setTrackCalories] = useState<boolean>(false);
+  const [dishTitle, setDishTitle] = useState<string>('');
+  const [caloriePreset, setCaloriePreset] = useState<number>(750);
+  const [customCalories, setCustomCalories] = useState<string>('750');
+
+  // Maintenance calorie target adjustment
+  const [currentTarget, setCurrentTarget] = useState<number>(calorieTarget);
 
   const effectiveMeals = (targetMeals && targetMeals.length > 0) ? targetMeals : (targetMeal ? [targetMeal] : []);
 
   useEffect(() => {
     if (isOpen) {
-      const typeObj = EAT_OUT_TYPES.find((t) => t.id === eatType) || EAT_OUT_TYPES[0];
-      const slotCap = targetSlot.charAt(0).toUpperCase() + targetSlot.slice(1);
-      setDishTitle(`${typeObj.defaultTitle} (${slotCap})`);
-      setCaloriePreset(typeObj.defaultCals);
-      setCustomCalories(String(typeObj.defaultCals));
       setHasLeftover(false);
       setLeftoverPortions(1);
       setLeftoverDestination('schedule');
       setLeftoverDate(tomorrow);
       setLeftoverSlot(defaultLeftoverSlot);
+      setShowAdvancedLeftoverDate(false);
+
       setOriginalMealAction('push_tomorrow');
       setOriginalMealPushDate(tomorrow);
       setOriginalMealPushSlot(targetSlot);
+      setShowAdvancedPushPicker(false);
+
+      setTrackCalories(false);
+      const slotCap = targetSlot.charAt(0).toUpperCase() + targetSlot.slice(1);
+      setDishTitle(`Ate Out (${slotCap})`);
+      setCaloriePreset(750);
+      setCustomCalories('750');
+      setCurrentTarget(calorieTarget);
     }
-  }, [isOpen, targetMeal, targetMeals, targetDate, targetSlot]);
+  }, [isOpen, targetMeal, targetMeals, targetDate, targetSlot, tomorrow, defaultLeftoverSlot, calorieTarget]);
 
   if (!isOpen) return null;
 
-  const handleSelectType = (typeId: string) => {
-    setEatType(typeId);
-    const typeObj = EAT_OUT_TYPES.find((t) => t.id === typeId);
-    if (typeObj) {
-      const slotCap = targetSlot.charAt(0).toUpperCase() + targetSlot.slice(1);
-      setDishTitle(`${typeObj.defaultTitle} (${slotCap})`);
-      setCaloriePreset(typeObj.defaultCals);
-      setCustomCalories(String(typeObj.defaultCals));
+  const handleAdjustTarget = (delta: number) => {
+    const next = Math.max(1200, Math.min(5000, currentTarget + delta));
+    setCurrentTarget(next);
+    if (onUpdateCalorieTarget) {
+      onUpdateCalorieTarget(next);
     }
-  };
-
-  const handleSelectCaloriePreset = (cals: number) => {
-    setCaloriePreset(cals);
-    setCustomCalories(cals > 0 ? String(cals) : '');
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const finalCalories = parseInt(customCalories, 10) || caloriePreset || 700;
+
+    const finalCalories = trackCalories
+      ? (parseInt(customCalories, 10) || caloriePreset || 750)
+      : 0;
+
+    const finalTitle = trackCalories && dishTitle.trim()
+      ? dishTitle.trim()
+      : `Ate Out (${targetSlot.charAt(0).toUpperCase() + targetSlot.slice(1)})`;
 
     onConfirmAteOut({
       dateScheduled: targetDate,
       mealType: targetSlot,
-      title: dishTitle.trim() || 'Ate Out',
+      title: finalTitle,
       calories: finalCalories,
       hasLeftover,
       leftoverPortions,
@@ -159,383 +159,465 @@ export default function AteOutModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md overflow-y-auto scrollbar-none">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md overflow-y-auto scrollbar-none">
       <motion.div
-        initial={{ opacity: 0, scale: 0.94, y: 15 }}
+        initial={{ opacity: 0, scale: 0.95, y: 15 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.94, y: 15 }}
+        exit={{ opacity: 0, scale: 0.95, y: 15 }}
         transition={{ type: 'spring', damping: 25, stiffness: 350 }}
-        className="relative w-full max-w-lg bg-white dark:bg-[#16171E] border-2 border-black dark:border-gray-700 rounded-3xl p-6 sm:p-7 shadow-neo-xl text-gray-900 dark:text-white max-h-[92vh] overflow-y-auto scrollbar-none"
+        className="relative w-full max-w-lg bg-white dark:bg-[#16171E] border-2 border-black dark:border-gray-700 rounded-3xl p-5 sm:p-6 shadow-neo-xl text-gray-900 dark:text-white max-h-[94vh] overflow-y-auto custom-scrollbar"
       >
         {/* Close Button */}
         <button
           onClick={onClose}
           aria-label="Close"
-          className="absolute top-5 right-5 w-8 h-8 rounded-xl bg-[#FAF8F5] dark:bg-[#20222E] border-2 border-black dark:border-gray-700 flex items-center justify-center text-gray-700 dark:text-gray-300 hover:text-black dark:hover:text-white shadow-neo-sm active:scale-95 transition-colors"
+          className="absolute top-4 right-4 w-8 h-8 rounded-xl bg-[#FAF8F5] dark:bg-[#20222E] border-2 border-black dark:border-gray-700 flex items-center justify-center text-gray-700 dark:text-gray-300 hover:text-black dark:hover:text-white shadow-neo-sm active:scale-95 transition-colors cursor-pointer"
         >
           <X className="w-4 h-4 stroke-[2.5]" />
         </button>
 
-        {/* Header Strip */}
-        <div className="mb-5">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#00E5FF] text-black font-black text-xs uppercase border-2 border-black shadow-neo-sm mb-2">
-            <Utensils className="w-3.5 h-3.5" />
-            <span>Ate Out / Something Else</span>
+        {/* Header */}
+        <div className="mb-4">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#00E5FF] text-black font-black text-[11px] uppercase border-2 border-black shadow-neo-sm mb-1.5">
+            <span>🍽️ ATE OUT / PLANS CHANGED</span>
           </div>
-          <h2 className="text-2xl font-funky font-black tracking-tight text-gray-900 dark:text-white">
+          <h2 className="text-xl sm:text-2xl font-funky font-black tracking-tight text-gray-900 dark:text-white">
             PLANS CHANGED?
           </h2>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 font-bold">
-            Log your meal outside the plan and handle any leftovers with zero food waste.
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 font-bold">
+            Keep your schedule smooth and your kitchen zero-waste.
           </p>
         </div>
 
-        {/* If original planned meal(s) exist in this slot, show disposition choices */}
-        {effectiveMeals.length > 0 && (
-          <div className="mb-5 p-4 rounded-2xl bg-[#FAF8F5] dark:bg-[#1E202A] border-2 border-black dark:border-gray-700 shadow-neo-sm space-y-2.5">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-black uppercase text-gray-500 dark:text-gray-400 tracking-wider">
-                Originally Scheduled:
-              </span>
-              <span className="font-funky font-black text-xs text-gray-900 dark:text-[#D4FF00] truncate max-w-[200px]" title={effectiveMeals.map((m) => m.title).join(', ')}>
-                {effectiveMeals.map((m) => m.title).join(', ')}
-              </span>
-            </div>
-
-            <p className="text-[11px] font-bold text-gray-700 dark:text-gray-300">
-              {effectiveMeals.length > 1
-                ? `What should happen to these ${effectiveMeals.length} planned dishes?`
-                : `What should happen to "${effectiveMeals[0].title}"?`}
-            </p>
-
-            <div className="grid grid-cols-3 gap-2 text-center text-xs">
-              <button
-                type="button"
-                onClick={() => setOriginalMealAction('push_tomorrow')}
-                className={`p-2 rounded-xl border-2 font-black transition-colors flex flex-col items-center justify-center gap-1 active:scale-95 ${
-                  originalMealAction === 'push_tomorrow'
-                    ? 'bg-[#FFE600] text-black border-black shadow-neo-sm'
-                    : 'bg-white dark:bg-[#16171E] border-black/20 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-black'
-                }`}
-              >
-                <CalendarDays className="w-3.5 h-3.5" />
-                <span className="text-[10px] uppercase leading-tight">Push to Tomorrow</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setOriginalMealAction('save_fridge')}
-                className={`p-2 rounded-xl border-2 font-black transition-colors flex flex-col items-center justify-center gap-1 active:scale-95 ${
-                  originalMealAction === 'save_fridge'
-                    ? 'bg-[#00E5FF] text-black border-black shadow-neo-sm'
-                    : 'bg-white dark:bg-[#16171E] border-black/20 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-black'
-                }`}
-              >
-                <Package className="w-3.5 h-3.5" />
-                <span className="text-[10px] uppercase leading-tight">Save in Fridge</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setOriginalMealAction('replace')}
-                className={`p-2 rounded-xl border-2 font-black transition-colors flex flex-col items-center justify-center gap-1 active:scale-95 ${
-                  originalMealAction === 'replace'
-                    ? 'bg-rose-100 text-rose-900 border-black shadow-neo-sm'
-                    : 'bg-white dark:bg-[#16171E] border-black/20 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-black'
-                }`}
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-                <span className="text-[10px] uppercase leading-tight">Cancel Dish</span>
-              </button>
-            </div>
-
-            {originalMealAction === 'push_tomorrow' && (
-              <div className="mt-2.5 p-2.5 bg-white dark:bg-[#16171E] rounded-xl border border-black/20 dark:border-gray-700 space-y-2">
-                <div className="flex items-center justify-between text-[10px] font-black uppercase text-gray-500">
-                  <span>Move Planned Meals To Day:</span>
-                  <span className="text-[#FF5500] font-black">{originalMealPushDate}</span>
-                </div>
-                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 custom-scrollbar">
-                  {rollingDays.map((d, dIdx) => (
-                    <button
-                      key={d.dateString}
-                      type="button"
-                      onClick={() => setOriginalMealPushDate(d.dateString)}
-                      className={`px-2.5 py-1 rounded-lg text-[10px] font-black border transition-colors flex-shrink-0 active:scale-95 ${
-                        originalMealPushDate === d.dateString
-                          ? 'bg-[#FFE600] text-black border-black shadow-neo-sm'
-                          : 'bg-[#FAF8F5] dark:bg-[#20222E] text-gray-700 dark:text-gray-300 border-black/20 dark:border-gray-700'
-                      }`}
-                    >
-                      {dIdx === 0 ? 'Today' : dIdx === 1 ? 'Tomorrow' : d.dayName}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="flex items-center justify-between text-[10px] font-black uppercase text-gray-500 pt-0.5">
-                  <span>Target Slot:</span>
-                  <span className="text-[#00E5FF] font-black uppercase">{originalMealPushSlot}</span>
-                </div>
-                <div className="grid grid-cols-4 gap-1">
-                  {(['breakfast', 'lunch', 'dinner', 'snack'] as MealType[]).map((slot) => (
-                    <button
-                      key={slot}
-                      type="button"
-                      onClick={() => setOriginalMealPushSlot(slot)}
-                      className={`py-1 text-center text-[10px] font-black uppercase rounded-lg border transition-colors active:scale-95 ${
-                        originalMealPushSlot === slot
-                          ? 'bg-[#00E5FF] text-black border-black shadow-neo-sm'
-                          : 'bg-[#FAF8F5] dark:bg-[#20222E] text-gray-700 dark:text-gray-300 border-black/20 dark:border-gray-700'
-                      }`}
-                    >
-                      {slot === 'breakfast' ? 'Bfast' : slot === 'lunch' ? 'Lunch' : slot === 'dinner' ? 'Dinner' : 'Snack'}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Eating Out Category */}
-          <div>
-            <label className="block text-[11px] font-black text-gray-500 uppercase tracking-wider mb-2">
-              What did you have?
-            </label>
-            <div className="grid grid-cols-2 gap-2">
-              {EAT_OUT_TYPES.map((t) => {
-                const Icon = t.icon;
-                const isSelected = eatType === t.id;
-                return (
-                  <button
-                    key={t.id}
-                    type="button"
-                    onClick={() => handleSelectType(t.id)}
-                    className={`p-2.5 rounded-xl border-2 font-black text-xs flex items-center gap-2 transition-all ${
-                      isSelected
-                        ? 'bg-[#FFE600] text-black border-black shadow-neo-sm'
-                        : 'bg-[#FAF8F5] dark:bg-[#1E202A] border-black/20 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-black'
-                    }`}
-                  >
-                    <Icon className="w-4 h-4 flex-shrink-0" />
-                    <span className="text-[11px] truncate">{t.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Meal Title / Description */}
-          <div>
-            <label className="block text-[11px] font-black text-gray-500 uppercase tracking-wider mb-1">
-              Dish or Place Name (Optional)
-            </label>
-            <input
-              type="text"
-              value={dishTitle}
-              onChange={(e) => setDishTitle(e.target.value)}
-              placeholder="e.g. Thai Green Curry, Chipotle Bowl, Sushi..."
-              className="w-full bg-[#FAF8F5] dark:bg-[#20222E] border-2 border-black dark:border-gray-700 rounded-xl px-3.5 py-2.5 text-xs text-gray-900 dark:text-white font-bold focus:outline-none"
-            />
-          </div>
-
-          {/* Rough Calorie Estimation */}
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="text-[11px] font-black text-gray-500 uppercase tracking-wider">
-                Rough Calorie Estimate (Optional)
-              </label>
-              <span className="text-[10px] font-bold text-gray-400">
-                {customCalories ? `${customCalories} kcal` : 'Skipped'}
-              </span>
-            </div>
-
-            <div className="flex items-center gap-1.5 flex-wrap">
-              {CALORIE_PRESETS.map((p) => {
-                const active = caloriePreset === p.calories;
-                return (
-                  <button
-                    key={p.label}
-                    type="button"
-                    onClick={() => handleSelectCaloriePreset(p.calories)}
-                    className={`px-3 py-1.5 rounded-xl border-2 text-[10px] font-black transition-all ${
-                      active
-                        ? 'bg-[#D4FF00] text-black border-black shadow-neo-sm'
-                        : 'bg-[#FAF8F5] dark:bg-[#1E202A] border-black/20 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:border-black'
-                    }`}
-                  >
-                    {p.label} ({p.desc})
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* SECTION: WERE THERE LEFTOVERS? (PRIMARY USER REQUIREMENT) */}
-          <div className="p-4 rounded-2xl bg-[#FAF8F5] dark:bg-[#1E202A] border-2 border-black dark:border-gray-700 shadow-neo-sm space-y-3">
-            <div className="flex items-center justify-between">
+          {/* ========================================================================= */}
+          {/* 1. MAIN HERO QUESTION: DO YOU HAVE LEFTOVERS?                             */}
+          {/* ========================================================================= */}
+          <div className="p-4 sm:p-5 rounded-3xl bg-[#FAF8F5] dark:bg-[#1E202A] border-2 border-black dark:border-gray-700 shadow-neo space-y-3">
+            <div className="flex items-start gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-[#A855F7] text-white border-2 border-black flex items-center justify-center shadow-neo-sm flex-shrink-0 mt-0.5">
+                <Package className="w-4 h-4" />
+              </div>
               <div>
-                <h4 className="font-funky font-black text-xs uppercase tracking-wider text-gray-900 dark:text-white flex items-center gap-1.5">
-                  <Package className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
-                  <span>Were There Leftovers?</span>
-                </h4>
-                <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 mt-0.5">
-                  Did you bring food home in a box or save an extra portion?
+                <h3 className="font-funky font-black text-sm sm:text-base text-gray-900 dark:text-white leading-tight">
+                  Do you have leftovers?
+                </h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mt-0.5">
+                  Did you bring food home or have an extra portion to save?
                 </p>
               </div>
+            </div>
 
-              {/* Toggle Switch */}
-              <div className="flex bg-white dark:bg-[#16171E] p-1 rounded-xl border-2 border-black dark:border-gray-700 shadow-neo-sm">
+            {/* Big, Playful 2-Choice Cards */}
+            <div className="grid grid-cols-2 gap-2.5 pt-1">
+              <button
+                type="button"
+                onClick={() => setHasLeftover(true)}
+                className={`py-3 px-3 rounded-2xl border-2 font-black text-xs flex items-center justify-center gap-2 transition-all active:scale-95 cursor-pointer ${
+                  hasLeftover
+                    ? 'bg-[#A855F7] text-white border-black shadow-neo'
+                    : 'bg-white dark:bg-[#16171E] border-black/20 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-black'
+                }`}
+              >
+                <span>🥡 Yes, have leftovers!</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setHasLeftover(false)}
+                className={`py-3 px-3 rounded-2xl border-2 font-black text-xs flex items-center justify-center gap-2 transition-all active:scale-95 cursor-pointer ${
+                  !hasLeftover
+                    ? 'bg-black text-white dark:bg-[#FFE600] dark:text-black border-2 border-black shadow-neo'
+                    : 'bg-white dark:bg-[#16171E] border-black/20 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-black'
+                }`}
+              >
+                <span>🍽️ Nope, all eaten</span>
+              </button>
+            </div>
+
+            {/* Smooth Leftover Configuration */}
+            <AnimatePresence>
+              {hasLeftover && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="pt-3 border-t-2 border-black/10 dark:border-gray-800 space-y-3 overflow-hidden"
+                >
+                  {/* Portions */}
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-black text-gray-800 dark:text-gray-200">
+                      Portions brought home:
+                    </span>
+                    <div className="flex gap-1.5">
+                      {[1, 2, 3].map((num) => (
+                        <button
+                          key={num}
+                          type="button"
+                          onClick={() => setLeftoverPortions(num)}
+                          className={`w-8 h-8 rounded-xl border-2 text-xs font-black transition-all cursor-pointer ${
+                            leftoverPortions === num
+                              ? 'bg-[#A855F7] text-white border-black shadow-neo-sm'
+                              : 'bg-white dark:bg-[#16171E] border-black/20 dark:border-gray-700 text-gray-700 dark:text-gray-300'
+                          }`}
+                        >
+                          {num}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Destination */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setLeftoverDestination('schedule')}
+                      className={`p-2.5 rounded-xl border-2 font-black text-left text-xs transition-all cursor-pointer ${
+                        leftoverDestination === 'schedule'
+                          ? 'bg-[#FFE600] text-black border-black shadow-neo-sm'
+                          : 'bg-white dark:bg-[#16171E] border-black/20 dark:border-gray-700 text-gray-600 dark:text-gray-400'
+                      }`}
+                    >
+                      <div className="flex items-center gap-1.5 uppercase text-[11px]">
+                        <CalendarDays className="w-3.5 h-3.5" />
+                        <span>Eat Tomorrow</span>
+                      </div>
+                      <p className="text-[10px] text-gray-700 dark:text-gray-800 font-bold mt-0.5">
+                        Assigned to tomorrow&apos;s {defaultLeftoverSlot}
+                      </p>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setLeftoverDestination('fridge')}
+                      className={`p-2.5 rounded-xl border-2 font-black text-left text-xs transition-all cursor-pointer ${
+                        leftoverDestination === 'fridge'
+                          ? 'bg-[#00E5FF] text-black border-black shadow-neo-sm'
+                          : 'bg-white dark:bg-[#16171E] border-black/20 dark:border-gray-700 text-gray-600 dark:text-gray-400'
+                      }`}
+                    >
+                      <div className="flex items-center gap-1.5 uppercase text-[11px]">
+                        <Package className="w-3.5 h-3.5" />
+                        <span>Keep in Fridge</span>
+                      </div>
+                      <p className="text-[10px] text-gray-700 dark:text-gray-800 font-bold mt-0.5">
+                        Track in Fridge Radar inventory
+                      </p>
+                    </button>
+                  </div>
+
+                  {/* Optional: Pick another day/slot for leftover */}
+                  {leftoverDestination === 'schedule' && (
+                    <div>
+                      <button
+                        type="button"
+                        onClick={() => setShowAdvancedLeftoverDate(!showAdvancedLeftoverDate)}
+                        className="text-[10px] text-gray-500 hover:text-black dark:hover:text-white font-bold underline flex items-center gap-1 cursor-pointer"
+                      >
+                        <span>{showAdvancedLeftoverDate ? 'Hide custom schedule' : 'Choose a different day or slot...'}</span>
+                        {showAdvancedLeftoverDate ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                      </button>
+
+                      {showAdvancedLeftoverDate && (
+                        <div className="mt-2 p-2.5 bg-white dark:bg-[#16171E] rounded-xl border-2 border-black dark:border-gray-700 space-y-2">
+                          <div className="flex gap-1.5 overflow-x-auto custom-scrollbar pb-1">
+                            {rollingDays.slice(0, 5).map((d) => (
+                              <button
+                                key={d.dateString}
+                                type="button"
+                                onClick={() => setLeftoverDate(d.dateString)}
+                                className={`px-2.5 py-1 rounded-lg border-2 text-[10px] font-black whitespace-nowrap transition-all cursor-pointer ${
+                                  leftoverDate === d.dateString
+                                    ? 'bg-[#A855F7] text-white border-black shadow-neo-sm'
+                                    : 'bg-[#FAF8F5] dark:bg-[#20222E] border-black/20 dark:border-gray-700 text-gray-700 dark:text-gray-300'
+                                }`}
+                              >
+                                {d.isToday ? 'Today' : d.dayName} {d.dayNumber}
+                              </button>
+                            ))}
+                          </div>
+                          <div className="grid grid-cols-4 gap-1 text-center">
+                            {(['breakfast', 'lunch', 'dinner', 'snack'] as MealType[]).map((slot) => (
+                              <button
+                                key={slot}
+                                type="button"
+                                onClick={() => setLeftoverSlot(slot)}
+                                className={`py-1 rounded-lg border-2 text-[10px] font-black uppercase transition-all cursor-pointer ${
+                                  leftoverSlot === slot
+                                    ? 'bg-[#FFE600] text-black border-black shadow-neo-sm'
+                                    : 'bg-[#FAF8F5] dark:bg-[#20222E] border-black/20 dark:border-gray-700 text-gray-600 dark:text-gray-300'
+                                }`}
+                              >
+                                {slot === 'breakfast' ? 'Bfast' : slot}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* ========================================================================= */}
+          {/* 2. SIMPLE PLANNED MEAL HANDLING (NO CRAMPING)                             */}
+          {/* ========================================================================= */}
+          {effectiveMeals.length > 0 && (
+            <div className="p-4 rounded-3xl bg-[#FAF8F5] dark:bg-[#1E202A] border-2 border-black dark:border-gray-700 shadow-neo space-y-2.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-black uppercase text-gray-500 dark:text-gray-400 tracking-wider">
+                  Originally Scheduled:
+                </span>
+                <span className="font-funky font-black text-xs text-gray-900 dark:text-[#D4FF00] truncate max-w-[200px]">
+                  {effectiveMeals.map((m) => m.title).join(', ')}
+                </span>
+              </div>
+
+              <p className="text-xs font-bold text-gray-800 dark:text-gray-200">
+                What should happen to {effectiveMeals.length > 1 ? 'these planned dishes' : `"${effectiveMeals[0].title}"`}?
+              </p>
+
+              <div className="grid grid-cols-3 gap-2">
                 <button
                   type="button"
-                  onClick={() => setHasLeftover(false)}
-                  className={`px-2.5 py-1 text-[10px] font-black rounded-lg transition-all ${
-                    !hasLeftover
-                      ? 'bg-gray-200 dark:bg-gray-700 text-black dark:text-white'
-                      : 'text-gray-400 hover:text-black dark:hover:text-white'
+                  onClick={() => setOriginalMealAction('push_tomorrow')}
+                  className={`p-2.5 rounded-2xl border-2 font-black text-xs flex flex-col items-center justify-center gap-1 transition-all active:scale-95 cursor-pointer ${
+                    originalMealAction === 'push_tomorrow'
+                      ? 'bg-[#FFE600] text-black border-black shadow-neo-sm'
+                      : 'bg-white dark:bg-[#16171E] border-black/20 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-black'
                   }`}
                 >
-                  No
+                  <CalendarDays className="w-4 h-4" />
+                  <span className="text-[10px] sm:text-[11px] uppercase leading-tight">Push Tomorrow</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setOriginalMealAction('save_fridge')}
+                  className={`p-2.5 rounded-2xl border-2 font-black text-xs flex flex-col items-center justify-center gap-1 transition-all active:scale-95 cursor-pointer ${
+                    originalMealAction === 'save_fridge'
+                      ? 'bg-[#00E5FF] text-black border-black shadow-neo-sm'
+                      : 'bg-white dark:bg-[#16171E] border-black/20 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-black'
+                  }`}
+                >
+                  <Package className="w-4 h-4" />
+                  <span className="text-[10px] sm:text-[11px] uppercase leading-tight">Save in Fridge</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setOriginalMealAction('replace')}
+                  className={`p-2.5 rounded-2xl border-2 font-black text-xs flex flex-col items-center justify-center gap-1 transition-all active:scale-95 cursor-pointer ${
+                    originalMealAction === 'replace'
+                      ? 'bg-rose-100 text-rose-900 border-black shadow-neo-sm'
+                      : 'bg-white dark:bg-[#16171E] border-black/20 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-black'
+                  }`}
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  <span className="text-[10px] sm:text-[11px] uppercase leading-tight">Skip Dish</span>
+                </button>
+              </div>
+
+              {/* Clean Progressive Disclosure: Only show custom day picker if user explicitly opens it */}
+              {originalMealAction === 'push_tomorrow' && (
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => setShowAdvancedPushPicker(!showAdvancedPushPicker)}
+                    className="text-[10px] text-gray-500 hover:text-black dark:hover:text-white font-bold underline flex items-center gap-1 mt-1 cursor-pointer"
+                  >
+                    <span>{showAdvancedPushPicker ? 'Hide date selector' : `Move to different day than tomorrow (${originalMealPushDate})?`}</span>
+                    {showAdvancedPushPicker ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                  </button>
+
+                  {showAdvancedPushPicker && (
+                    <div className="mt-2 p-2.5 bg-white dark:bg-[#16171E] rounded-xl border border-black/20 dark:border-gray-700 space-y-2">
+                      <div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar pb-1">
+                        {rollingDays.map((d, dIdx) => (
+                          <button
+                            key={d.dateString}
+                            type="button"
+                            onClick={() => setOriginalMealPushDate(d.dateString)}
+                            className={`px-2.5 py-1 rounded-lg text-[10px] font-black border transition-colors flex-shrink-0 cursor-pointer ${
+                              originalMealPushDate === d.dateString
+                                ? 'bg-[#FFE600] text-black border-black shadow-neo-sm'
+                                : 'bg-[#FAF8F5] dark:bg-[#20222E] text-gray-700 dark:text-gray-300 border-black/20 dark:border-gray-700'
+                            }`}
+                          >
+                            {dIdx === 0 ? 'Today' : dIdx === 1 ? 'Tomorrow' : d.dayName}
+                          </button>
+                        ))}
+                      </div>
+
+                      <div className="grid grid-cols-4 gap-1">
+                        {(['breakfast', 'lunch', 'dinner', 'snack'] as MealType[]).map((slot) => (
+                          <button
+                            key={slot}
+                            type="button"
+                            onClick={() => setOriginalMealPushSlot(slot)}
+                            className={`py-1 text-center text-[10px] font-black uppercase rounded-lg border transition-colors cursor-pointer ${
+                              originalMealPushSlot === slot
+                                ? 'bg-[#00E5FF] text-black border-black shadow-neo-sm'
+                                : 'bg-[#FAF8F5] dark:bg-[#20222E] text-gray-700 dark:text-gray-300 border-black/20 dark:border-gray-700'
+                            }`}
+                          >
+                            {slot === 'breakfast' ? 'Bfast' : slot}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ========================================================================= */}
+          {/* 3. SUBTLE & SMALL: TRACK CALORIES? (OPTIONAL)                             */}
+          {/* ========================================================================= */}
+          <div className="p-4 rounded-3xl bg-white dark:bg-[#16171E] border-2 border-black dark:border-gray-700 shadow-neo-sm space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Flame className="w-4 h-4 text-[#FF5500]" />
+                <span className="text-xs font-black text-gray-800 dark:text-gray-200">
+                  Track calories for this meal?
+                </span>
+              </div>
+
+              {/* Subtly small toggle */}
+              <div className="flex bg-[#FAF8F5] dark:bg-[#20222E] p-0.5 rounded-xl border border-black/30 dark:border-gray-700">
+                <button
+                  type="button"
+                  onClick={() => setTrackCalories(false)}
+                  className={`px-2.5 py-1 text-[10px] font-black rounded-lg transition-all cursor-pointer ${
+                    !trackCalories
+                      ? 'bg-black text-white dark:bg-white dark:text-black shadow-neo-sm'
+                      : 'text-gray-500 hover:text-black dark:hover:text-white'
+                  }`}
+                >
+                  Skip
                 </button>
                 <button
                   type="button"
-                  onClick={() => setHasLeftover(true)}
-                  className={`px-2.5 py-1 text-[10px] font-black rounded-lg transition-all ${
-                    hasLeftover
-                      ? 'bg-[#A855F7] text-white border border-black shadow-neo-sm'
-                      : 'text-gray-400 hover:text-black dark:hover:text-white'
+                  onClick={() => setTrackCalories(true)}
+                  className={`px-2.5 py-1 text-[10px] font-black rounded-lg transition-all cursor-pointer ${
+                    trackCalories
+                      ? 'bg-[#D4FF00] text-black border border-black shadow-neo-sm'
+                      : 'text-gray-500 hover:text-black dark:hover:text-white'
                   }`}
                 >
-                  Yes!
+                  Track
                 </button>
               </div>
             </div>
 
-            {/* Expanded Leftover Options */}
-            {hasLeftover && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                className="pt-3 border-t-2 border-black/10 dark:border-gray-800 space-y-3"
-              >
-                {/* Portions Count */}
-                <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-black text-gray-700 dark:text-gray-300">
-                    Portions Brought Home:
-                  </span>
-                  <div className="flex gap-1.5">
-                    {[1, 2, 3].map((num) => (
+            {/* If tracking: quick presets & dish name */}
+            <AnimatePresence>
+              {trackCalories && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="pt-2 border-t border-black/10 dark:border-gray-800 space-y-2.5 overflow-hidden"
+                >
+                  <input
+                    type="text"
+                    value={dishTitle}
+                    onChange={(e) => setDishTitle(e.target.value)}
+                    placeholder="What did you have? (e.g. Sushi, Burgers, Thai Curry...)"
+                    className="w-full bg-[#FAF8F5] dark:bg-[#20222E] border-2 border-black dark:border-gray-700 rounded-xl px-3 py-2 text-xs text-gray-900 dark:text-white font-bold focus:outline-none"
+                  />
+
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {[
+                      { label: 'Light', cals: 450 },
+                      { label: 'Standard', cals: 750 },
+                      { label: 'Hearty', cals: 1100 },
+                    ].map((p) => (
                       <button
-                        key={num}
+                        key={p.label}
                         type="button"
-                        onClick={() => setLeftoverPortions(num)}
-                        className={`w-7 h-7 rounded-lg border-2 text-xs font-black transition-all ${
-                          leftoverPortions === num
-                            ? 'bg-[#A855F7] text-white border-black shadow-neo-sm'
-                            : 'bg-white dark:bg-[#16171E] border-black/30 dark:border-gray-700 text-gray-700 dark:text-gray-300'
+                        onClick={() => {
+                          setCaloriePreset(p.cals);
+                          setCustomCalories(String(p.cals));
+                        }}
+                        className={`px-2.5 py-1 rounded-lg border-2 text-[10px] font-black transition-all cursor-pointer ${
+                          caloriePreset === p.cals
+                            ? 'bg-[#D4FF00] text-black border-black shadow-neo-sm'
+                            : 'bg-[#FAF8F5] dark:bg-[#20222E] border-black/20 dark:border-gray-700 text-gray-700 dark:text-gray-300'
                         }`}
                       >
-                        {num}
+                        {p.label} (~{p.cals} kcal)
                       </button>
                     ))}
-                  </div>
-                </div>
 
-                {/* Leftover Action: Schedule on Board OR Store in Fridge */}
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setLeftoverDestination('schedule')}
-                    className={`p-2.5 rounded-xl border-2 text-left font-black transition-all ${
-                      leftoverDestination === 'schedule'
-                        ? 'bg-[#FFE600] text-black border-black shadow-neo-sm'
-                        : 'bg-white dark:bg-[#16171E] border-black/20 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-black'
-                    }`}
-                  >
-                    <div className="flex items-center gap-1 text-[11px] uppercase">
-                      <CalendarDays className="w-3.5 h-3.5" />
-                      <span>Schedule for Meal</span>
-                    </div>
-                    <p className="text-[9px] font-bold text-gray-700 mt-1">
-                      Eat for tomorrow&apos;s lunch/dinner
-                    </p>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setLeftoverDestination('fridge')}
-                    className={`p-2.5 rounded-xl border-2 text-left font-black transition-all ${
-                      leftoverDestination === 'fridge'
-                        ? 'bg-[#00E5FF] text-black border-black shadow-neo-sm'
-                        : 'bg-white dark:bg-[#16171E] border-black/20 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-black'
-                    }`}
-                  >
-                    <div className="flex items-center gap-1 text-[11px] uppercase">
-                      <Package className="w-3.5 h-3.5" />
-                      <span>Keep in Fridge</span>
-                    </div>
-                    <p className="text-[9px] font-bold text-gray-700 mt-1">
-                      Track on Fridge Radar inventory
-                    </p>
-                  </button>
-                </div>
-
-                {/* If Scheduled: Pick Day & Slot */}
-                {leftoverDestination === 'schedule' && (
-                  <div className="p-3 bg-white dark:bg-[#16171E] rounded-xl border-2 border-black dark:border-gray-700 space-y-2">
-                    <div className="flex items-center justify-between text-[10px] font-black uppercase text-gray-500">
-                      <span>Schedule Leftover When?</span>
-                    </div>
-
-                    {/* Day Picker */}
-                    <div className="flex gap-1.5 overflow-x-auto scrollbar-none pb-1">
-                      {rollingDays.slice(0, 5).map((d) => (
-                        <button
-                          key={d.dateString}
-                          type="button"
-                          onClick={() => setLeftoverDate(d.dateString)}
-                          className={`px-2.5 py-1 rounded-lg border-2 text-[10px] font-black whitespace-nowrap transition-all ${
-                            leftoverDate === d.dateString
-                              ? 'bg-[#A855F7] text-white border-black shadow-neo-sm'
-                              : 'bg-[#FAF8F5] dark:bg-[#20222E] border-black/20 dark:border-gray-700 text-gray-700 dark:text-gray-300'
-                          }`}
-                        >
-                          {d.isToday ? 'Today' : d.dayName} {d.dayNumber}
-                        </button>
-                      ))}
-                    </div>
-
-                    {/* Slot Picker */}
-                    <div className="grid grid-cols-4 gap-1.5 text-center">
-                      {(['breakfast', 'lunch', 'dinner', 'snack'] as MealType[]).map((slot) => (
-                        <button
-                          key={slot}
-                          type="button"
-                          onClick={() => setLeftoverSlot(slot)}
-                          className={`py-1 rounded-lg border-2 text-[10px] font-black uppercase transition-all ${
-                            leftoverSlot === slot
-                              ? 'bg-[#FFE600] text-black border-black shadow-neo-sm'
-                              : 'bg-[#FAF8F5] dark:bg-[#20222E] border-black/20 dark:border-gray-700 text-gray-600 dark:text-gray-300'
-                          }`}
-                        >
-                          {slot === 'breakfast' ? 'Bfast' : slot}
-                        </button>
-                      ))}
+                    <div className="flex items-center gap-1 ml-auto">
+                      <input
+                        type="number"
+                        value={customCalories}
+                        onChange={(e) => {
+                          setCustomCalories(e.target.value);
+                          setCaloriePreset(parseInt(e.target.value, 10) || 0);
+                        }}
+                        placeholder="kcal"
+                        className="w-16 bg-[#FAF8F5] dark:bg-[#20222E] border-2 border-black dark:border-gray-700 rounded-lg px-2 py-1 text-[11px] font-bold text-center"
+                      />
+                      <span className="text-[10px] text-gray-500 font-bold">kcal</span>
                     </div>
                   </div>
-                )}
-              </motion.div>
-            )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* =================================================================== */}
+            {/* 4. CHANCE TO CHANGE DAILY MAINTENANCE CALORIE TARGET                */}
+            {/* =================================================================== */}
+            <div className="pt-2.5 border-t border-black/10 dark:border-gray-800 flex items-center justify-between">
+              <div>
+                <span className="text-[11px] font-black uppercase text-gray-600 dark:text-gray-400 flex items-center gap-1">
+                  <Flame className="w-3.5 h-3.5 text-[#FF5500]" />
+                  <span>Daily Calorie Target:</span>
+                </span>
+                <p className="text-[10px] text-gray-400 font-medium">Quickly adjust maintenance target</p>
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => handleAdjustTarget(-100)}
+                  className="w-7 h-7 rounded-lg bg-[#FAF8F5] dark:bg-[#20222E] border-2 border-black dark:border-gray-700 flex items-center justify-center text-xs font-black hover:bg-gray-100 dark:hover:bg-[#2c3040] active:scale-95 cursor-pointer shadow-neo-sm"
+                  title="Decrease 100 kcal"
+                >
+                  <Minus className="w-3.5 h-3.5 stroke-[2.5]" />
+                </button>
+
+                <div className="px-2.5 py-1 rounded-xl bg-[#FAF8F5] dark:bg-[#20222E] border-2 border-black dark:border-gray-700 font-funky font-black text-xs text-gray-900 dark:text-[#FFE600] min-w-[75px] text-center shadow-neo-sm">
+                  {currentTarget} kcal
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => handleAdjustTarget(100)}
+                  className="w-7 h-7 rounded-lg bg-[#FAF8F5] dark:bg-[#20222E] border-2 border-black dark:border-gray-700 flex items-center justify-center text-xs font-black hover:bg-gray-100 dark:hover:bg-[#2c3040] active:scale-95 cursor-pointer shadow-neo-sm"
+                  title="Increase 100 kcal"
+                >
+                  <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+                </button>
+              </div>
+            </div>
           </div>
 
-          {/* Submit Action */}
+          {/* ========================================================================= */}
+          {/* SUBMIT BUTTON                                                             */}
+          {/* ========================================================================= */}
           <button
             type="submit"
-            className="w-full py-3 bg-[#00E5FF] hover:bg-[#00cbe2] text-black font-black text-xs uppercase tracking-wider rounded-2xl border-2 border-black shadow-neo active:scale-[0.98] transition-colors flex items-center justify-center gap-2 mt-2"
+            className="w-full py-3.5 bg-[#00E5FF] hover:bg-[#00cbe2] text-black font-black text-xs uppercase tracking-wider rounded-2xl border-2 border-black shadow-neo active:scale-[0.98] transition-colors flex items-center justify-center gap-2 cursor-pointer mt-2"
           >
-            <span>Log Meal</span>
-            {hasLeftover && <span>&amp; Save Leftover</span>}
+            <span>Save &amp; Continue</span>
+            {hasLeftover && <span>(Leftovers Saved)</span>}
             <ArrowRight className="w-4 h-4 stroke-[2.5]" />
           </button>
         </form>

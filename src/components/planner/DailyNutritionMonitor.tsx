@@ -14,6 +14,7 @@ interface DailyNutritionMonitorProps {
   proteinTarget: number;
   carbsTarget: number;
   fatTarget: number;
+  onUpdateCalorieTarget?: (newTarget: number) => void;
   onAutoFillDay?: () => void;
   onQuickAddMeal: (slot: 'breakfast' | 'lunch' | 'dinner' | 'snack') => void;
 }
@@ -27,6 +28,7 @@ export default function DailyNutritionMonitor({
   proteinTarget,
   carbsTarget,
   fatTarget,
+  onUpdateCalorieTarget,
   onAutoFillDay,
   onQuickAddMeal,
 }: DailyNutritionMonitorProps) {
@@ -192,9 +194,37 @@ export default function DailyNutritionMonitor({
                   <span className="text-[10px] font-black uppercase tracking-wider text-gray-600 dark:text-gray-400">
                     Total Energy
                   </span>
-                  <span className="text-xs font-black text-gray-900 dark:text-[#D4FF00]">
-                    {totalCalories} / {calTargetSafe} kcal
-                  </span>
+                  <div className="flex items-center gap-1">
+                    <span className="text-xs font-black text-gray-900 dark:text-[#D4FF00]">
+                      {totalCalories} / {calTargetSafe} kcal
+                    </span>
+                    {onUpdateCalorieTarget && (
+                      <div className="flex items-center gap-0.5 ml-1">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onUpdateCalorieTarget(Math.max(1200, calTargetSafe - 100));
+                          }}
+                          className="w-4 h-4 rounded bg-black/10 dark:bg-white/10 flex items-center justify-center text-[9px] font-black hover:scale-110 active:scale-95 cursor-pointer"
+                          title="Decrease 100 kcal target"
+                        >
+                          -
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onUpdateCalorieTarget(Math.min(5000, calTargetSafe + 100));
+                          }}
+                          className="w-4 h-4 rounded bg-black/10 dark:bg-white/10 flex items-center justify-center text-[9px] font-black hover:scale-110 active:scale-95 cursor-pointer"
+                          title="Increase 100 kcal target"
+                        >
+                          +
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div className="w-full bg-gray-200 dark:bg-gray-700 h-2 rounded-full overflow-hidden border border-black/20">
                   <div
